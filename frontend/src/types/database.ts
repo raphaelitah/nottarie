@@ -8,9 +8,15 @@ export type RoleNotarial =
 export interface Etude {
   id: string
   raison_sociale: string
-  adresse: string | null
   siret: string | null
   numero_chambre: string | null
+  telephone: string | null
+  email: string | null
+  adresse: string | null
+  adresse_ligne1: string | null
+  code_postal: string | null
+  ville: string | null
+  pays: string
   created_at: string
 }
 

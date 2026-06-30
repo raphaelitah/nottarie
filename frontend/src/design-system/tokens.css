@@ -1,0 +1,156 @@
+/* Nottarie Design System — tokens
+ * Single entry point for all CSS custom properties.
+ */
+
+/* ── Typeface ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-sans: 'Sora', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* ── Brand ───────────────────────────────────────────────── */
+  --color-ink:         #1E2D45;
+  --color-ink-hover:   #162236;
+  --color-ink-active:  #0E1828;
+  --color-ink-10:      rgba(30, 45, 69, 0.10);
+  --color-ink-20:      rgba(30, 45, 69, 0.20);
+
+  --color-seal:        #A07600;
+  --color-seal-hover:  #8A6500;
+  --color-seal-10:     rgba(160, 118, 0, 0.10);
+
+  --color-parchment:   #F6F3EE;
+
+  /* ── Neutral scale ───────────────────────────────────────── */
+  --n-900: #1A1924;
+  --n-800: #2D2C3C;
+  --n-700: #413F52;
+  --n-600: #575468;
+  --n-500: #716E84;
+  --n-400: #9B98AC;
+  --n-300: #C5C3CF;
+  --n-200: #E0DFE8;
+  --n-100: #EDECF2;
+  --n-50:  #F5F5F8;
+
+  /* ── Surfaces ────────────────────────────────────────────── */
+  --surface-base:   #FFFFFF;
+  --surface-subtle: var(--color-parchment);
+  --surface-muted:  var(--n-100);
+  --surface-raised: #FFFFFF;
+
+  /* ── Text ────────────────────────────────────────────────── */
+  --text-primary:   var(--n-900);
+  --text-secondary: var(--n-700);
+  --text-muted:     var(--n-500);
+  --text-disabled:  var(--n-300);
+  --text-inverse:   #FFFFFF;
+  --text-accent:    var(--color-seal);
+
+  /* ── Borders ─────────────────────────────────────────────── */
+  --border-default: var(--n-200);
+  --border-strong:  var(--n-300);
+  --border-focus:   var(--color-ink);
+
+  /* ── Status (French labels) ──────────────────────────────── */
+  --status-signed-bg:     #E6F4EC;
+  --status-signed-text:   #14532D;
+  --status-ongoing-bg:    #DBEAFE;
+  --status-ongoing-text:  #1E3A8A;
+  --status-pending-bg:    #FEF9C3;
+  --status-pending-text:  #713F12;
+  --status-draft-bg:      var(--n-100);
+  --status-draft-text:    var(--n-600);
+  --status-refused-bg:    #FEE2E2;
+  --status-refused-text:  #7F1D1D;
+  --status-archived-bg:   var(--n-50);
+  --status-archived-text: var(--n-400);
+
+  /* ── Semantic aliases ────────────────────────────────────── */
+  --color-primary: var(--color-ink);
+  --color-accent:  var(--color-seal);
+  --color-success: var(--status-signed-text);
+  --color-warning: var(--status-pending-text);
+  --color-danger:  var(--status-refused-text);
+
+  /* ── Type scale ───────────────────────────────────────────── */
+  --text-display: 2.25rem;
+  --text-xl:      1.75rem;
+  --text-lg:      1.375rem;
+  --text-md:      1.125rem;
+  --text-base:    1rem;
+  --text-sm:      0.875rem;
+  --text-xs:      0.8125rem;
+  --text-2xs:     0.75rem;
+
+  /* ── Font weights ────────────────────────────────────────── */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* ── Line heights ────────────────────────────────────────── */
+  --leading-tight:   1.25;
+  --leading-snug:    1.4;
+  --leading-normal:  1.6;
+  --leading-relaxed: 1.75;
+
+  /* ── Letter spacing ──────────────────────────────────────── */
+  --tracking-tight:  -0.025em;
+  --tracking-snug:   -0.015em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.04em;
+  --tracking-wider:   0.08em;
+  --tracking-caps:    0.10em;
+
+  /* ── Spacing (4px base) ──────────────────────────────────── */
+  --space-px:  1px;
+  --space-0-5: 2px;
+  --space-1:   4px;
+  --space-1-5: 6px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-7:   28px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+  --space-16:  64px;
+  --space-20:  80px;
+  --space-24:  96px;
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  --page-gutter:   var(--space-8);
+  --content-width: 1200px;
+  --sidebar-width: 260px;
+  --panel-width:   380px;
+
+  /* ── Border radii ────────────────────────────────────────── */
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(30, 45, 69, 0.05);
+  --shadow-sm: 0 1px 3px rgba(30, 45, 69, 0.06), 0 1px 2px rgba(30, 45, 69, 0.04);
+  --shadow-md: 0 4px 8px rgba(30, 45, 69, 0.08), 0 2px 4px rgba(30, 45, 69, 0.04);
+  --shadow-lg: 0 8px 20px rgba(30, 45, 69, 0.10), 0 4px 8px rgba(30, 45, 69, 0.05);
+  --shadow-xl: 0 16px 40px rgba(30, 45, 69, 0.12), 0 8px 16px rgba(30, 45, 69, 0.06);
+
+  /* ── Focus rings ─────────────────────────────────────────── */
+  --ring-focus:        0 0 0 3px rgba(30, 45, 69, 0.18);
+  --ring-focus-seal:   0 0 0 3px rgba(160, 118, 0, 0.22);
+  --ring-focus-danger: 0 0 0 3px rgba(127, 29, 29, 0.14);
+
+  /* ── Transitions ─────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow:   300ms ease;
+}
