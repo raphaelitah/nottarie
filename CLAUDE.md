@@ -1,5 +1,9 @@
 # Nottarie — Project Guide
 
+## Git workflow
+
+Always create a feature branch before starting any coding work. Never commit or push directly to `main`. When the work is ready, open a PR with `gh pr create` and let it be merged. Note: `gh` CLI must be installed (`brew install gh`) for PR creation to work.
+
 Nottarie is a SaaS product for managing a French notarial office (étude notariale): case files (dossiers), people, properties, deed/document generation from templates (trames), electronic signature and AAE (Acte Authentique Électronique) production, and interconnection with the French notarial network (ADSN/MICEN).
 
 This file encodes the product and architecture decisions from the BRD (Business Requirements Document) and ADR (Architecture Decision Records). It is a prototyping-phase fork of ADR-01: **Supabase replaces Django/django-tenants**, with row-level multi-tenancy instead of schema-per-tenant. Treat the deviations below as authoritative over the original ADR-01 stack choice; everything else in the ADR/BRD still applies.
