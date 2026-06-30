@@ -80,6 +80,14 @@ export function AdminPage() {
   const [inviting, setInviting] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
 
+  // User actions
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [editingRoles, setEditingRoles] = useState<RoleNotarial[]>([])
+  const [savingUserId, setSavingUserId] = useState<string | null>(null)
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null)
+  const [confirmDisableId, setConfirmDisableId] = useState<string | null>(null)
+  const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null)
+
   async function loadEtudes() {
     const { data, error } = await supabase.from('etudes').select('*').order('created_at', { ascending: false })
     if (error) setError('Impossible de charger les études : ' + error.message)
@@ -88,12 +96,13 @@ export function AdminPage() {
 
   async function loadUsers(etudeId: string) {
     setLoadingUsers(etudeId)
-    const { data } = await supabase
-      .from('utilisateurs')
-      .select('*')
-      .eq('tenant_id', etudeId)
-      .order('created_at', { ascending: true })
-    setUsers(u => ({ ...u, [etudeId]: data ?? [] }))
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-etude-users?tenant_id=${etudeId}`,
+      { headers: { Authorization: `Bearer ${session?.access_token}` } }
+    )
+    const json = await response.json()
+    setUsers(u => ({ ...u, [etudeId]: json.users ?? [] }))
     setLoadingUsers(null)
   }
 
@@ -188,6 +197,52 @@ export function AdminPage() {
     setInviteForm(EMPTY_INVITE)
     setShowInvite(false)
     loadUsers(etudeId)
+  }
+
+  async function invokeUserAction(body: object) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-user-action`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    )
+    return res.json()
+  }
+
+  async function handleSaveRoles(u: Utilisateur, etudeId: string) {
+    setSavingUserId(u.id)
+    setError(null)
+    const json = await invokeUserAction({ action: 'update_roles', utilisateur_id: u.id, roles: editingRoles })
+    setSavingUserId(null)
+    if (json.error) { setError('Erreur : ' + json.error); return }
+    setEditingUserId(null)
+    setSuccess('Rôle mis à jour.')
+    loadUsers(etudeId)
+  }
+
+  async function handleToggleActif(u: Utilisateur, etudeId: string) {
+    setTogglingUserId(u.id)
+    setError(null)
+    const json = await invokeUserAction({ action: 'set_actif', utilisateur_id: u.id, actif: !u.actif })
+    setTogglingUserId(null)
+    setConfirmDisableId(null)
+    if (json.error) { setError('Erreur : ' + json.error); return }
+    const name = [u.prenom, u.nom].filter(Boolean).join(' ') || u.email || 'L\'utilisateur'
+    setSuccess(u.actif ? `${name} a été désactivé.` : `${name} a été réactivé.`)
+    loadUsers(etudeId)
+  }
+
+  async function handleResetPassword(u: Utilisateur) {
+    if (!u.email) return
+    setResettingPasswordId(u.id)
+    setError(null)
+    const json = await invokeUserAction({ action: 'reset_password', email: u.email })
+    setResettingPasswordId(null)
+    if (json.error) { setError('Erreur : ' + json.error); return }
+    setSuccess(`Email de réinitialisation envoyé à ${u.email}.`)
   }
 
   const activeEtude =
@@ -437,22 +492,84 @@ export function AdminPage() {
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Aucun utilisateur rattaché à cette étude.</div>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {(users[activeEtude.id] ?? []).map(u => (
-                    <div key={u.id} style={{ ...card, padding: 'var(--space-3) var(--space-5)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--n-900)' }}>
-                          {[u.prenom, u.nom].filter(Boolean).join(' ') || '—'}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                  {(users[activeEtude.id] ?? []).map(u => {
+                    const isEditing = editingUserId === u.id
+                    const isConfirmDisable = confirmDisableId === u.id
+                    const displayName = [u.prenom, u.nom].filter(Boolean).join(' ') || '—'
+                    const inactive = !u.actif
+                    return (
+                      <div key={u.id} style={{ ...card, padding: 'var(--space-4) var(--space-5)', opacity: inactive ? 0.7 : 1 }}>
+                        {/* Main row */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                          {/* Identity */}
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 600, color: inactive ? 'var(--n-400)' : 'var(--n-900)' }}>
+                              {displayName}
+                              {inactive && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, color: 'var(--n-400)', marginLeft: '8px' }}>Désactivé</span>}
+                            </div>
+                            {u.email && (
+                              <a href={`mailto:${u.email}`} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: inactive ? 'var(--n-400)' : 'var(--color-accent)', marginTop: '2px', display: 'block', textDecoration: 'none', pointerEvents: inactive ? 'none' : 'auto' }}>
+                                {u.email}
+                              </a>
+                            )}
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--n-300)', marginTop: '3px' }}>{u.auth_user_id}</div>
+                          </div>
+
+                          {/* Role badges + actions */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>
+                            {!isEditing && !inactive && (
+                              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                {u.roles.map(r => (
+                                  <span key={r} style={roleBadge}>{ROLE_OPTIONS.find(o => o.value === r)?.label ?? r}</span>
+                                ))}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
+                              {inactive ? (
+                                <IconButton icon="refresh" label="Réactiver" onClick={() => handleToggleActif(u, activeEtude.id)} disabled={togglingUserId === u.id} />
+                              ) : (
+                                <>
+                                  <IconButton icon="pencil" label="Modifier le rôle" onClick={() => { setEditingUserId(u.id); setEditingRoles([...u.roles]); setConfirmDisableId(null); setError(null) }} />
+                                  <IconButton icon="key" label="Réinitialiser le mot de passe" onClick={() => handleResetPassword(u)} disabled={resettingPasswordId === u.id} />
+                                  <IconButton icon="ban" label="Désactiver" onClick={() => { setConfirmDisableId(u.id); setEditingUserId(null); setError(null) }} />
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--n-400)', marginTop: '2px' }}>{u.auth_user_id}</div>
+
+                        {/* Inline role editor */}
+                        {isEditing && (
+                          <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Rôle</label>
+                            <Select
+                              value={editingRoles[0] ?? 'assistant'}
+                              options={ROLE_OPTIONS}
+                              onChange={e => setEditingRoles([e.target.value as RoleNotarial])}
+                            />
+                            <Button size="sm" variant="primary" disabled={savingUserId === u.id} onClick={() => handleSaveRoles(u, activeEtude.id)}>
+                              {savingUserId === u.id ? 'Enregistrement…' : 'Enregistrer'}
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => setEditingUserId(null)}>Annuler</Button>
+                          </div>
+                        )}
+
+                        {/* Inline disable confirmation */}
+                        {isConfirmDisable && (
+                          <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-700)', flex: 1 }}>
+                              Désactiver <strong>{displayName}</strong> ? Il ne pourra plus se connecter.
+                            </span>
+                            <Button size="sm" variant="destructive" disabled={togglingUserId === u.id} onClick={() => handleToggleActif(u, activeEtude.id)}>
+                              {togglingUserId === u.id ? 'Désactivation…' : 'Désactiver'}
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => setConfirmDisableId(null)}>Annuler</Button>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        {u.roles.map(r => (
-                          <span key={r} style={roleBadge}>{ROLE_OPTIONS.find(o => o.value === r)?.label ?? r}</span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -484,35 +601,57 @@ const ICON_SVGS: Record<string, (color: string) => JSX.Element> = {
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
     </svg>
   ),
+  key: (c) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7.5" cy="15.5" r="5.5"/>
+      <path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>
+    </svg>
+  ),
+  ban: (c) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="m4.9 4.9 14.2 14.2"/>
+    </svg>
+  ),
+  refresh: (c) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 12a9 9 0 0 1-15 6.7L3 16"/>
+      <path d="M21 3v5h-5M3 21v-5h5"/>
+    </svg>
+  ),
 }
 
-function IconButton({ icon, label, onClick }: { icon: keyof typeof ICON_SVGS; label: string; onClick: () => void }) {
+function IconButton({ icon, label, onClick, disabled }: { icon: keyof typeof ICON_SVGS; label: string; onClick: () => void; disabled?: boolean }) {
   const [hovered, setHovered] = useState(false)
+  const isDanger = icon === 'ban'
+  const activeColor = isDanger ? '#991B1B' : '#1E2D45'
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => !disabled && setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title={label}
+      disabled={disabled}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: '5px',
         height: '32px',
         padding: hovered ? '0 10px' : '0 8px',
-        background: hovered ? 'var(--n-100)' : 'transparent',
+        background: hovered ? (isDanger ? '#FEF2F2' : 'var(--n-100)') : 'transparent',
         border: '1px solid',
-        borderColor: hovered ? 'var(--border-default)' : 'transparent',
+        borderColor: hovered ? (isDanger ? '#FECACA' : 'var(--border-default)') : 'transparent',
         borderRadius: 'var(--radius-md)',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
         transition: 'all 120ms ease',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
       }}
     >
-      {ICON_SVGS[icon](hovered ? '#1E2D45' : '#716E84')}
+      {ICON_SVGS[icon](hovered ? activeColor : '#716E84')}
       {hovered && (
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 600, color: '#1E2D45' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 600, color: activeColor }}>
           {label}
         </span>
       )}

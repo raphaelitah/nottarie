@@ -27,5 +27,7 @@ export interface Utilisateur {
   nom: string | null
   prenom: string | null
   roles: RoleNotarial[]
+  actif: boolean
+  email?: string | null
   created_at: string
 }
