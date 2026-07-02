@@ -2,7 +2,7 @@
 
 ## Git workflow
 
-Always create a feature branch before starting any coding work. Never commit or push directly to `main`. When the work is ready, open a PR with `gh pr create` and let it be merged. Note: `gh` CLI must be installed (`brew install gh`) for PR creation to work.
+Work directly on `main`. Commit and push straight to `main` — no feature branches, no PRs. This is a solo project, so there's no review step to gate on.
 
 Nottarie is a SaaS product for managing a French notarial office (étude notariale): case files (dossiers), people, properties, deed/document generation from templates (trames), electronic signature and AAE (Acte Authentique Électronique) production, and interconnection with the French notarial network (ADSN/MICEN).
 
