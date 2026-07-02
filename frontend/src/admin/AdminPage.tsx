@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
 import { Button, Input, Select } from '../design-system'
 import type { Etude, RoleNotarial, Utilisateur } from '../types/database'
+import { ROLE_OPTIONS } from '../constants/roles'
 
 interface EtudeForm {
   raison_sociale: string
@@ -41,14 +42,6 @@ const EMPTY_INVITE: InviteForm = {
   nom: '',
   role: 'assistant',
 }
-
-const ROLE_OPTIONS: { value: RoleNotarial; label: string }[] = [
-  { value: 'notaire', label: 'Notaire' },
-  { value: 'redacteur', label: 'Clerc' },
-  { value: 'formaliste', label: 'Formaliste' },
-  { value: 'assistant', label: 'Assistant' },
-  { value: 'administrateur', label: 'Administrateur' },
-]
 
 function etudeToForm(e: Etude): EtudeForm {
   return {
@@ -264,6 +257,7 @@ export function AdminPage() {
         boxShadow: 'var(--shadow-md)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px' }} />
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-md)', fontWeight: 700, color: '#fff', letterSpacing: 'var(--tracking-tight)' }}>Nottarie</span>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--n-400)', background: 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>Administration</span>
         </div>

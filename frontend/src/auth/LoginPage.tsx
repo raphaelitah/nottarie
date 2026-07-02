@@ -69,18 +69,11 @@ export function LoginPage() {
       }}>
         {/* Brand */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '48px',
-            height: '48px',
-            background: 'var(--color-ink)',
-            borderRadius: 'var(--radius-lg)',
-            marginBottom: 'var(--space-4)',
-          }}>
-            <span style={{ color: '#fff', fontSize: '22px', fontWeight: 700, fontFamily: 'var(--font-sans)', letterSpacing: '-0.03em' }}>N</span>
-          </div>
+          <img
+            src="/favicon.png"
+            alt="Nottarie"
+            style={{ width: '56px', height: '56px', marginBottom: 'var(--space-4)' }}
+          />
           <div style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 'var(--text-xl)',
