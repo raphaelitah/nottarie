@@ -30,4 +30,5 @@ export interface Utilisateur {
   actif: boolean
   email?: string | null
   created_at: string
+  etude?: { raison_sociale: string } | null
 }
