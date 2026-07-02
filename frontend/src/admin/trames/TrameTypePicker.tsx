@@ -60,7 +60,6 @@ const row: CSSProperties = {
   cursor: 'pointer',
   textAlign: 'left',
   width: '100%',
-  maxWidth: '480px',
 }
 
 const rowTitle: CSSProperties = {

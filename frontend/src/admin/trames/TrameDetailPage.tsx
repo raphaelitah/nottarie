@@ -144,7 +144,7 @@ export function TrameDetailPage({ typeActe, onBack }: TrameDetailPageProps) {
             <Button variant="primary" size="sm" onClick={openCreateSection}>+ Nouvelle section</Button>
           </div>
 
-          <div style={{ marginBottom: 'var(--space-5)', maxWidth: '360px' }}>
+          <div style={{ marginBottom: 'var(--space-5)' }}>
             <Input placeholder="Rechercher une section…" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
 
@@ -207,7 +207,6 @@ const subtitle: CSSProperties = {
   fontSize: 'var(--text-sm)',
   color: 'var(--text-muted)',
   margin: 0,
-  maxWidth: '640px',
 }
 
 const card: CSSProperties = {
