@@ -29,29 +29,43 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         flexShrink: 0,
         boxShadow: 'var(--shadow-md)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0, flexShrink: 1 }}>
+          <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
           <span style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 'var(--text-md)',
             fontWeight: 700,
             color: '#fff',
             letterSpacing: 'var(--tracking-tight)',
+            flexShrink: 0,
           }}>Nottarie</span>
           {membership?.etude && (
             <>
-              <span style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} />
-              <span style={{
-                fontFamily: 'var(--font-sans)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--n-400)',
-              }}>{membership.etude.raison_sociale}</span>
+              <span style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+              <span
+                title={membership.etude.raison_sociale}
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--n-400)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  minWidth: 0,
+                }}>{membership.etude.raison_sociale}</span>
+              <div style={{ display: 'flex', gap: 'var(--space-1)', flexShrink: 0 }}>
+                {membership.roles.length === 0
+                  ? <Badge status="archived" label="Aucun rôle" />
+                  : membership.roles.map((r: string) => (
+                      <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
+                    ))}
+              </div>
             </>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
           {isAdmin && membership && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)', whiteSpace: 'nowrap' }}>
@@ -109,7 +123,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
           }}>Bienvenue dans votre espace Nottarie.</p>
         </div>
 
-        {!membership ? (
+        {!membership && (
           <div style={{
             background: 'var(--surface-base)',
             border: '1px solid var(--border-default)',
@@ -143,31 +157,6 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             }}>
               Votre compte n'est rattaché à aucune étude. Demandez à l'administrateur de vous ajouter.
             </p>
-          </div>
-        ) : (
-          <div style={{
-            background: 'var(--surface-base)',
-            border: '1px solid var(--border-default)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-4) var(--space-5)',
-            boxShadow: 'var(--shadow-xs)',
-          }}>
-            <div style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              letterSpacing: 'var(--tracking-caps)',
-              textTransform: 'uppercase',
-              marginBottom: 'var(--space-2)',
-            }}>Mon rôle</div>
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              {membership.roles.length === 0
-                ? <Badge status="archived" label="Aucun rôle" />
-                : membership.roles.map((r: string) => (
-                    <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
-                  ))}
-            </div>
           </div>
         )}
       </main>
