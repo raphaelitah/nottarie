@@ -57,7 +57,7 @@ function etudeToForm(e: Etude): EtudeForm {
   }
 }
 
-export function AdminPage() {
+export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () => void }) {
   const { user, signOut } = useAuth()
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [form, setForm] = useState<EtudeForm>(EMPTY_ETUDE_FORM)
@@ -263,6 +263,9 @@ export function AdminPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)' }}>{user?.email}</span>
+          {onSwitchToDashboard && (
+            <Button variant="secondary" size="sm" onClick={onSwitchToDashboard}>Mon tableau de bord</Button>
+          )}
           <Button variant="secondary" size="sm" onClick={signOut}>Se déconnecter</Button>
         </div>
       </header>

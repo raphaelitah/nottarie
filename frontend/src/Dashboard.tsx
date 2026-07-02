@@ -5,7 +5,7 @@ import { Select } from './design-system/Select'
 import { ROLE_OPTIONS } from './constants/roles'
 import type { RoleNotarial } from './types/database'
 
-export function Dashboard() {
+export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
 
   return (
@@ -38,6 +38,11 @@ export function Dashboard() {
             fontSize: 'var(--text-xs)',
             color: 'var(--n-400)',
           }}>{user?.email}</span>
+          {onSwitchToAdmin && (
+            <Button variant="secondary" size="sm" onClick={onSwitchToAdmin}>
+              Administration
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={signOut}>
             Se déconnecter
           </Button>
