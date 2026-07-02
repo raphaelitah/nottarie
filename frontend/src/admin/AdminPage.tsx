@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Button, Input, Select } from '../design-system'
 import type { Etude, RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
+import { ParagraphLibraryPage } from './paragraphs/ParagraphLibraryPage'
 
 interface EtudeForm {
   raison_sociale: string
@@ -59,6 +60,7 @@ function etudeToForm(e: Etude): EtudeForm {
 
 export function AdminPage() {
   const { user, signOut } = useAuth()
+  const [section, setSection] = useState<'etudes' | 'paragraphs'>('etudes')
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [form, setForm] = useState<EtudeForm>(EMPTY_ETUDE_FORM)
   const [saving, setSaving] = useState(false)

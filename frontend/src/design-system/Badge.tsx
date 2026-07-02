@@ -1,15 +1,16 @@
 import React, { type CSSProperties } from 'react'
 
-export type BadgeStatus = 'signed' | 'ongoing' | 'pending' | 'draft' | 'refused' | 'archived'
+export type BadgeStatus = 'signed' | 'ongoing' | 'pending' | 'draft' | 'refused' | 'archived' | 'published'
 type BadgeSize = 'sm' | 'md'
 
 const STATUS: Record<BadgeStatus, { label: string; bg: string; color: string }> = {
-  signed:   { label: 'Signé',      bg: '#E6F4EC', color: '#14532D' },
-  ongoing:  { label: 'En cours',   bg: '#DBEAFE', color: '#1E3A8A' },
-  pending:  { label: 'En attente', bg: '#FEF9C3', color: '#713F12' },
-  draft:    { label: 'Brouillon',  bg: '#EDECF2', color: '#575468' },
-  refused:  { label: 'Refusé',     bg: '#FEE2E2', color: '#7F1D1D' },
-  archived: { label: 'Archivé',    bg: '#F5F5F8', color: '#9B98AC' },
+  signed:    { label: 'Signé',      bg: '#E6F4EC', color: '#14532D' },
+  ongoing:   { label: 'En cours',   bg: '#DBEAFE', color: '#1E3A8A' },
+  pending:   { label: 'En attente', bg: '#FEF9C3', color: '#713F12' },
+  draft:     { label: 'Brouillon',  bg: '#EDECF2', color: '#575468' },
+  refused:   { label: 'Refusé',     bg: '#FEE2E2', color: '#7F1D1D' },
+  archived:  { label: 'Archivé',    bg: '#F5F5F8', color: '#9B98AC' },
+  published: { label: 'Publié',     bg: '#E6F4EC', color: '#14532D' },
 }
 
 const SIZES: Record<BadgeSize, CSSProperties> = {

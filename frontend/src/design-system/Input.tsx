@@ -14,6 +14,7 @@ interface InputProps {
   prefix?: ReactNode
   suffix?: ReactNode
   id?: string
+  list?: string
 }
 
 export function Input({
@@ -30,6 +31,7 @@ export function Input({
   prefix,
   suffix,
   id,
+  list,
 }: InputProps) {
   const [focused, setFocused] = useState(false)
   const inputId = id ?? (label ? label.replace(/\s+/g, '-').toLowerCase() : undefined)
@@ -76,6 +78,7 @@ export function Input({
           placeholder={placeholder}
           disabled={disabled}
           required={required}
+          list={list}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           style={{

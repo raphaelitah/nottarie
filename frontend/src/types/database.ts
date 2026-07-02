@@ -20,6 +20,29 @@ export interface Etude {
   created_at: string
 }
 
+export type BrancheDroit = 'immobilier' | 'famille' | 'entreprise_societes'
+
+export type ParagraphFieldType = 'auto' | 'manuel'
+
+export interface ParagraphVariable {
+  key: string
+  label: string
+  field_type: ParagraphFieldType
+}
+
+export interface TrameParagraph {
+  id: string
+  branche: BrancheDroit
+  type_acte: string
+  category: string
+  title: string
+  content: Record<string, unknown>
+  variables: ParagraphVariable[]
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Utilisateur {
   id: string
   auth_user_id: string
