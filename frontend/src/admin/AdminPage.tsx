@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Button, Input, Select } from '../design-system'
 import type { Etude, RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
-import { ParagraphLibraryPage } from './paragraphs/ParagraphLibraryPage'
+import { TrameLibraryPage } from './trames/TrameLibraryPage'
 
 interface EtudeForm {
   raison_sociale: string
@@ -60,7 +60,7 @@ function etudeToForm(e: Etude): EtudeForm {
 
 export function AdminPage() {
   const { user, signOut } = useAuth()
-  const [section, setSection] = useState<'etudes' | 'paragraphs'>('etudes')
+  const [section, setSection] = useState<'etudes' | 'trames'>('etudes')
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [form, setForm] = useState<EtudeForm>(EMPTY_ETUDE_FORM)
   const [saving, setSaving] = useState(false)
@@ -247,7 +247,7 @@ export function AdminPage() {
 
   return (
     <div style={{ minHeight: '100svh', background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column' }}>
-      {/* Top nav */}
+      {/* Top bar */}
       <header style={{
         background: 'var(--color-ink)',
         padding: '0 var(--space-8)',
@@ -269,7 +269,23 @@ export function AdminPage() {
         </div>
       </header>
 
-      <main style={{ flex: 1, padding: 'var(--space-8)', maxWidth: '900px', width: '100%', margin: '0 auto' }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {/* Left nav */}
+        <nav style={{
+          width: '220px',
+          flexShrink: 0,
+          background: 'var(--surface-subtle)',
+          padding: 'var(--space-5) var(--space-3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-1)',
+        }}>
+          <SidebarLink active={section === 'etudes'} onClick={() => setSection('etudes')}>Études</SidebarLink>
+          <SidebarLink active={section === 'trames'} onClick={() => setSection('trames')}>Bibliothèque de Trame</SidebarLink>
+        </nav>
+
+        <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0 }}>
+          {section === 'trames' ? <TrameLibraryPage /> : <>
 
         {/* Breadcrumb */}
         {mode !== 'list' && (
@@ -571,8 +587,33 @@ export function AdminPage() {
             </div>
           </div>
         )}
-      </main>
+          </>}
+        </main>
+      </div>
     </div>
+  )
+}
+
+function SidebarLink({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: 'left',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 500,
+        color: 'var(--color-ink)',
+        textDecoration: active ? 'underline' : 'none',
+        textUnderlineOffset: '3px',
+        background: 'transparent',
+        border: 'none',
+        padding: '6px 8px',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
   )
 }
 

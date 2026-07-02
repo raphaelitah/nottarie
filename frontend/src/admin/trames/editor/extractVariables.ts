@@ -1,4 +1,4 @@
-import type { ParagraphVariable } from '../../../types/database'
+import type { SectionVariable } from '../../../types/database'
 
 interface JSONNode {
   type?: string
@@ -8,8 +8,8 @@ interface JSONNode {
 
 // The `variables` column is derived from the "champ" nodes in the document,
 // which are the single source of truth — this keeps them from drifting apart.
-export function extractVariablesFromDoc(doc: JSONNode | Record<string, unknown>): ParagraphVariable[] {
-  const found = new Map<string, ParagraphVariable>()
+export function extractVariablesFromDoc(doc: JSONNode | Record<string, unknown>): SectionVariable[] {
+  const found = new Map<string, SectionVariable>()
 
   function walk(node: JSONNode | undefined) {
     if (!node) return

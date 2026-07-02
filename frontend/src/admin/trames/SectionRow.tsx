@@ -1,28 +1,28 @@
 import type { CSSProperties } from 'react'
 import { Badge, Button } from '../../design-system'
-import type { TrameParagraph } from '../../types/database'
+import type { TrameSection } from '../../types/database'
 
-interface ParagraphRowProps {
-  paragraph: TrameParagraph
+interface SectionRowProps {
+  section: TrameSection
   onEdit: () => void
   onDuplicate: () => void
   onArchive: () => void
 }
 
-export function ParagraphRow({ paragraph, onEdit, onDuplicate, onArchive }: ParagraphRowProps) {
+export function SectionRow({ section, onEdit, onDuplicate, onArchive }: SectionRowProps) {
   return (
     <div style={row}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
-        <span style={title}>{paragraph.title}</span>
-        <Badge status={paragraph.is_published ? 'published' : 'draft'} size="sm" />
-        {paragraph.variables.length > 0 && (
-          <span style={variableCount}>{paragraph.variables.length} champ{paragraph.variables.length > 1 ? 's' : ''}</span>
+        <span style={title}>{section.title}</span>
+        <Badge status={section.is_published ? 'published' : 'draft'} size="sm" />
+        {section.variables.length > 0 && (
+          <span style={variableCount}>{section.variables.length} champ{section.variables.length > 1 ? 's' : ''}</span>
         )}
       </div>
       <div style={{ display: 'flex', gap: 'var(--space-2)', flexShrink: 0 }}>
         <Button variant="ghost" size="sm" onClick={onEdit}>Modifier</Button>
         <Button variant="ghost" size="sm" onClick={onDuplicate}>Dupliquer</Button>
-        {paragraph.is_published && (
+        {section.is_published && (
           <Button variant="ghost" size="sm" onClick={onArchive}>Archiver</Button>
         )}
       </div>

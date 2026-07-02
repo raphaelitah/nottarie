@@ -22,23 +22,27 @@ export interface Etude {
 
 export type BrancheDroit = 'immobilier' | 'famille' | 'entreprise_societes'
 
-export type ParagraphFieldType = 'auto' | 'manuel'
+export type SectionFieldType = 'auto' | 'manuel'
 
-export interface ParagraphVariable {
+export interface SectionVariable {
   key: string
   label: string
-  field_type: ParagraphFieldType
+  field_type: SectionFieldType
 }
 
-export interface TrameParagraph {
+// A trame belongs to exactly one type_acte. Each trame has one row with
+// is_standard = true (the always-present base model) plus any number of
+// optional, addable sections (is_standard = false, category required).
+export interface TrameSection {
   id: string
   branche: BrancheDroit
   type_acte: string
-  category: string
+  category: string | null
   title: string
   content: Record<string, unknown>
-  variables: ParagraphVariable[]
+  variables: SectionVariable[]
   is_published: boolean
+  is_standard: boolean
   created_at: string
   updated_at: string
 }

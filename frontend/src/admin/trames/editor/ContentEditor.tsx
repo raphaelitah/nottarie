@@ -4,14 +4,14 @@ import StarterKit from '@tiptap/starter-kit'
 import { FieldNode } from './fieldNode'
 import { FieldFormModal } from './FieldFormModal'
 import { extractVariablesFromDoc } from './extractVariables'
-import type { ParagraphVariable } from '../../../types/database'
+import type { SectionVariable } from '../../../types/database'
 
-interface ParagraphEditorProps {
+interface ContentEditorProps {
   content: Record<string, unknown>
-  onChange: (content: Record<string, unknown>, variables: ParagraphVariable[]) => void
+  onChange: (content: Record<string, unknown>, variables: SectionVariable[]) => void
 }
 
-export function ParagraphEditor({ content, onChange }: ParagraphEditorProps) {
+export function ContentEditor({ content, onChange }: ContentEditorProps) {
   const [fieldModalOpen, setFieldModalOpen] = useState(false)
 
   const editor = useEditor({

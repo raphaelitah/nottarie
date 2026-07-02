@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Modal, Button, Input, Select } from '../../../design-system'
-import type { ParagraphFieldType } from '../../../types/database'
+import type { SectionFieldType } from '../../../types/database'
 import { SNAKE_CASE_RE, slugifyKey } from './fieldKey'
 import type { ChampAttrs } from './fieldNode'
 
-const FIELD_TYPE_OPTIONS: { value: ParagraphFieldType; label: string }[] = [
+const FIELD_TYPE_OPTIONS: { value: SectionFieldType; label: string }[] = [
   { value: 'auto', label: 'Automatique (rempli depuis le dossier)' },
   { value: 'manuel', label: 'Manuel (saisi par le rédacteur)' },
 ]
@@ -22,7 +22,7 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
   const [label, setLabel] = useState('')
   const [key, setKey] = useState('')
   const [keyEdited, setKeyEdited] = useState(false)
-  const [fieldType, setFieldType] = useState<ParagraphFieldType>('auto')
+  const [fieldType, setFieldType] = useState<SectionFieldType>('auto')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
           label="Type de champ"
           options={FIELD_TYPE_OPTIONS}
           value={fieldType}
-          onChange={(e) => setFieldType(e.target.value as ParagraphFieldType)}
+          onChange={(e) => setFieldType(e.target.value as SectionFieldType)}
         />
       </div>
     </Modal>

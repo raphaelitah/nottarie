@@ -1,12 +1,12 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import type { ParagraphFieldType } from '../../../types/database'
+import type { SectionFieldType } from '../../../types/database'
 import { FieldNodeView } from './FieldNodeView'
 
 export interface ChampAttrs {
   key: string
   label: string
-  fieldType: ParagraphFieldType
+  fieldType: SectionFieldType
 }
 
 declare module '@tiptap/core' {
