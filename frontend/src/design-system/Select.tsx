@@ -58,8 +58,7 @@ export function Select({
       <div style={{ position: 'relative' }}>
         <select
           id={selectId}
-          value={value}
-          defaultValue={defaultValue ?? ''}
+          {...(value !== undefined ? { value } : { defaultValue: defaultValue ?? '' })}
           onChange={onChange}
           disabled={disabled}
           required={required}
