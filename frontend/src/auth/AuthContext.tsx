@@ -78,7 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase
       .from('utilisateurs')
-      .select('*')
+      .select('*, etude:etudes(raison_sociale)')
+      .eq('auth_user_id', session.user.id)
       .then(({ data, error }) => {
         if (error) {
           console.error('Failed to load tenant memberships', error)

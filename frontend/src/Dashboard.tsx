@@ -8,6 +8,14 @@ import type { RoleNotarial } from './types/database'
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
 
+  // A user belongs to a single étude in practice — the membership query is
+  // scoped to auth_user_id, so this is just "my" row (if any).
+  const membership = memberships[0] ?? null
+  const isAdmin = membership?.roles.includes('administrateur') ?? false
+  const activeRole = membership
+    ? activeRoles[membership.tenant_id] ?? (isAdmin ? 'administrateur' : membership.roles[0])
+    : null
+
   return (
     <div style={{ minHeight: '100svh', background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column' }}>
       {/* Top nav */}
@@ -21,7 +29,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         flexShrink: 0,
         boxShadow: 'var(--shadow-md)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px' }} />
           <span style={{
             fontFamily: 'var(--font-sans)',
@@ -30,9 +38,34 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             color: '#fff',
             letterSpacing: 'var(--tracking-tight)',
           }}>Nottarie</span>
+          {membership?.etude && (
+            <>
+              <span style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)' }} />
+              <span style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 600,
+                color: 'var(--n-400)',
+              }}>{membership.etude.raison_sociale}</span>
+            </>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          {isAdmin && membership && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)', whiteSpace: 'nowrap' }}>
+                Voir en tant que
+              </span>
+              <div style={{ width: '160px' }}>
+                <Select
+                  value={activeRole ?? undefined}
+                  options={ROLE_OPTIONS}
+                  onChange={e => setActiveRole(membership.tenant_id, e.target.value as RoleNotarial)}
+                />
+              </div>
+            </div>
+          )}
           <span style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 'var(--text-xs)',
@@ -76,7 +109,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
           }}>Bienvenue dans votre espace Nottarie.</p>
         </div>
 
-        {memberships.length === 0 ? (
+        {!membership ? (
           <div style={{
             background: 'var(--surface-base)',
             border: '1px solid var(--border-default)',
@@ -112,63 +145,29 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-            <h2 style={{
+          <div style={{
+            background: 'var(--surface-base)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-4) var(--space-5)',
+            boxShadow: 'var(--shadow-xs)',
+          }}>
+            <div style={{
               fontFamily: 'var(--font-sans)',
               fontSize: 'var(--text-xs)',
               fontWeight: 600,
               color: 'var(--text-muted)',
               letterSpacing: 'var(--tracking-caps)',
               textTransform: 'uppercase',
-              margin: '0 0 var(--space-2)',
-            }}>Mes études</h2>
-            {memberships.map((m) => {
-              const isAdmin = m.roles.includes('administrateur')
-              const activeRole = activeRoles[m.tenant_id] ?? (isAdmin ? 'administrateur' : m.roles[0])
-              return (
-                <div key={m.id} style={{
-                  background: 'var(--surface-base)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: 'var(--space-4) var(--space-5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 'var(--space-4)',
-                  boxShadow: 'var(--shadow-xs)',
-                }}>
-                  <div>
-                    <div style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--text-muted)',
-                      marginBottom: 'var(--space-1)',
-                    }}>{m.tenant_id}</div>
-                    <div style={{
-                      display: 'flex',
-                      gap: 'var(--space-2)',
-                      flexWrap: 'wrap',
-                    }}>
-                      {m.roles.length === 0
-                        ? <Badge status="archived" label="Aucun rôle" />
-                        : m.roles.map((r: string) => (
-                            <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
-                          ))}
-                    </div>
-                  </div>
-                  {isAdmin && (
-                    <div style={{ minWidth: '180px', flexShrink: 0 }}>
-                      <Select
-                        label="Voir en tant que"
-                        value={activeRole}
-                        options={ROLE_OPTIONS}
-                        onChange={e => setActiveRole(m.tenant_id, e.target.value as RoleNotarial)}
-                      />
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+              marginBottom: 'var(--space-2)',
+            }}>Mon rôle</div>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {membership.roles.length === 0
+                ? <Badge status="archived" label="Aucun rôle" />
+                : membership.roles.map((r: string) => (
+                    <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
+                  ))}
+            </div>
           </div>
         )}
       </main>
