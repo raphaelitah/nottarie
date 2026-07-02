@@ -1,9 +1,12 @@
 import { useAuth } from './auth/AuthContext'
 import { Button } from './design-system/Button'
 import { Badge } from './design-system/Badge'
+import { Select } from './design-system/Select'
+import { ROLE_OPTIONS } from './constants/roles'
+import type { RoleNotarial } from './types/database'
 
 export function Dashboard() {
-  const { user, memberships, signOut } = useAuth()
+  const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
 
   return (
     <div style={{ minHeight: '100svh', background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column' }}>
@@ -18,13 +21,16 @@ export function Dashboard() {
         flexShrink: 0,
         boxShadow: 'var(--shadow-md)',
       }}>
-        <span style={{
-          fontFamily: 'var(--font-sans)',
-          fontSize: 'var(--text-md)',
-          fontWeight: 700,
-          color: '#fff',
-          letterSpacing: 'var(--tracking-tight)',
-        }}>Nottarie</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px' }} />
+          <span style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: 'var(--text-md)',
+            fontWeight: 700,
+            color: '#fff',
+            letterSpacing: 'var(--tracking-tight)',
+          }}>Nottarie</span>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <span style={{
@@ -111,38 +117,53 @@ export function Dashboard() {
               textTransform: 'uppercase',
               margin: '0 0 var(--space-2)',
             }}>Mes études</h2>
-            {memberships.map((m) => (
-              <div key={m.id} style={{
-                background: 'var(--surface-base)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-lg)',
-                padding: 'var(--space-4) var(--space-5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: 'var(--shadow-xs)',
-              }}>
-                <div>
-                  <div style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--text-muted)',
-                    marginBottom: 'var(--space-1)',
-                  }}>{m.tenant_id}</div>
-                  <div style={{
-                    display: 'flex',
-                    gap: 'var(--space-2)',
-                    flexWrap: 'wrap',
-                  }}>
-                    {m.roles.length === 0
-                      ? <Badge status="archived" label="Aucun rôle" />
-                      : m.roles.map((r: string) => (
-                          <Badge key={r} status="ongoing" label={r} />
-                        ))}
+            {memberships.map((m) => {
+              const isAdmin = m.roles.includes('administrateur')
+              const activeRole = activeRoles[m.tenant_id] ?? (isAdmin ? 'administrateur' : m.roles[0])
+              return (
+                <div key={m.id} style={{
+                  background: 'var(--surface-base)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: 'var(--space-4) var(--space-5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 'var(--space-4)',
+                  boxShadow: 'var(--shadow-xs)',
+                }}>
+                  <div>
+                    <div style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-muted)',
+                      marginBottom: 'var(--space-1)',
+                    }}>{m.tenant_id}</div>
+                    <div style={{
+                      display: 'flex',
+                      gap: 'var(--space-2)',
+                      flexWrap: 'wrap',
+                    }}>
+                      {m.roles.length === 0
+                        ? <Badge status="archived" label="Aucun rôle" />
+                        : m.roles.map((r: string) => (
+                            <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
+                          ))}
+                    </div>
                   </div>
+                  {isAdmin && (
+                    <div style={{ minWidth: '180px', flexShrink: 0 }}>
+                      <Select
+                        label="Voir en tant que"
+                        value={activeRole}
+                        options={ROLE_OPTIONS}
+                        onChange={e => setActiveRole(m.tenant_id, e.target.value as RoleNotarial)}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>

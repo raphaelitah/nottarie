@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { Utilisateur } from '../types/database'
+import type { RoleNotarial, Utilisateur } from '../types/database'
 
 interface AuthState {
   session: Session | null
@@ -14,6 +14,19 @@ interface AuthState {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   setNewPassword: (password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  /** Role an administrateur is currently previewing the app as, per étude (EF-ROL testing aid). */
+  activeRoles: Record<string, RoleNotarial>
+  setActiveRole: (tenantId: string, role: RoleNotarial) => void
+}
+
+const ACTIVE_ROLE_STORAGE_KEY = 'nottarie:active-roles'
+
+function loadStoredActiveRoles(): Record<string, RoleNotarial> {
+  try {
+    return JSON.parse(localStorage.getItem(ACTIVE_ROLE_STORAGE_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
@@ -24,6 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false)
+  const [activeRoles, setActiveRoles] = useState<Record<string, RoleNotarial>>(loadStoredActiveRoles)
+
+  const setActiveRole = (tenantId: string, role: RoleNotarial) => {
+    setActiveRoles(prev => {
+      const next = { ...prev, [tenantId]: role }
+      localStorage.setItem(ACTIVE_ROLE_STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     // Capture invite type from URL hash before Supabase clears it
@@ -106,6 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         setNewPassword,
         signOut,
+        activeRoles,
+        setActiveRole,
       }}
     >
       {children}
