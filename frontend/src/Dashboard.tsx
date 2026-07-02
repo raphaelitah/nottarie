@@ -54,12 +54,10 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                   textOverflow: 'ellipsis',
                   minWidth: 0,
                 }}>{membership.etude.raison_sociale}</span>
-              <div style={{ display: 'flex', gap: 'var(--space-1)', flexShrink: 0 }}>
-                {membership.roles.length === 0
-                  ? <Badge status="archived" label="Aucun rôle" />
-                  : membership.roles.map((r: string) => (
-                      <Badge key={r} status={isAdmin && r !== activeRole ? 'archived' : 'ongoing'} label={r} />
-                    ))}
+              <div style={{ flexShrink: 0 }}>
+                {activeRole
+                  ? <Badge status="ongoing" label={activeRole} />
+                  : <Badge status="archived" label="Aucun rôle" />}
               </div>
             </>
           )}
