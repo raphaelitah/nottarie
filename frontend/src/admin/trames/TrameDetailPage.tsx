@@ -111,7 +111,7 @@ export function TrameDetailPage({ typeActe, onBack }: TrameDetailPageProps) {
 
   return (
     <div>
-      <button onClick={onBack} style={breadcrumbBtn}>‹ Bibliothèque de Trame</button>
+      <button onClick={onBack} style={breadcrumbBtn}>‹ Bibliothèque de Trames</button>
 
       <h1 style={h1}>{acteTypeLabel(typeActe)}</h1>
       <p style={subtitle}>Tout nouvel acte de ce type commence avec le modèle standard ci-dessous ; les sections peuvent ensuite être ajoutées selon le dossier.</p>

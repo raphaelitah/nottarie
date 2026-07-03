@@ -284,7 +284,7 @@ export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () =>
           gap: 'var(--space-1)',
         }}>
           <SidebarLink active={section === 'etudes'} onClick={() => setSection('etudes')}>Études</SidebarLink>
-          <SidebarLink active={section === 'trames'} onClick={() => setSection('trames')}>Bibliothèque de Trame</SidebarLink>
+          <SidebarLink active={section === 'trames'} onClick={() => setSection('trames')}>Trames</SidebarLink>
         </nav>
 
         <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0 }}>

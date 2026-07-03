@@ -14,7 +14,7 @@ interface TrameTypePickerProps {
 export function TrameTypePicker({ onSelect }: TrameTypePickerProps) {
   return (
     <div>
-      <h1 style={h1}>Bibliothèque de Trame</h1>
+      <h1 style={h1}>Bibliothèque de Trames</h1>
       <p style={subtitle}>Choisissez un type d'acte pour gérer son modèle standard et ses sections.</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-6)' }}>
