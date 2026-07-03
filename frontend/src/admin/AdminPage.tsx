@@ -61,6 +61,7 @@ function etudeToForm(e: Etude): EtudeForm {
 export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () => void }) {
   const { user, signOut } = useAuth()
   const [section, setSection] = useState<'etudes' | 'trames'>('etudes')
+  const [trameLibraryKey, setTrameLibraryKey] = useState(0)
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [form, setForm] = useState<EtudeForm>(EMPTY_ETUDE_FORM)
   const [saving, setSaving] = useState(false)
@@ -284,11 +285,11 @@ export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () =>
           gap: 'var(--space-1)',
         }}>
           <SidebarLink active={section === 'etudes'} onClick={() => setSection('etudes')}>Études</SidebarLink>
-          <SidebarLink active={section === 'trames'} onClick={() => setSection('trames')}>Trames</SidebarLink>
+          <SidebarLink active={section === 'trames'} onClick={() => { setSection('trames'); setTrameLibraryKey(k => k + 1) }}>Trames</SidebarLink>
         </nav>
 
         <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0 }}>
-          {section === 'trames' ? <TrameLibraryPage /> : <>
+          {section === 'trames' ? <TrameLibraryPage key={trameLibraryKey} /> : <>
 
         {/* Breadcrumb */}
         {mode !== 'list' && (

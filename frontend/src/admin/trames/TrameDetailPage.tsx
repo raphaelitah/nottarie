@@ -126,10 +126,10 @@ export function TrameDetailPage({ typeActe, onBack }: TrameDetailPageProps) {
 
           {standard ? (
             <div style={card}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+              <button onClick={openStandardModel} style={cardTitleBtn}>
                 <span style={cardTitle}>{STANDARD_MODEL_TITLE}</span>
                 <Badge status={standard.is_published ? 'published' : 'draft'} size="sm" />
-              </div>
+              </button>
               <Button variant="ghost" size="sm" onClick={openStandardModel}>Modifier</Button>
             </div>
           ) : (
@@ -218,6 +218,18 @@ const card: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
+}
+
+const cardTitleBtn: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  minWidth: 0,
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  textAlign: 'left',
 }
 
 const cardTitle: CSSProperties = {

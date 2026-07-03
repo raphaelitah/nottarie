@@ -12,13 +12,13 @@ interface SectionRowProps {
 export function SectionRow({ section, onEdit, onDuplicate, onArchive }: SectionRowProps) {
   return (
     <div style={row}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+      <button onClick={onEdit} style={titleBtn}>
         <span style={title}>{section.title}</span>
         <Badge status={section.is_published ? 'published' : 'draft'} size="sm" />
         {section.variables.length > 0 && (
           <span style={variableCount}>{section.variables.length} champ{section.variables.length > 1 ? 's' : ''}</span>
         )}
-      </div>
+      </button>
       <div style={{ display: 'flex', gap: 'var(--space-2)', flexShrink: 0 }}>
         <Button variant="ghost" size="sm" onClick={onEdit}>Modifier</Button>
         <Button variant="ghost" size="sm" onClick={onDuplicate}>Dupliquer</Button>
@@ -39,6 +39,18 @@ const row: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-md)',
+}
+
+const titleBtn: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--space-3)',
+  minWidth: 0,
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  textAlign: 'left',
 }
 
 const title: CSSProperties = {
