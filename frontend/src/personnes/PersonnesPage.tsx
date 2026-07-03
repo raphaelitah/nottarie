@@ -13,9 +13,11 @@ function personneTypeLabel(type: string): string {
 
 interface PersonnesPageProps {
   tenantId: string
+  focusId?: string | null
+  onFocusHandled?: () => void
 }
 
-export function PersonnesPage({ tenantId }: PersonnesPageProps) {
+export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPageProps) {
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -23,6 +25,15 @@ export function PersonnesPage({ tenantId }: PersonnesPageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<Personne | null>(null)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!focusId) return
+    supabase.from('personnes').select('*').eq('id', focusId).single().then(({ data }) => {
+      if (data) { setEditing(data); setDrawerOpen(true) }
+      onFocusHandled?.()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId])
 
   async function loadPersonnes() {
     setLoading(true)

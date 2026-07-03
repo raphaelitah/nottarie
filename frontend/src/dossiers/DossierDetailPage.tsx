@@ -3,14 +3,10 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button, Input, Select } from '../design-system'
 import type { Dossier } from '../types/database'
-import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
+import { acteTypeLabel } from '../constants/acteTypes'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
-
-function typeActeLabel(typeActe: string): string {
-  return ACTE_TYPE_OPTIONS.find((o) => o.value === typeActe)?.label ?? typeActe
-}
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -66,7 +62,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
         <h1 style={h1}>{dossier.numero || 'Dossier sans numéro'}</h1>
         <Badge status={statutBadgeStatus(dossier.statut)} label={dossierStatutLabel(dossier.statut)} />
       </div>
-      <p style={subtitle}>{typeActeLabel(dossier.type_acte)}</p>
+      <p style={subtitle}>{acteTypeLabel(dossier.type_acte)}</p>
 
       {error && (
         <div style={{
@@ -111,7 +107,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
           <div style={grid2}>
             <div>
               <label style={labelStyle}>Type de dossier</label>
-              <div style={valueStyle}>{typeActeLabel(dossier.type_acte)}</div>
+              <div style={valueStyle}>{acteTypeLabel(dossier.type_acte)}</div>
             </div>
             <div>
               <label style={labelStyle}>Créé le</label>

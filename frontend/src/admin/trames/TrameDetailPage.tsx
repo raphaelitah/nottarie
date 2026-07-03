@@ -3,13 +3,9 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Badge, Button, Input } from '../../design-system'
 import type { TrameSection } from '../../types/database'
-import { ACTE_TYPE_OPTIONS } from '../../constants/acteTypes'
+import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../../constants/acteTypes'
 import { SectionList } from './SectionList'
 import { SectionFormDrawer, STANDARD_MODEL_TITLE, type SectionFormValues } from './SectionFormDrawer'
-
-function acteTypeLabel(typeActe: string): string {
-  return ACTE_TYPE_OPTIONS.find((o) => o.value === typeActe)?.label ?? typeActe
-}
 
 interface TrameDetailPageProps {
   typeActe: string

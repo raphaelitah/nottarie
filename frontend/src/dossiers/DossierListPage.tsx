@@ -4,13 +4,9 @@ import { supabase } from '../lib/supabase'
 import { Button, Table, type TableColumn } from '../design-system'
 import { Badge } from '../design-system/Badge'
 import type { Dossier } from '../types/database'
-import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
+import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
-
-function typeActeLabel(typeActe: string): string {
-  return ACTE_TYPE_OPTIONS.find((o) => o.value === typeActe)?.label ?? typeActe
-}
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -60,7 +56,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
 
   const columns: TableColumn<Dossier>[] = [
     { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '25%' },
-    { key: 'type_acte', label: 'Type', sortable: true, width: '35%', render: (v) => typeActeLabel(v as string) },
+    { key: 'type_acte', label: 'Type', sortable: true, width: '35%', render: (v) => acteTypeLabel(v as string) },
     {
       key: 'statut', label: 'Statut', width: '18%',
       render: (v) => <Badge status={statutBadgeStatus(v as string)} label={dossierStatutLabel(v as string)} />,

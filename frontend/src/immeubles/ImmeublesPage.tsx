@@ -9,9 +9,11 @@ import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValu
 
 interface ImmeublesPageProps {
   tenantId: string
+  focusId?: string | null
+  onFocusHandled?: () => void
 }
 
-export function ImmeublesPage({ tenantId }: ImmeublesPageProps) {
+export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPageProps) {
   const [immeubles, setImmeubles] = useState<Immeuble[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -19,6 +21,15 @@ export function ImmeublesPage({ tenantId }: ImmeublesPageProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<Immeuble | null>(null)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!focusId) return
+    supabase.from('immeubles').select('*').eq('id', focusId).single().then(({ data }) => {
+      if (data) { setEditing(data); setDrawerOpen(true) }
+      onFocusHandled?.()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId])
 
   async function loadImmeubles() {
     setLoading(true)
