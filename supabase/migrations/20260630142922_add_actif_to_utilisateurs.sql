@@ -1,0 +1,1 @@
+ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS actif boolean NOT NULL DEFAULT true;

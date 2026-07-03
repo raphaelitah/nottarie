@@ -1,4 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { canManageEtude } from '../_shared/authorize.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +33,10 @@ Deno.serve(async (req) => {
     const tenant_id = url.searchParams.get('tenant_id')
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: 'tenant_id requis' }), { status: 400, headers: corsHeaders })
+    }
+
+    if (!(await canManageEtude(supabaseAdmin, caller.id, tenant_id))) {
+      return new Response(JSON.stringify({ error: 'Accès refusé à cette étude.' }), { status: 403, headers: corsHeaders })
     }
 
     const { data, error } = await supabaseAdmin
