@@ -58,6 +58,32 @@ export interface Dossier {
   created_at: string
 }
 
+export type PersonneType = 'physique' | 'morale' | 'tiers_partenaire'
+
+export interface Personne {
+  id: string
+  tenant_id: string
+  type: PersonneType
+  civilite: string | null
+  nom: string | null
+  prenom: string | null
+  raison_sociale: string | null
+  email: string | null
+  telephone: string | null
+  adresse: string | null
+  created_at: string
+}
+
+export interface Comparant {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  personne_id: string
+  qualite: string
+  created_at: string
+  personne?: Personne
+}
+
 export interface Utilisateur {
   id: string
   auth_user_id: string
