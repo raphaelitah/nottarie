@@ -47,6 +47,17 @@ export interface TrameSection {
   updated_at: string
 }
 
+export interface Dossier {
+  id: string
+  tenant_id: string
+  numero: string | null
+  branche: BrancheDroit
+  type_acte: string
+  statut: string
+  acces_restreint: boolean
+  created_at: string
+}
+
 export interface Utilisateur {
   id: string
   auth_user_id: string

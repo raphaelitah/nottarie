@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import { Button } from './design-system/Button'
 import { Badge } from './design-system/Badge'
 import { Select } from './design-system/Select'
 import { ROLE_OPTIONS } from './constants/roles'
 import type { RoleNotarial } from './types/database'
+import { DossiersPage } from './dossiers/DossiersPage'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
+  const [section, setSection] = useState<'accueil' | 'dossiers'>('accueil')
 
   // A user belongs to a single étude in practice — the membership query is
   // scoped to auth_user_id, so this is just "my" row (if any).
@@ -95,33 +98,14 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
       </header>
 
       {/* Content */}
-      <main style={{
-        flex: 1,
-        padding: 'var(--space-8)',
-        maxWidth: 'var(--content-width)',
-        width: '100%',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          marginBottom: 'var(--space-8)',
+      {!membership ? (
+        <main style={{
+          flex: 1,
+          padding: 'var(--space-8)',
+          maxWidth: 'var(--content-width)',
+          width: '100%',
+          margin: '0 auto',
         }}>
-          <h1 style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-xl)',
-            fontWeight: 700,
-            color: 'var(--n-900)',
-            letterSpacing: 'var(--tracking-tight)',
-            margin: '0 0 var(--space-1)',
-          }}>Tableau de bord</h1>
-          <p style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-muted)',
-            margin: 0,
-          }}>Bienvenue dans votre espace Nottarie.</p>
-        </div>
-
-        {!membership && (
           <div style={{
             background: 'var(--surface-base)',
             border: '1px solid var(--border-default)',
@@ -156,8 +140,70 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               Votre compte n'est rattaché à aucune étude. Demandez à l'administrateur de vous ajouter.
             </p>
           </div>
-        )}
-      </main>
+        </main>
+      ) : (
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          {/* Left nav */}
+          <nav style={{
+            width: '220px',
+            flexShrink: 0,
+            background: 'var(--surface-subtle)',
+            padding: 'var(--space-5) var(--space-3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-1)',
+          }}>
+            <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
+            <SidebarLink active={section === 'dossiers'} onClick={() => setSection('dossiers')}>Dossiers</SidebarLink>
+          </nav>
+
+          <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
+            {section === 'dossiers' ? (
+              <DossiersPage tenantId={membership.tenant_id} />
+            ) : (
+              <div>
+                <h1 style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 'var(--text-xl)',
+                  fontWeight: 700,
+                  color: 'var(--n-900)',
+                  letterSpacing: 'var(--tracking-tight)',
+                  margin: '0 0 var(--space-1)',
+                }}>Tableau de bord</h1>
+                <p style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--text-muted)',
+                  margin: 0,
+                }}>Bienvenue dans votre espace Nottarie.</p>
+              </div>
+            )}
+          </main>
+        </div>
+      )}
     </div>
+  )
+}
+
+function SidebarLink({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: 'left',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 500,
+        color: 'var(--color-ink)',
+        textDecoration: active ? 'underline' : 'none',
+        textUnderlineOffset: '3px',
+        background: 'transparent',
+        border: 'none',
+        padding: '6px 8px',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
   )
 }
