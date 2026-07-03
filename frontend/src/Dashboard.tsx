@@ -7,10 +7,11 @@ import { ROLE_OPTIONS } from './constants/roles'
 import type { RoleNotarial } from './types/database'
 import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
+import { ImmeublesPage } from './immeubles/ImmeublesPage'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
-  const [section, setSection] = useState<'accueil' | 'dossiers' | 'personnes'>('accueil')
+  const [section, setSection] = useState<'accueil' | 'dossiers' | 'personnes' | 'immeubles'>('accueil')
 
   // A user belongs to a single étude in practice — the membership query is
   // scoped to auth_user_id, so this is just "my" row (if any).
@@ -157,6 +158,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
             <SidebarLink active={section === 'dossiers'} onClick={() => setSection('dossiers')}>Dossiers</SidebarLink>
             <SidebarLink active={section === 'personnes'} onClick={() => setSection('personnes')}>Personnes</SidebarLink>
+            <SidebarLink active={section === 'immeubles'} onClick={() => setSection('immeubles')}>Immeubles</SidebarLink>
           </nav>
 
           <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
@@ -164,6 +166,8 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <DossiersPage tenantId={membership.tenant_id} />
             ) : section === 'personnes' ? (
               <PersonnesPage tenantId={membership.tenant_id} />
+            ) : section === 'immeubles' ? (
+              <ImmeublesPage tenantId={membership.tenant_id} />
             ) : (
               <div>
                 <h1 style={{

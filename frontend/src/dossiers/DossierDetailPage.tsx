@@ -6,6 +6,7 @@ import type { Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
+import { ImmeublesSection } from './ImmeublesSection'
 
 function typeActeLabel(typeActe: string): string {
   return ACTE_TYPE_OPTIONS.find((o) => o.value === typeActe)?.label ?? typeActe
@@ -122,6 +123,10 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
 
       <div style={{ marginTop: 'var(--space-6)' }}>
         <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
       </div>
     </div>
   )

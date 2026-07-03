@@ -84,6 +84,25 @@ export interface Comparant {
   personne?: Personne
 }
 
+export type RegimeBien = 'propre' | 'communaute'
+
+export interface Immeuble {
+  id: string
+  tenant_id: string
+  regime: RegimeBien | null
+  references_cadastrales: string | null
+  designation: string | null
+  created_at: string
+}
+
+export interface DossierImmeuble {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  immeuble_id: string
+  immeuble?: Immeuble
+}
+
 export interface Utilisateur {
   id: string
   auth_user_id: string
