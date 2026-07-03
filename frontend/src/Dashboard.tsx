@@ -8,9 +8,9 @@ import type { RoleNotarial } from './types/database'
 import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
 import { ImmeublesPage } from './immeubles/ImmeublesPage'
-import { RecherchePage } from './recherche/RecherchePage'
+import { GlobalSearch } from './recherche/GlobalSearch'
 
-type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'recherche'
+type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
@@ -77,6 +77,19 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             </>
           )}
         </div>
+
+        {membership && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0, padding: '0 var(--space-6)' }}>
+            <div style={{ width: '100%', maxWidth: '420px' }}>
+              <GlobalSearch
+                tenantId={membership.tenant_id}
+                onSelectDossier={goToDossier}
+                onSelectPersonne={goToPersonne}
+                onSelectImmeuble={goToImmeuble}
+              />
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
           {isAdmin && membership && (
@@ -166,7 +179,6 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             gap: 'var(--space-1)',
           }}>
             <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
-            <SidebarLink active={section === 'recherche'} onClick={() => setSection('recherche')}>Recherche</SidebarLink>
             <SidebarLink active={section === 'dossiers'} onClick={() => setSection('dossiers')}>Dossiers</SidebarLink>
             <SidebarLink active={section === 'personnes'} onClick={() => setSection('personnes')}>Personnes</SidebarLink>
             <SidebarLink active={section === 'immeubles'} onClick={() => setSection('immeubles')}>Immeubles</SidebarLink>
@@ -179,13 +191,6 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <PersonnesPage tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
             ) : section === 'immeubles' ? (
               <ImmeublesPage tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
-            ) : section === 'recherche' ? (
-              <RecherchePage
-                tenantId={membership.tenant_id}
-                onSelectDossier={goToDossier}
-                onSelectPersonne={goToPersonne}
-                onSelectImmeuble={goToImmeuble}
-              />
             ) : (
               <div>
                 <h1 style={{
