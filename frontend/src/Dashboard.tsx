@@ -20,6 +20,9 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
   const [focusDossierId, setFocusDossierId] = useState<string | null>(null)
   const [focusPersonneId, setFocusPersonneId] = useState<string | null>(null)
   const [focusImmeubleId, setFocusImmeubleId] = useState<string | null>(null)
+  const [dossiersResetKey, setDossiersResetKey] = useState(0)
+  const [personnesResetKey, setPersonnesResetKey] = useState(0)
+  const [immeublesResetKey, setImmeublesResetKey] = useState(0)
 
   function goToDossier(id: string) { setFocusDossierId(id); setSection('dossiers') }
   function goToPersonne(id: string) { setFocusPersonneId(id); setSection('personnes') }
@@ -170,18 +173,18 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             gap: 'var(--space-1)',
           }}>
             <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
-            <SidebarLink active={section === 'dossiers'} onClick={() => setSection('dossiers')}>Dossiers</SidebarLink>
-            <SidebarLink active={section === 'personnes'} onClick={() => setSection('personnes')}>Personnes</SidebarLink>
-            <SidebarLink active={section === 'immeubles'} onClick={() => setSection('immeubles')}>Immeubles</SidebarLink>
+            <SidebarLink active={section === 'dossiers'} onClick={() => { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
+            <SidebarLink active={section === 'personnes'} onClick={() => { setSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
+            <SidebarLink active={section === 'immeubles'} onClick={() => { setSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
           </nav>
 
           <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
             {section === 'dossiers' ? (
-              <DossiersPage tenantId={membership.tenant_id} focusId={focusDossierId} onFocusHandled={() => setFocusDossierId(null)} />
+              <DossiersPage key={dossiersResetKey} tenantId={membership.tenant_id} focusId={focusDossierId} onFocusHandled={() => setFocusDossierId(null)} />
             ) : section === 'personnes' ? (
-              <PersonnesPage tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
+              <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
             ) : section === 'immeubles' ? (
-              <ImmeublesPage tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
+              <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
             ) : (
               <div>
                 <h1 style={{
@@ -216,6 +219,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                   value={activeRole ?? undefined}
                   options={ROLE_OPTIONS}
                   onChange={e => setActiveRole(membership.tenant_id, e.target.value as RoleNotarial)}
+                  height="30px"
                 />
               </div>
             </div>
