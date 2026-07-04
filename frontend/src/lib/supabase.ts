@@ -8,3 +8,8 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
+
+if (import.meta.env.DEV) {
+  // Lets preview tooling sign in via window.supabase.auth.signInWithPassword(...) instead of driving the login form.
+  ;(window as unknown as { supabase: typeof supabase }).supabase = supabase
+}
