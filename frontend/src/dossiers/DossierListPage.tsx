@@ -68,14 +68,18 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   }
 
   const columns: TableColumn<Dossier>[] = [
-    { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '25%' },
-    { key: 'type_acte', label: 'Type', sortable: true, width: '35%', render: (v) => acteTypeLabel(v as string) },
+    { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '20%' },
+    { key: 'type_acte', label: 'Type', sortable: true, width: '28%', render: (v) => acteTypeLabel(v as string) },
     {
-      key: 'statut', label: 'Statut', width: '18%',
+      key: 'statut', label: 'Statut', width: '14%',
       render: (v) => <Badge status={statutBadgeStatus(v as string)} label={dossierStatutLabel(v as string)} />,
     },
     {
-      key: 'created_at', label: 'Créé le', width: '22%', sortable: true,
+      key: 'created_at', label: 'Créé le', width: '18%', sortable: true,
+      render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
+    },
+    {
+      key: 'updated_at', label: 'Mis à jour', width: '20%', sortable: true,
       render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
     },
   ]

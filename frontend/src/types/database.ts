@@ -59,6 +59,8 @@ export interface Dossier {
   notaire_id: string
   cree_par: string | null
   created_at: string
+  updated_at: string
+  mis_a_jour_par: string | null
 }
 
 export interface DossierAcces {
