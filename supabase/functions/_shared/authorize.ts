@@ -23,3 +23,15 @@ export async function isEtudeAdmin(admin: SupabaseClient, authUserId: string, te
 export async function canManageEtude(admin: SupabaseClient, authUserId: string, tenantId: string): Promise<boolean> {
   return (await isPlatformAdmin(admin, authUserId)) || (await isEtudeAdmin(admin, authUserId, tenantId))
 }
+
+/** Any role, as long as they belong to the étude — used for tenant-scoped actions
+ * that any notarial staff member may perform (e.g. generating an acte). */
+export async function isTenantMember(admin: SupabaseClient, authUserId: string, tenantId: string): Promise<boolean> {
+  const { data } = await admin
+    .from('utilisateurs')
+    .select('auth_user_id')
+    .eq('auth_user_id', authUserId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  return !!data
+}

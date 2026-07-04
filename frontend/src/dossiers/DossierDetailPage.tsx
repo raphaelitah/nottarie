@@ -7,6 +7,7 @@ import { acteTypeLabel } from '../constants/acteTypes'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
+import { ActesSection } from './ActesSection'
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -123,6 +124,10 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
 
       <div style={{ marginTop: 'var(--space-6)' }}>
         <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        <ActesSection dossier={dossier} />
       </div>
     </div>
   )

@@ -103,6 +103,28 @@ export interface DossierImmeuble {
   immeuble?: Immeuble
 }
 
+export interface DocumentRow {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  acte_id: string | null
+  nom: string
+  storage_path: string
+  created_at: string
+}
+
+export interface Acte {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  trame_id: string
+  numero: string | null
+  statut: string
+  donnees: Record<string, string>
+  created_at: string
+  documents?: DocumentRow[]
+}
+
 export interface Utilisateur {
   id: string
   auth_user_id: string
