@@ -19,9 +19,10 @@ interface DossierDetailPageProps {
   dossier: Dossier
   onBack: () => void
   onUpdated: (dossier: Dossier) => void
+  onOpenComposer: () => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }: DossierDetailPageProps) {
   const [editingNumero, setEditingNumero] = useState(false)
   const [numeroDraft, setNumeroDraft] = useState(dossier.numero ?? '')
   const [savingNumero, setSavingNumero] = useState(false)
@@ -153,7 +154,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
       </div>
 
       <div style={{ marginTop: 'var(--space-6)' }}>
-        <ActesSection dossier={dossier} />
+        <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
       </div>
 
       <div style={{ marginTop: 'var(--space-6)' }}>

@@ -20,6 +20,7 @@ export function extractVariablesFromDoc(doc: JSONNode | Record<string, unknown>)
           key,
           label: String(node.attrs.label ?? ''),
           field_type: node.attrs.fieldType === 'manuel' ? 'manuel' : 'auto',
+          source: typeof node.attrs.source === 'string' ? node.attrs.source : null,
         })
       }
     }

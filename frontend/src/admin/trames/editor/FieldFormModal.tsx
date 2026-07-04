@@ -3,10 +3,25 @@ import { Modal, Button, Input, Select } from '../../../design-system'
 import type { SectionFieldType } from '../../../types/database'
 import { SNAKE_CASE_RE, slugifyKey } from './fieldKey'
 import type { ChampAttrs } from './fieldNode'
+import {
+  parseChampSource,
+  buildChampSource,
+  type ChampSourceKind,
+  SESSION_ATTRIBUTE_OPTIONS,
+  ETUDE_ATTRIBUTE_OPTIONS,
+  PERSONNE_ATTRIBUTE_OPTIONS,
+  COMPARANT_QUALITE_OPTIONS,
+} from '../../../trames/champSource'
 
 const FIELD_TYPE_OPTIONS: { value: SectionFieldType; label: string }[] = [
   { value: 'auto', label: 'Automatique (rempli depuis le dossier)' },
   { value: 'manuel', label: 'Manuel (saisi par le rédacteur)' },
+]
+
+const SOURCE_KIND_OPTIONS: { value: ChampSourceKind; label: string }[] = [
+  { value: 'comparant', label: 'Comparant du dossier' },
+  { value: 'etude', label: "Étude" },
+  { value: 'session', label: 'Séance (date, notaire)' },
 ]
 
 interface FieldFormModalProps {
@@ -23,6 +38,9 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
   const [key, setKey] = useState('')
   const [keyEdited, setKeyEdited] = useState(false)
   const [fieldType, setFieldType] = useState<SectionFieldType>('auto')
+  const [sourceKind, setSourceKind] = useState<ChampSourceKind>('comparant')
+  const [sourceQualite, setSourceQualite] = useState(COMPARANT_QUALITE_OPTIONS[0])
+  const [sourceAttribute, setSourceAttribute] = useState(PERSONNE_ATTRIBUTE_OPTIONS[0].value)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -31,6 +49,10 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
     setKey(initialValues?.key ?? '')
     setKeyEdited(!!initialValues?.key)
     setFieldType(initialValues?.fieldType ?? 'auto')
+    const parsed = parseChampSource(initialValues?.source)
+    setSourceKind(parsed?.kind ?? 'comparant')
+    setSourceQualite(parsed?.qualite ?? COMPARANT_QUALITE_OPTIONS[0])
+    setSourceAttribute(parsed?.attribute ?? PERSONNE_ATTRIBUTE_OPTIONS[0].value)
     setError(null)
   }, [open, initialValues])
 
@@ -61,7 +83,14 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
       setError('Le libellé est obligatoire.')
       return
     }
-    onSave({ key: normalizedKey, label: label.trim(), fieldType })
+    const source = fieldType === 'auto'
+      ? buildChampSource(
+          sourceKind === 'comparant'
+            ? { kind: 'comparant', qualite: sourceQualite, attribute: sourceAttribute }
+            : { kind: sourceKind, attribute: sourceAttribute }
+        )
+      : null
+    onSave({ key: normalizedKey, label: label.trim(), fieldType, source })
   }
 
   return (
@@ -103,6 +132,43 @@ export function FieldFormModal({ open, initialValues, existingKeys, onSave, onDe
           value={fieldType}
           onChange={(e) => setFieldType(e.target.value as SectionFieldType)}
         />
+
+        {fieldType === 'auto' && (
+          <>
+            <Select
+              label="Source"
+              options={SOURCE_KIND_OPTIONS}
+              value={sourceKind}
+              onChange={(e) => {
+                const kind = e.target.value as ChampSourceKind
+                setSourceKind(kind)
+                setSourceAttribute(
+                  kind === 'session' ? SESSION_ATTRIBUTE_OPTIONS[0].value
+                  : kind === 'etude' ? ETUDE_ATTRIBUTE_OPTIONS[0].value
+                  : PERSONNE_ATTRIBUTE_OPTIONS[0].value
+                )
+              }}
+            />
+            {sourceKind === 'comparant' && (
+              <Select
+                label="Qualité du comparant"
+                options={COMPARANT_QUALITE_OPTIONS}
+                value={sourceQualite}
+                onChange={(e) => setSourceQualite(e.target.value)}
+              />
+            )}
+            <Select
+              label="Attribut"
+              options={
+                sourceKind === 'session' ? SESSION_ATTRIBUTE_OPTIONS
+                : sourceKind === 'etude' ? ETUDE_ATTRIBUTE_OPTIONS
+                : PERSONNE_ATTRIBUTE_OPTIONS
+              }
+              value={sourceAttribute}
+              onChange={(e) => setSourceAttribute(e.target.value)}
+            />
+          </>
+        )}
       </div>
     </Modal>
   )

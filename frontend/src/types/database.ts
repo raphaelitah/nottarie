@@ -28,6 +28,7 @@ export interface SectionVariable {
   key: string
   label: string
   field_type: SectionFieldType
+  source?: string | null
 }
 
 // A trame belongs to exactly one type_acte. Each trame has one row with

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Dossier } from '../types/database'
 import { DossierListPage } from './DossierListPage'
 import { DossierDetailPage } from './DossierDetailPage'
+import { ActeComposerPage } from './composer/ActeComposerPage'
 
 interface DossiersPageProps {
   tenantId: string
@@ -12,6 +13,7 @@ interface DossiersPageProps {
 
 export function DossiersPage({ tenantId, focusId, onFocusHandled }: DossiersPageProps) {
   const [selected, setSelected] = useState<Dossier | null>(null)
+  const [composing, setComposing] = useState(false)
 
   useEffect(() => {
     if (!focusId) return
@@ -22,12 +24,23 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled }: DossiersPage
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId])
 
+  if (selected && composing) {
+    return (
+      <ActeComposerPage
+        dossier={selected}
+        onBack={() => setComposing(false)}
+        onGenerated={() => setComposing(false)}
+      />
+    )
+  }
+
   return selected
     ? (
       <DossierDetailPage
         dossier={selected}
         onBack={() => setSelected(null)}
         onUpdated={setSelected}
+        onOpenComposer={() => setComposing(true)}
       />
     )
     : <DossierListPage tenantId={tenantId} onSelect={setSelected} />

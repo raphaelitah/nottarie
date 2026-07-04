@@ -3,7 +3,6 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button } from '../design-system'
 import type { Acte, DocumentRow, Dossier } from '../types/database'
-import { ActeGenerationDrawer } from './ActeGenerationDrawer'
 
 function acteStatutBadge(statut: string): 'draft' | 'signed' | 'ongoing' {
   if (statut === 'signe') return 'signed'
@@ -13,13 +12,13 @@ function acteStatutBadge(statut: string): 'draft' | 'signed' | 'ongoing' {
 
 interface ActesSectionProps {
   dossier: Dossier
+  onOpenComposer: () => void
 }
 
-export function ActesSection({ dossier }: ActesSectionProps) {
+export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
   const [actes, setActes] = useState<Acte[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   async function loadActes() {
@@ -37,11 +36,6 @@ export function ActesSection({ dossier }: ActesSectionProps) {
 
   useEffect(() => { loadActes() }, [dossier.id])
 
-  function handleGenerated() {
-    setDrawerOpen(false)
-    loadActes()
-  }
-
   async function handleDownload(document: DocumentRow) {
     setDownloadingId(document.id)
     const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 60)
@@ -54,7 +48,7 @@ export function ActesSection({ dossier }: ActesSectionProps) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Actes</h3>
-        <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Générer un acte</Button>
+        <Button variant="primary" size="sm" onClick={onOpenComposer}>+ Générer un acte</Button>
       </div>
 
       {error && (
@@ -92,13 +86,6 @@ export function ActesSection({ dossier }: ActesSectionProps) {
           })}
         </div>
       )}
-
-      <ActeGenerationDrawer
-        open={drawerOpen}
-        dossier={dossier}
-        onClose={() => setDrawerOpen(false)}
-        onGenerated={handleGenerated}
-      />
     </div>
   )
 }

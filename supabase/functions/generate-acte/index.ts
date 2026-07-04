@@ -15,14 +15,7 @@ interface TiptapNode {
   marks?: { type: string }[]
 }
 
-interface TrameSectionRow {
-  id: string
-  title: string
-  content: TiptapNode
-  is_standard: boolean
-}
-
-function inlineRuns(nodes: TiptapNode[] | undefined, values: Record<string, string>): TextRun[] {
+function inlineRuns(nodes: TiptapNode[] | undefined, donnees: Record<string, string>): TextRun[] {
   const runs: TextRun[] = []
   for (const node of nodes ?? []) {
     if (node.type === 'text') {
@@ -32,14 +25,15 @@ function inlineRuns(nodes: TiptapNode[] | undefined, values: Record<string, stri
     } else if (node.type === 'champ') {
       const key = String(node.attrs?.key ?? '')
       const label = String(node.attrs?.label ?? key)
-      const value = values[key]
-      runs.push(new TextRun({ text: value && value.trim() ? value : `[${label}]`, bold: !(value && value.trim()) }))
+      const value = String(node.attrs?.value ?? '')
+      if (key && value.trim()) donnees[key] = value.trim()
+      runs.push(new TextRun({ text: value.trim() ? value : `[${label}]`, bold: !value.trim() }))
     }
   }
   return runs
 }
 
-function paragraphsFromSection(doc: TiptapNode, values: Record<string, string>): Paragraph[] {
+function paragraphsFromDoc(doc: TiptapNode, donnees: Record<string, string>): Paragraph[] {
   const paragraphs: Paragraph[] = []
   for (const node of doc.content ?? []) {
     if (node.type === 'heading') {
@@ -47,14 +41,14 @@ function paragraphsFromSection(doc: TiptapNode, values: Record<string, string>):
       paragraphs.push(new Paragraph({
         heading: level <= 1 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
         spacing: { before: 240, after: 120 },
-        children: inlineRuns(node.content, values),
+        children: inlineRuns(node.content, donnees),
       }))
     } else if (node.type === 'paragraph') {
-      paragraphs.push(new Paragraph({ spacing: { after: 120 }, children: inlineRuns(node.content, values) }))
+      paragraphs.push(new Paragraph({ spacing: { after: 120 }, children: inlineRuns(node.content, donnees) }))
     } else if (node.type === 'bulletList') {
       for (const item of node.content ?? []) {
         for (const p of item.content ?? []) {
-          paragraphs.push(new Paragraph({ bullet: { level: 0 }, spacing: { after: 80 }, children: inlineRuns(p.content, values) }))
+          paragraphs.push(new Paragraph({ bullet: { level: 0 }, spacing: { after: 80 }, children: inlineRuns(p.content, donnees) }))
         }
       }
     }
@@ -85,9 +79,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Session invalide' }), { status: 401, headers: corsHeaders })
     }
 
-    const { dossier_id, section_ids, values } = await req.json()
-    if (!dossier_id || typeof values !== 'object' || values === null) {
-      return new Response(JSON.stringify({ error: 'dossier_id et values sont requis' }), { status: 400, headers: corsHeaders })
+    const { dossier_id, content } = await req.json()
+    if (!dossier_id || !content || typeof content !== 'object') {
+      return new Response(JSON.stringify({ error: 'dossier_id et content sont requis' }), { status: 400, headers: corsHeaders })
     }
 
     const { data: dossier, error: dossierError } = await supabaseAdmin
@@ -103,17 +97,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Accès refusé à ce dossier.' }), { status: 403, headers: corsHeaders })
     }
 
-    const { data: standard, error: standardError } = await supabaseAdmin
-      .from('trame_sections')
-      .select('id, title, content, is_standard')
-      .eq('type_acte', dossier.type_acte)
-      .eq('is_standard', true)
-      .eq('is_published', true)
-      .maybeSingle()
-    if (standardError || !standard) {
-      return new Response(JSON.stringify({ error: "Aucun modèle standard publié pour ce type d'acte." }), { status: 404, headers: corsHeaders })
-    }
-
     const { data: trame } = await supabaseAdmin
       .from('trames')
       .select('id')
@@ -123,40 +106,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Aucune trame nationale enregistrée pour ce type d'acte." }), { status: 404, headers: corsHeaders })
     }
 
-    let optionalSections: TrameSectionRow[] = []
-    const requestedIds = Array.isArray(section_ids) ? section_ids.filter((id) => typeof id === 'string') : []
-    if (requestedIds.length > 0) {
-      const { data: sections, error: sectionsError } = await supabaseAdmin
-        .from('trame_sections')
-        .select('id, title, content, is_standard')
-        .eq('type_acte', dossier.type_acte)
-        .eq('is_published', true)
-        .eq('is_standard', false)
-        .in('id', requestedIds)
-        .order('category')
-        .order('title')
-      if (sectionsError) {
-        return new Response(JSON.stringify({ error: sectionsError.message }), { status: 500, headers: corsHeaders })
-      }
-      optionalSections = sections ?? []
-    }
-
-    const orderedSections: TrameSectionRow[] = [standard, ...optionalSections]
-    const stringValues: Record<string, string> = {}
-    for (const [key, value] of Object.entries(values as Record<string, unknown>)) {
-      stringValues[key] = value == null ? '' : String(value)
-    }
-
-    const paragraphs: Paragraph[] = []
-    for (const section of orderedSections) {
-      paragraphs.push(...paragraphsFromSection(section.content, stringValues))
-      paragraphs.push(new Paragraph({ text: '' }))
-    }
+    const donnees: Record<string, string> = {}
+    const paragraphs = paragraphsFromDoc(content as TiptapNode, donnees)
 
     const doc = new Document({ sections: [{ children: paragraphs }] })
     const buffer = await Packer.toBuffer(doc)
 
-    const fileName = `${dossier.numero || dossier.id} - ${standard.title}.docx`
+    const fileName = `${dossier.numero || dossier.id} - ${dossier.type_acte}.docx`
     const storagePath = `${dossier.tenant_id}/${dossier.id}/${crypto.randomUUID()}.docx`
 
     const { error: uploadError } = await supabaseAdmin.storage
@@ -175,7 +131,7 @@ Deno.serve(async (req) => {
         dossier_id: dossier.id,
         trame_id: trame.id,
         statut: 'brouillon',
-        donnees: stringValues,
+        donnees,
       })
       .select()
       .single()

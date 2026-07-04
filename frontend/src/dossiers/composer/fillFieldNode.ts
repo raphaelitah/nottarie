@@ -1,24 +1,19 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
-import type { SectionFieldType } from '../../../types/database'
-import { FieldNodeView } from './FieldNodeView'
+import { FieldFillNodeView } from './FieldFillNodeView'
 
-export interface ChampAttrs {
+// Same node name ("champ") as the admin authoring extension, but a different
+// Tiptap editor instance — this one renders a resolved/fillable value instead
+// of exposing key/label/type editing.
+export interface FillChampAttrs {
   key: string
   label: string
-  fieldType: SectionFieldType
+  fieldType: 'auto' | 'manuel'
   source?: string | null
+  value: string
 }
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    champ: {
-      insertChamp: (attrs: ChampAttrs) => ReturnType
-    }
-  }
-}
-
-export const FieldNode = Node.create({
+export const FillFieldNode = Node.create({
   name: 'champ',
   group: 'inline',
   inline: true,
@@ -31,6 +26,7 @@ export const FieldNode = Node.create({
       label: { default: '' },
       fieldType: { default: 'auto' },
       source: { default: null },
+      value: { default: '' },
     }
   },
 
@@ -45,6 +41,7 @@ export const FieldNode = Node.create({
             label: element.getAttribute('data-label') ?? '',
             fieldType: element.getAttribute('data-field-type') ?? 'auto',
             source: element.getAttribute('data-source') || null,
+            value: element.getAttribute('data-value') ?? '',
           }
         },
       },
@@ -60,21 +57,13 @@ export const FieldNode = Node.create({
         'data-label': node.attrs.label,
         'data-field-type': node.attrs.fieldType,
         'data-source': node.attrs.source ?? '',
+        'data-value': node.attrs.value ?? '',
       }),
-      `{{ ${node.attrs.key} }}`,
+      node.attrs.value || `{{ ${node.attrs.key} }}`,
     ]
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(FieldNodeView)
-  },
-
-  addCommands() {
-    return {
-      insertChamp:
-        (attrs: ChampAttrs) =>
-        ({ chain }) =>
-          chain().insertContent({ type: this.name, attrs }).run(),
-    }
+    return ReactNodeViewRenderer(FieldFillNodeView)
   },
 })
