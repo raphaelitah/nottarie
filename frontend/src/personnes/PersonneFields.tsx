@@ -1,6 +1,11 @@
 import { Input, Select } from '../design-system'
 import type { Personne, PersonneType } from '../types/database'
-import { PERSONNE_TYPE_OPTIONS, CIVILITE_OPTIONS } from '../constants/personneTypes'
+import {
+  PERSONNE_TYPE_OPTIONS,
+  CIVILITE_OPTIONS,
+  SITUATION_MATRIMONIALE_OPTIONS,
+  REGIME_MATRIMONIAL_OPTIONS,
+} from '../constants/personneTypes'
 
 export interface PersonneFormValues {
   type: PersonneType
@@ -11,6 +16,13 @@ export interface PersonneFormValues {
   email: string
   telephone: string
   adresse: string
+  date_naissance: string
+  lieu_naissance: string
+  nationalite: string
+  situation_matrimoniale: string
+  regime_matrimonial: string
+  date_deces: string
+  lieu_deces: string
 }
 
 export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
@@ -22,6 +34,13 @@ export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
   email: '',
   telephone: '',
   adresse: '',
+  date_naissance: '',
+  lieu_naissance: '',
+  nationalite: '',
+  situation_matrimoniale: '',
+  regime_matrimonial: '',
+  date_deces: '',
+  lieu_deces: '',
 }
 
 export function personneToForm(p: Personne): PersonneFormValues {
@@ -34,6 +53,13 @@ export function personneToForm(p: Personne): PersonneFormValues {
     email: p.email ?? '',
     telephone: p.telephone ?? '',
     adresse: p.adresse ?? '',
+    date_naissance: p.date_naissance ?? '',
+    lieu_naissance: p.lieu_naissance ?? '',
+    nationalite: p.nationalite ?? '',
+    situation_matrimoniale: p.situation_matrimoniale ?? '',
+    regime_matrimonial: p.regime_matrimonial ?? '',
+    date_deces: p.date_deces ?? '',
+    lieu_deces: p.lieu_deces ?? '',
   }
 }
 
@@ -51,16 +77,24 @@ export function personneFormError(values: PersonneFormValues): string | null {
 }
 
 export function personneFormToInsertPayload(values: PersonneFormValues, tenantId: string) {
+  const isPhysique = values.type === 'physique'
   return {
     tenant_id: tenantId,
     type: values.type,
-    civilite: values.type === 'physique' ? (values.civilite || null) : null,
-    nom: values.type === 'physique' ? (values.nom.trim() || null) : null,
-    prenom: values.type === 'physique' ? (values.prenom.trim() || null) : null,
-    raison_sociale: values.type !== 'physique' ? (values.raison_sociale.trim() || null) : null,
+    civilite: isPhysique ? (values.civilite || null) : null,
+    nom: isPhysique ? (values.nom.trim() || null) : null,
+    prenom: isPhysique ? (values.prenom.trim() || null) : null,
+    raison_sociale: !isPhysique ? (values.raison_sociale.trim() || null) : null,
     email: values.email.trim() || null,
     telephone: values.telephone.trim() || null,
     adresse: values.adresse.trim() || null,
+    date_naissance: isPhysique ? (values.date_naissance || null) : null,
+    lieu_naissance: isPhysique ? (values.lieu_naissance.trim() || null) : null,
+    nationalite: isPhysique ? (values.nationalite.trim() || null) : null,
+    situation_matrimoniale: isPhysique ? (values.situation_matrimoniale || null) : null,
+    regime_matrimonial: isPhysique ? (values.regime_matrimonial || null) : null,
+    date_deces: isPhysique ? (values.date_deces || null) : null,
+    lieu_deces: isPhysique ? (values.lieu_deces.trim() || null) : null,
   }
 }
 
@@ -83,18 +117,16 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
       />
 
       {values.type === 'physique' ? (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '16px' }}>
-            <Select
-              label="Civilité"
-              options={CIVILITE_OPTIONS}
-              value={values.civilite}
-              onChange={(e) => set({ civilite: e.target.value })}
-            />
-            <Input label="Prénom" value={values.prenom} onChange={(e) => set({ prenom: e.target.value })} />
-            <Input label="Nom" required value={values.nom} onChange={(e) => set({ nom: e.target.value })} />
-          </div>
-        </>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '16px' }}>
+          <Select
+            label="Civilité"
+            options={CIVILITE_OPTIONS}
+            value={values.civilite}
+            onChange={(e) => set({ civilite: e.target.value })}
+          />
+          <Input label="Prénom" value={values.prenom} onChange={(e) => set({ prenom: e.target.value })} />
+          <Input label="Nom" required value={values.nom} onChange={(e) => set({ nom: e.target.value })} />
+        </div>
       ) : (
         <Input
           label="Raison sociale"
@@ -111,6 +143,74 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
       </div>
 
       <Input label="Adresse" value={values.adresse} onChange={(e) => set({ adresse: e.target.value })} />
+
+      {values.type === 'physique' && (
+        <>
+          <div style={sectionLabelStyle}>État civil</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Input
+              label="Date de naissance"
+              type="date"
+              value={values.date_naissance}
+              onChange={(e) => set({ date_naissance: e.target.value })}
+            />
+            <Input
+              label="Lieu de naissance"
+              value={values.lieu_naissance}
+              onChange={(e) => set({ lieu_naissance: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Nationalité"
+            placeholder="ex. Française"
+            value={values.nationalite}
+            onChange={(e) => set({ nationalite: e.target.value })}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Select
+              label="Situation matrimoniale"
+              options={SITUATION_MATRIMONIALE_OPTIONS}
+              value={values.situation_matrimoniale}
+              onChange={(e) => set({ situation_matrimoniale: e.target.value })}
+            />
+            <Select
+              label="Régime matrimonial"
+              options={REGIME_MATRIMONIAL_OPTIONS}
+              value={values.regime_matrimonial}
+              onChange={(e) => set({ regime_matrimonial: e.target.value })}
+            />
+          </div>
+
+          <div style={sectionLabelStyle}>Décès (le cas échéant)</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Input
+              label="Date de décès"
+              type="date"
+              value={values.date_deces}
+              onChange={(e) => set({ date_deces: e.target.value })}
+            />
+            <Input
+              label="Lieu de décès"
+              value={values.lieu_deces}
+              onChange={(e) => set({ lieu_deces: e.target.value })}
+            />
+          </div>
+        </>
+      )}
     </div>
   )
+}
+
+const sectionLabelStyle = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  letterSpacing: 'var(--tracking-caps)',
+  textTransform: 'uppercase' as const,
+  marginTop: '4px',
 }

@@ -5,6 +5,7 @@ import { Button } from '../design-system'
 import type { DossierImmeuble, Immeuble } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/ImmeubleFields'
 import { regimeBienLabel } from '../constants/regimeBien'
+import { typeBienLabel } from '../constants/typeBien'
 import { ImmeubleAttachDrawer, type ImmeubleAttachResult } from './ImmeubleAttachDrawer'
 
 interface ImmeublesSectionProps {
@@ -100,6 +101,7 @@ export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps)
             <div key={l.id} style={row}>
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{l.immeuble ? immeubleDisplayName(l.immeuble) : 'Immeuble inconnu'}</span>
+                {l.immeuble?.type_bien && <span style={meta}>{typeBienLabel(l.immeuble.type_bien)}</span>}
                 {l.immeuble?.regime && <span style={meta}>{regimeBienLabel(l.immeuble.regime)}</span>}
               </div>
               <Button variant="ghost" size="sm" disabled={removingId === l.id} onClick={() => handleDetach(l)}>

@@ -6,6 +6,22 @@ export const PERSONNE_TYPE_OPTIONS: { value: string; label: string }[] = [
 
 export const CIVILITE_OPTIONS = ['M.', 'Mme']
 
+export const SITUATION_MATRIMONIALE_OPTIONS = [
+  'Célibataire',
+  'Marié(e)',
+  'Pacsé(e)',
+  'Divorcé(e)',
+  'Veuf/Veuve',
+]
+
+export const REGIME_MATRIMONIAL_OPTIONS = [
+  'Communauté légale',
+  'Communauté universelle',
+  'Séparation de biens',
+  'Participation aux acquêts',
+  'Non marié(e)',
+]
+
 // Common comparant qualités across the MVP acte types (succession, donation) — offered
 // as suggestions, not an enum: qualite is freeform text (BRD doesn't constrain it).
 export const QUALITE_SUGGESTIONS = [

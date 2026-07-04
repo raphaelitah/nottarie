@@ -71,6 +71,13 @@ export interface Personne {
   email: string | null
   telephone: string | null
   adresse: string | null
+  date_naissance: string | null
+  lieu_naissance: string | null
+  nationalite: string | null
+  situation_matrimoniale: string | null
+  regime_matrimonial: string | null
+  date_deces: string | null
+  lieu_deces: string | null
   created_at: string
 }
 
@@ -84,6 +91,13 @@ export interface Comparant {
   personne?: Personne
 }
 
+export interface QualiteComparant {
+  id: string
+  tenant_id: string
+  libelle: string
+  created_at: string
+}
+
 export type RegimeBien = 'propre' | 'communaute'
 
 export interface Immeuble {
@@ -92,6 +106,11 @@ export interface Immeuble {
   regime: RegimeBien | null
   references_cadastrales: string | null
   designation: string | null
+  type_bien: string | null
+  adresse: string | null
+  ville: string | null
+  code_postal: string | null
+  pays: string
   created_at: string
 }
 

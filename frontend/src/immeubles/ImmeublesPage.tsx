@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Button, Input, Table, type TableColumn } from '../design-system'
 import type { Immeuble } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
+import { typeBienLabel } from '../constants/typeBien'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './ImmeubleFields'
 
@@ -72,14 +73,17 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
   const filtered = query
     ? immeubles.filter((i) =>
         immeubleDisplayName(i).toLowerCase().includes(query) ||
-        (i.references_cadastrales ?? '').toLowerCase().includes(query)
+        (i.references_cadastrales ?? '').toLowerCase().includes(query) ||
+        (i.ville ?? '').toLowerCase().includes(query)
       )
     : immeubles
 
   const columns: TableColumn<Immeuble>[] = [
-    { key: 'designation', label: 'Désignation', width: '40%', render: (_v, row) => immeubleDisplayName(row) },
-    { key: 'references_cadastrales', label: 'Références cadastrales', width: '35%' },
-    { key: 'regime', label: 'Régime', width: '25%', render: (v) => regimeBienLabel(v as string | null) },
+    { key: 'designation', label: 'Désignation', width: '30%', render: (_v, row) => immeubleDisplayName(row) },
+    { key: 'type_bien', label: 'Type', width: '20%', render: (v) => typeBienLabel(v as string | null) },
+    { key: 'ville', label: 'Ville', width: '20%' },
+    { key: 'references_cadastrales', label: 'Références cadastrales', width: '20%' },
+    { key: 'regime', label: 'Régime', width: '10%', render: (v) => regimeBienLabel(v as string | null) },
   ]
 
   return (

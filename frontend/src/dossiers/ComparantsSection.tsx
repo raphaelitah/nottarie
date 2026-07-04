@@ -113,6 +113,7 @@ export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProp
 
       <ComparantFormDrawer
         open={drawerOpen}
+        tenantId={tenantId}
         personnes={personnes}
         saving={saving}
         onSave={handleAdd}
