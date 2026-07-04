@@ -85,6 +85,9 @@ export interface Personne {
   email: string | null
   telephone: string | null
   adresse: string | null
+  code_postal: string | null
+  ville: string | null
+  pays: string | null
   date_naissance: string | null
   lieu_naissance: string | null
   pays_naissance: string | null

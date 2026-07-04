@@ -17,6 +17,9 @@ export interface PersonneFormValues {
   email: string
   telephone: string
   adresse: string
+  code_postal: string
+  ville: string
+  pays: string
   date_naissance: string
   lieu_naissance: string
   pays_naissance: string
@@ -37,6 +40,9 @@ export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
   email: '',
   telephone: '',
   adresse: '',
+  code_postal: '',
+  ville: '',
+  pays: 'France',
   date_naissance: '',
   lieu_naissance: '',
   pays_naissance: 'France',
@@ -58,6 +64,9 @@ export function personneToForm(p: Personne): PersonneFormValues {
     email: p.email ?? '',
     telephone: p.telephone ?? '',
     adresse: p.adresse ?? '',
+    code_postal: p.code_postal ?? '',
+    ville: p.ville ?? '',
+    pays: p.pays ?? 'France',
     date_naissance: p.date_naissance ?? '',
     lieu_naissance: p.lieu_naissance ?? '',
     pays_naissance: p.pays_naissance ?? 'France',
@@ -95,6 +104,9 @@ export function personneFormToInsertPayload(values: PersonneFormValues, tenantId
     email: values.email.trim() || null,
     telephone: values.telephone.trim() || null,
     adresse: values.adresse.trim() || null,
+    code_postal: values.code_postal.trim() || null,
+    ville: values.ville.trim() || null,
+    pays: values.pays || null,
     date_naissance: isPhysique ? (values.date_naissance || null) : null,
     lieu_naissance: isPhysique ? (values.lieu_naissance.trim() || null) : null,
     pays_naissance: isPhysique ? (values.pays_naissance || null) : null,
@@ -160,6 +172,17 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
       </div>
 
       <Input label="Adresse" value={values.adresse} onChange={(e) => set({ adresse: e.target.value })} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '16px' }}>
+        <Input label="Code postal" value={values.code_postal} onChange={(e) => set({ code_postal: e.target.value })} />
+        <Input label="Ville" value={values.ville} onChange={(e) => set({ ville: e.target.value })} />
+        <Select
+          label="Pays"
+          options={PAYS_OPTIONS}
+          value={values.pays}
+          onChange={(e) => set({ pays: e.target.value })}
+        />
+      </div>
 
       {values.type === 'physique' && (
         <>
