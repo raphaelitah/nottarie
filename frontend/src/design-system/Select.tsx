@@ -17,6 +17,7 @@ interface SelectProps {
   disabled?: boolean
   required?: boolean
   id?: string
+  height?: string
 }
 
 export function Select({
@@ -31,6 +32,7 @@ export function Select({
   disabled = false,
   required = false,
   id,
+  height = '36px',
 }: SelectProps) {
   const [focused, setFocused] = useState(false)
   const selectId = id ?? (label ? label.replace(/\s+/g, '-').toLowerCase() : undefined)
@@ -66,7 +68,7 @@ export function Select({
           onBlur={() => setFocused(false)}
           style={{
             width: '100%',
-            height: '36px',
+            height,
             padding: '0 32px 0 12px',
             fontFamily: "'Sora', system-ui, sans-serif",
             fontSize: '14px',
