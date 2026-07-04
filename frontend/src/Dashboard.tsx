@@ -74,11 +74,6 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                   textOverflow: 'ellipsis',
                   minWidth: 0,
                 }}>{membership.etude.raison_sociale}</span>
-              <div style={{ flexShrink: 0 }}>
-                {activeRole
-                  ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
-                  : <Badge status="archived" label="Aucun rôle" />}
-              </div>
             </>
           )}
         </div>
@@ -102,6 +97,11 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             fontSize: 'var(--text-xs)',
             color: 'var(--n-400)',
           }}>{user?.email}</span>
+          {membership && (
+            activeRole
+              ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
+              : <Badge status="archived" label="Aucun rôle" />
+          )}
           <IconButton
             title="Se déconnecter"
             onClick={signOut}
