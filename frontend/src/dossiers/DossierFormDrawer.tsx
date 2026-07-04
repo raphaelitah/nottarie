@@ -1,25 +1,30 @@
 import { useEffect, useState } from 'react'
 import { Drawer, Button, Input, Select } from '../design-system'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
+import type { Utilisateur } from '../types/database'
+import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 
 export interface DossierFormValues {
   type_acte: string
   numero: string
+  notaire_id: string
 }
 
 const EMPTY: DossierFormValues = {
   type_acte: '',
   numero: '',
+  notaire_id: '',
 }
 
 interface DossierFormDrawerProps {
   open: boolean
   saving: boolean
+  notaires: Utilisateur[]
   onSave: (values: DossierFormValues) => void
   onClose: () => void
 }
 
-export function DossierFormDrawer({ open, saving, onSave, onClose }: DossierFormDrawerProps) {
+export function DossierFormDrawer({ open, saving, notaires, onSave, onClose }: DossierFormDrawerProps) {
   const [values, setValues] = useState<DossierFormValues>(EMPTY)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,6 +37,7 @@ export function DossierFormDrawer({ open, saving, onSave, onClose }: DossierForm
 
   function handleSubmit() {
     if (!values.type_acte) { setError("Le type de dossier est obligatoire."); return }
+    if (!values.notaire_id) { setError("Le notaire responsable est obligatoire."); return }
     setError(null)
     onSave({ ...values, numero: values.numero.trim() })
   }
@@ -73,6 +79,15 @@ export function DossierFormDrawer({ open, saving, onSave, onClose }: DossierForm
           helper="Facultatif — peut être renseigné plus tard."
           value={values.numero}
           onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))}
+        />
+
+        <Select
+          label="Notaire responsable"
+          required
+          helper="Accès par défaut au dossier, avec la personne qui le crée."
+          options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
+          value={values.notaire_id}
+          onChange={(e) => setValues((v) => ({ ...v, notaire_id: e.target.value }))}
         />
       </div>
     </Drawer>

@@ -6,6 +6,7 @@ import { Badge } from '../design-system/Badge'
 import type { Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
+import type { Utilisateur } from '../types/database'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
@@ -19,6 +20,7 @@ interface DossierListPageProps {
 
 export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -37,7 +39,17 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     setLoading(false)
   }
 
-  useEffect(() => { loadDossiers() }, [tenantId])
+  async function loadNotaires() {
+    const { data } = await supabase
+      .from('utilisateurs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('actif', true)
+      .contains('roles', ['notaire'])
+    setNotaires(data ?? [])
+  }
+
+  useEffect(() => { loadDossiers(); loadNotaires() }, [tenantId])
 
   async function handleCreate(values: DossierFormValues) {
     setSaving(true)
@@ -47,6 +59,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       branche,
       type_acte: values.type_acte,
       numero: values.numero || null,
+      notaire_id: values.notaire_id,
     })
     setSaving(false)
     if (error) { setError('Erreur lors de la création : ' + error.message); return }
@@ -97,6 +110,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       <DossierFormDrawer
         open={drawerOpen}
         saving={saving}
+        notaires={notaires}
         onSave={handleCreate}
         onClose={() => setDrawerOpen(false)}
       />

@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button, Input, Select } from '../design-system'
-import type { Dossier } from '../types/database'
+import type { Dossier, Utilisateur } from '../types/database'
+import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { acteTypeLabel } from '../constants/acteTypes'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
 import { ActesSection } from './ActesSection'
+import { AccesSection } from './AccesSection'
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -25,6 +27,19 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
   const [savingNumero, setSavingNumero] = useState(false)
   const [savingStatut, setSavingStatut] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notaire, setNotaire] = useState<Utilisateur | null>(null)
+  const [createur, setCreateur] = useState<Utilisateur | null>(null)
+
+  useEffect(() => {
+    supabase.from('utilisateurs').select('*').eq('id', dossier.notaire_id).maybeSingle()
+      .then(({ data }) => setNotaire(data))
+    if (dossier.cree_par) {
+      supabase.from('utilisateurs').select('*').eq('id', dossier.cree_par).maybeSingle()
+        .then(({ data }) => setCreateur(data))
+    } else {
+      setCreateur(null)
+    }
+  }, [dossier.notaire_id, dossier.cree_par])
 
   async function handleSaveNumero() {
     setSavingNumero(true)
@@ -115,6 +130,17 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
               <div style={valueStyle}>{new Date(dossier.created_at).toLocaleDateString('fr-FR')}</div>
             </div>
           </div>
+
+          <div style={grid2}>
+            <div>
+              <label style={labelStyle}>Notaire responsable</label>
+              <div style={valueStyle}>{utilisateurLabel(notaire)}</div>
+            </div>
+            <div>
+              <label style={labelStyle}>Créé par</label>
+              <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -128,6 +154,10 @@ export function DossierDetailPage({ dossier, onBack, onUpdated }: DossierDetailP
 
       <div style={{ marginTop: 'var(--space-6)' }}>
         <ActesSection dossier={dossier} />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        <AccesSection dossier={dossier} onUpdated={onUpdated} />
       </div>
     </div>
   )

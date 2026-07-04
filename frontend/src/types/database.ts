@@ -55,7 +55,18 @@ export interface Dossier {
   type_acte: string
   statut: string
   acces_restreint: boolean
+  notaire_id: string
+  cree_par: string | null
   created_at: string
+}
+
+export interface DossierAcces {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  utilisateur_id: string
+  created_at: string
+  utilisateur?: Utilisateur
 }
 
 export type PersonneType = 'physique' | 'morale' | 'tiers_partenaire'
