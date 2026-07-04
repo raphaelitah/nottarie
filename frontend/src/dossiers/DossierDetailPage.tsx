@@ -15,9 +15,6 @@ import { HistoriqueSection } from './HistoriqueSection'
 
 const TABS = [
   { key: 'general', label: 'Général' },
-  { key: 'comparants', label: 'Comparants' },
-  { key: 'immeubles', label: 'Immeubles' },
-  { key: 'actes', label: 'Actes' },
   { key: 'acces', label: 'Accès' },
   { key: 'log', label: 'Log' },
 ] as const
@@ -154,6 +151,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
       </div>
 
       {tab === 'general' && (
+        <>
         <div style={{ ...card, marginTop: 'var(--space-6)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
             <div style={{ ...sectionLabel, marginBottom: 0 }}>Informations générales</div>
@@ -168,98 +166,79 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
               <EditPenButton onClick={handleStartEditGeneral} />
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={grid2}>
-              <div>
-                <label style={labelStyle}>Numéro de dossier</label>
-                <div style={valueStyle}>{dossier.numero || '—'}</div>
-              </div>
-              <div>
-                <label style={labelStyle}>Statut</label>
-                {editingGeneral ? (
-                  <Select
-                    value={draft.statut}
-                    options={DOSSIER_STATUT_OPTIONS}
-                    onChange={(e) => setDraft((d) => ({ ...d, statut: e.target.value }))}
-                  />
-                ) : (
-                  <div style={valueStyle}>{dossierStatutLabel(dossier.statut)}</div>
-                )}
-              </div>
+          <div style={grid3}>
+            <div>
+              <label style={labelStyle}>Numéro de dossier</label>
+              <div style={valueStyle}>{dossier.numero || '—'}</div>
             </div>
-
-            <div style={grid2}>
-              <div>
-                <label style={labelStyle}>Type de dossier</label>
-                {editingGeneral ? (
-                  <Select
-                    value={draft.type_acte}
-                    options={ACTE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                    onChange={(e) => setDraft((d) => ({ ...d, type_acte: e.target.value }))}
-                  />
-                ) : (
-                  <div style={valueStyle}>{acteTypeLabel(dossier.type_acte)}</div>
-                )}
-              </div>
-              <div>
-                <label style={labelStyle}>Créé le</label>
-                <div style={valueStyle}>{new Date(dossier.created_at).toLocaleDateString('fr-FR')}</div>
-              </div>
+            <div>
+              <label style={labelStyle}>Statut</label>
+              {editingGeneral ? (
+                <Select
+                  value={draft.statut}
+                  options={DOSSIER_STATUT_OPTIONS}
+                  onChange={(e) => setDraft((d) => ({ ...d, statut: e.target.value }))}
+                />
+              ) : (
+                <div style={valueStyle}>{dossierStatutLabel(dossier.statut)}</div>
+              )}
             </div>
-
-            <div style={grid2}>
-              <div>
-                <label style={labelStyle}>Notaire responsable</label>
-                {editingGeneral ? (
-                  <Select
-                    value={draft.notaire_id}
-                    options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
-                    onChange={(e) => setDraft((d) => ({ ...d, notaire_id: e.target.value }))}
-                  />
-                ) : (
-                  <div style={valueStyle}>{utilisateurLabel(notaire)}</div>
-                )}
-              </div>
-              <div>
-                <label style={labelStyle}>Clerc attitré</label>
-                {editingGeneral ? (
-                  <Select
-                    value={draft.clerc_attitre_id}
-                    options={clercs.map((c) => ({ value: c.id, label: utilisateurLabel(c) }))}
-                    onChange={(e) => setDraft((d) => ({ ...d, clerc_attitre_id: e.target.value }))}
-                  />
-                ) : (
-                  <div style={valueStyle}>{utilisateurLabel(clercAttitre)}</div>
-                )}
-              </div>
+            <div>
+              <label style={labelStyle}>Type de dossier</label>
+              {editingGeneral ? (
+                <Select
+                  value={draft.type_acte}
+                  options={ACTE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  onChange={(e) => setDraft((d) => ({ ...d, type_acte: e.target.value }))}
+                />
+              ) : (
+                <div style={valueStyle}>{acteTypeLabel(dossier.type_acte)}</div>
+              )}
             </div>
-
-            <div style={grid2}>
-              <div>
-                <label style={labelStyle}>Créé par</label>
-                <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
-              </div>
+            <div>
+              <label style={labelStyle}>Créé le</label>
+              <div style={valueStyle}>{new Date(dossier.created_at).toLocaleDateString('fr-FR')}</div>
+            </div>
+            <div>
+              <label style={labelStyle}>Notaire responsable</label>
+              {editingGeneral ? (
+                <Select
+                  value={draft.notaire_id}
+                  options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
+                  onChange={(e) => setDraft((d) => ({ ...d, notaire_id: e.target.value }))}
+                />
+              ) : (
+                <div style={valueStyle}>{utilisateurLabel(notaire)}</div>
+              )}
+            </div>
+            <div>
+              <label style={labelStyle}>Clerc attitré</label>
+              {editingGeneral ? (
+                <Select
+                  value={draft.clerc_attitre_id}
+                  options={clercs.map((c) => ({ value: c.id, label: utilisateurLabel(c) }))}
+                  onChange={(e) => setDraft((d) => ({ ...d, clerc_attitre_id: e.target.value }))}
+                />
+              ) : (
+                <div style={valueStyle}>{utilisateurLabel(clercAttitre)}</div>
+              )}
+            </div>
+            <div>
+              <label style={labelStyle}>Créé par</label>
+              <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
             </div>
           </div>
         </div>
-      )}
 
-      {tab === 'comparants' && (
-        <div style={{ marginTop: 'var(--space-6)' }}>
+        <div style={{ ...grid2, marginTop: 'var(--space-6)' }}>
           <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
-        </div>
-      )}
-
-      {tab === 'immeubles' && (
-        <div style={{ marginTop: 'var(--space-6)' }}>
           <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
-      )}
 
-      {tab === 'actes' && (
         <div style={{ marginTop: 'var(--space-6)' }}>
           <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
         </div>
+        </>
       )}
 
       {tab === 'acces' && (
@@ -351,6 +330,12 @@ const valueStyle: CSSProperties = {
 const grid2: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
+  gap: 'var(--space-4)',
+}
+
+const grid3: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr 1fr',
   gap: 'var(--space-4)',
 }
 
