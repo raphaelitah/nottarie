@@ -1,5 +1,6 @@
 export { Button } from './Button'
 export { IconButton } from './IconButton'
+export { EditPenButton } from './EditPenButton'
 export { UserMenu } from './UserMenu'
 export { AppFooter } from './AppFooter'
 export { Input } from './Input'

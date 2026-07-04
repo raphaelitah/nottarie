@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, Input, Select } from '../design-system'
+import { Badge, Button, EditPenButton, Input, Select } from '../design-system'
 import { Modal } from '../design-system/Modal'
 import type { Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
@@ -201,7 +201,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
                 </Button>
               </div>
             ) : (
-              <EditPenButton onClick={handleStartEditGeneral} />
+              <EditPenButton label="Modifier les informations générales" onClick={handleStartEditGeneral} />
             )}
           </div>
           <div style={grid3}>
@@ -418,34 +418,3 @@ const breadcrumbBtn: CSSProperties = {
   display: 'inline-block',
 }
 
-function EditPenButton({ onClick }: { onClick: () => void }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      type="button"
-      title="Modifier les informations générales"
-      aria-label="Modifier les informations générales"
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '28px',
-        height: '28px',
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid',
-        borderColor: hover ? 'var(--border-default)' : 'transparent',
-        background: hover ? 'var(--n-100)' : 'transparent',
-        color: hover ? 'var(--n-900)' : 'var(--n-400)',
-        cursor: 'pointer',
-        transition: 'all 120ms ease',
-      }}
-    >
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      </svg>
-    </button>
-  )
-}

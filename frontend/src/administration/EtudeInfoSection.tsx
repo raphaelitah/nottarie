@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input } from '../design-system'
+import { Button, EditPenButton, Input } from '../design-system'
 import type { Etude } from '../types/database'
 
 interface EtudeForm {
@@ -69,7 +69,7 @@ export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
           <div style={sectionLabel}>Informations de l'étude</div>
-          <Button variant="secondary" size="sm" onClick={startEdit}>Modifier</Button>
+          <EditPenButton label="Modifier les informations de l'étude" onClick={startEdit} />
         </div>
         <div style={grid3}>
           <Field label="Raison sociale" value={etude.raison_sociale} />

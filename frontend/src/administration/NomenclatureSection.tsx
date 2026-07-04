@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input } from '../design-system'
+import { Button, EditPenButton, Input } from '../design-system'
 import type { Etude } from '../types/database'
 
 function formatPreview(format: string, date: Date, compteur: number): string {
@@ -58,7 +58,7 @@ export function NomenclatureSection({ etude, onUpdated }: { etude: Etude; onUpda
     <div style={card}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
         <div style={sectionLabel}>Nomenclature de dossiers</div>
-        {!editing && <Button variant="secondary" size="sm" onClick={startEdit}>Modifier</Button>}
+        {!editing && <EditPenButton label="Modifier la nomenclature de dossiers" onClick={startEdit} />}
       </div>
       <p style={helpText}>
         Détermine le format des numéros de dossier, attribués automatiquement à la création. Utilisez <code>YYYY</code> pour l'année,
