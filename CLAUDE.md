@@ -15,7 +15,7 @@ This file encodes the product and architecture decisions from the BRD (Business 
 | Backend / DB | Supabase (PostgreSQL + Auth + Storage + RLS) | Replaces Django/DRF + django-tenants for the prototype. |
 | Multi-tenancy | Row-level, via `tenant_id` column + Row-Level Security policies | Replaces schema-per-tenant. Every tenant-scoped table carries `tenant_id` and is locked down with RLS — see "Multi-tenancy" below. |
 | Frontend | React, TypeScript | Browser-only access (ENF-09), no heavy install. |
-| Document generation | Python service using `docxtpl` (Jinja2-in-.docx), called by the frontend over HTTP | **Not** embedded in Supabase Edge Functions — see "Document generation service" below. |
+| Document generation | Supabase Edge Function (TypeScript/Deno), called by the frontend over HTTP | Renders `.docx` from trame Tiptap JSON + dossier data. Second deviation from ADR-01 — see "Document generation service" below. |
 | Storage (GED) | Supabase Storage (S3-compatible), EU region | Covers BRD 4.14 and CRH-01 (EU hosting). |
 | Signature | Abstracted behind a `SignatureProvider` interface (ADR-02), mock implementation until ADSN specs (EI-12) are received | Unchanged from ADR-02. |
 
@@ -33,11 +33,12 @@ Original ADR-01 (Django, django-tenants, Docker Compose) describes the eventual/
 
 ## Document generation service
 
-- All `docxtpl` (python-docx-template, Jinja2 syntax) logic lives in a **standalone Python service**, separate from the Supabase project.
-- The React frontend calls this service directly (HTTP API) to generate documents (actes, courriers, attestations) from `.docx` trames and dossier data — it is not proxied through, or embedded in, a Supabase Edge Function.
-- Rationale: Edge Functions run on Deno, not Python, and have constraints (cold starts, execution limits, no native Python ecosystem) that are a poor fit for docxtpl's templating engine. Keeping it a separate service also keeps the door open to swap/scale it independently of Supabase.
-- The service should be stateless: it receives trame + JSON data (or fetches trame/data via Supabase using a service-role or scoped token) and returns the rendered document. It must still respect tenant isolation — never accept a tenant_id from an untrusted client without validating it against the caller's authenticated session/JWT.
-- Trame library and templates remain in `.docx` files with `{{ field }}` and `{% if %}` Jinja2 syntax (ADR-01 §2.3) — this format choice is unaffected by the Supabase switch.
+Second prototype-phase deviation from ADR-01 (in addition to the Supabase swap): ADR-01 §2.3 specified `.docx` trame files with `{{ field }}`/`{% if %}` Jinja2 syntax, rendered by a standalone Python `docxtpl` service. That assumption never matched what got built — the trame editor (`frontend/src/admin/trames/editor`) stores trames as structured **Tiptap JSON** (`trame_sections.content`), not Jinja-templated `.docx` files. Since `docxtpl` doesn't apply to that data shape either way, the "needs Python" rationale for a separate service no longer holds.
+
+- Document generation (actes, courriers, attestations) runs as a **Supabase Edge Function** (TypeScript/Deno), not a separate standalone service.
+- The function walks the trame's Tiptap JSON (substituting `champ` node values from dossier/personne/comparant data) and builds a `.docx` using a JS docx-building library (e.g. the `docx` npm package, imported via Deno's `npm:` specifier support).
+- It must still respect tenant isolation like any other Edge Function here: validate the caller's JWT and derive `tenant_id` from their session/membership — never trust a `tenant_id` passed by the client.
+- If a future need arises to swap in a different rendering engine or scale generation independently of Supabase, revisit this as a standalone service then — don't build that flexibility preemptively.
 
 ## Domain model (from ADR-03, unaffected by the Supabase switch)
 
