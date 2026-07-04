@@ -1,4 +1,6 @@
 export { Button } from './Button'
+export { IconButton } from './IconButton'
+export { AppFooter } from './AppFooter'
 export { Input } from './Input'
 export { Badge } from './Badge'
 export type { BadgeStatus } from './Badge'

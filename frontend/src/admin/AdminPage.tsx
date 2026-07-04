@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthContext'
-import { Button, Input, Select } from '../design-system'
+import { Button, IconButton as HeaderIconButton, AppFooter, Input, Select } from '../design-system'
 import type { Etude, RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
 import { TrameLibraryPage } from './trames/TrameLibraryPage'
@@ -266,10 +266,17 @@ export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () =>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)' }}>{user?.email}</span>
-          {onSwitchToDashboard && (
-            <Button variant="secondary" size="sm" onClick={onSwitchToDashboard}>Mon tableau de bord</Button>
-          )}
-          <Button variant="secondary" size="sm" onClick={signOut}>Se déconnecter</Button>
+          <HeaderIconButton
+            title="Se déconnecter"
+            onClick={signOut}
+            icon={(
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            )}
+          />
         </div>
       </header>
 
@@ -594,6 +601,12 @@ export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () =>
           </>}
         </main>
       </div>
+
+      {onSwitchToDashboard && (
+        <AppFooter>
+          <Button variant="secondary" size="sm" onClick={onSwitchToDashboard}>Mon tableau de bord</Button>
+        </AppFooter>
+      )}
     </div>
   )
 }

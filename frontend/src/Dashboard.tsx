@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import { Button } from './design-system/Button'
+import { IconButton } from './design-system/IconButton'
+import { AppFooter } from './design-system/AppFooter'
 import { Badge } from './design-system/Badge'
 import { Select } from './design-system/Select'
 import { ROLE_OPTIONS } from './constants/roles'
@@ -71,7 +73,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                 }}>{membership.etude.raison_sociale}</span>
               <div style={{ flexShrink: 0 }}>
                 {activeRole
-                  ? <Badge status="ongoing" label={activeRole} />
+                  ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
                   : <Badge status="archived" label="Aucun rôle" />}
               </div>
             </>
@@ -80,7 +82,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
 
         {membership && (
           <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0, padding: '0 var(--space-6)' }}>
-            <div style={{ width: '100%', maxWidth: '420px' }}>
+            <div style={{ width: '100%', maxWidth: '640px' }}>
               <GlobalSearch
                 tenantId={membership.tenant_id}
                 onSelectDossier={goToDossier}
@@ -92,33 +94,22 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
-          {isAdmin && membership && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)', whiteSpace: 'nowrap' }}>
-                Voir en tant que
-              </span>
-              <div style={{ width: '160px' }}>
-                <Select
-                  value={activeRole ?? undefined}
-                  options={ROLE_OPTIONS}
-                  onChange={e => setActiveRole(membership.tenant_id, e.target.value as RoleNotarial)}
-                />
-              </div>
-            </div>
-          )}
           <span style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 'var(--text-xs)',
             color: 'var(--n-400)',
           }}>{user?.email}</span>
-          {onSwitchToAdmin && (
-            <Button variant="secondary" size="sm" onClick={onSwitchToAdmin}>
-              Administration
-            </Button>
-          )}
-          <Button variant="secondary" size="sm" onClick={signOut}>
-            Se déconnecter
-          </Button>
+          <IconButton
+            title="Se déconnecter"
+            onClick={signOut}
+            icon={(
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            )}
+          />
         </div>
       </header>
 
@@ -211,6 +202,30 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             )}
           </main>
         </div>
+      )}
+
+      {((isAdmin && membership) || onSwitchToAdmin) && (
+        <AppFooter>
+          {isAdmin && membership && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--n-400)', whiteSpace: 'nowrap' }}>
+                Voir en tant que
+              </span>
+              <div style={{ width: '160px' }}>
+                <Select
+                  value={activeRole ?? undefined}
+                  options={ROLE_OPTIONS}
+                  onChange={e => setActiveRole(membership.tenant_id, e.target.value as RoleNotarial)}
+                />
+              </div>
+            </div>
+          )}
+          {onSwitchToAdmin && (
+            <Button variant="secondary" size="sm" onClick={onSwitchToAdmin}>
+              Administration
+            </Button>
+          )}
+        </AppFooter>
       )}
     </div>
   )
