@@ -99,7 +99,7 @@ export function ComparantFormDrawer({ open, tenantId, personnes, saving, onSave,
       open={open}
       onClose={onClose}
       title="Ajouter un comparant"
-      size="md"
+      size="lg"
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose}>Annuler</Button>

@@ -40,7 +40,7 @@ export function PersonneFormDrawer({ open, personne, saving, onSave, onClose }: 
       open={open}
       onClose={onClose}
       title={personne ? 'Modifier la personne' : 'Nouvelle personne'}
-      size="md"
+      size="lg"
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose}>Annuler</Button>

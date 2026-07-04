@@ -6,6 +6,7 @@ import {
   SITUATION_MATRIMONIALE_OPTIONS,
   REGIME_MATRIMONIAL_OPTIONS,
 } from '../constants/personneTypes'
+import { PAYS_OPTIONS, DEPARTEMENTS_OPTIONS, ETRANGER } from '../constants/geo'
 
 export interface PersonneFormValues {
   type: PersonneType
@@ -18,6 +19,8 @@ export interface PersonneFormValues {
   adresse: string
   date_naissance: string
   lieu_naissance: string
+  pays_naissance: string
+  departement_naissance: string
   nationalite: string
   situation_matrimoniale: string
   regime_matrimonial: string
@@ -36,6 +39,8 @@ export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
   adresse: '',
   date_naissance: '',
   lieu_naissance: '',
+  pays_naissance: 'France',
+  departement_naissance: '',
   nationalite: '',
   situation_matrimoniale: '',
   regime_matrimonial: '',
@@ -55,6 +60,8 @@ export function personneToForm(p: Personne): PersonneFormValues {
     adresse: p.adresse ?? '',
     date_naissance: p.date_naissance ?? '',
     lieu_naissance: p.lieu_naissance ?? '',
+    pays_naissance: p.pays_naissance ?? 'France',
+    departement_naissance: p.departement_naissance ?? '',
     nationalite: p.nationalite ?? '',
     situation_matrimoniale: p.situation_matrimoniale ?? '',
     regime_matrimonial: p.regime_matrimonial ?? '',
@@ -90,6 +97,8 @@ export function personneFormToInsertPayload(values: PersonneFormValues, tenantId
     adresse: values.adresse.trim() || null,
     date_naissance: isPhysique ? (values.date_naissance || null) : null,
     lieu_naissance: isPhysique ? (values.lieu_naissance.trim() || null) : null,
+    pays_naissance: isPhysique ? (values.pays_naissance || null) : null,
+    departement_naissance: isPhysique ? (values.departement_naissance || null) : null,
     nationalite: isPhysique ? (values.nationalite.trim() || null) : null,
     situation_matrimoniale: isPhysique ? (values.situation_matrimoniale || null) : null,
     regime_matrimonial: isPhysique ? (values.regime_matrimonial || null) : null,
@@ -105,6 +114,14 @@ interface PersonneFieldsProps {
 
 export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
   const set = (patch: Partial<PersonneFormValues>) => onChange({ ...values, ...patch })
+
+  function setPaysNaissance(pays: string) {
+    if (pays === 'France') {
+      set({ pays_naissance: pays, departement_naissance: values.departement_naissance === ETRANGER ? '' : values.departement_naissance })
+    } else {
+      set({ pays_naissance: pays, departement_naissance: ETRANGER })
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -162,9 +179,26 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
             />
           </div>
 
-          <Input
+          <div style={{ display: 'grid', gridTemplateColumns: values.pays_naissance === 'France' ? '1fr 1fr' : '1fr', gap: '16px' }}>
+            <Select
+              label="Pays de naissance"
+              options={PAYS_OPTIONS}
+              value={values.pays_naissance}
+              onChange={(e) => setPaysNaissance(e.target.value)}
+            />
+            {values.pays_naissance === 'France' && (
+              <Select
+                label="Département de naissance"
+                options={DEPARTEMENTS_OPTIONS}
+                value={values.departement_naissance}
+                onChange={(e) => set({ departement_naissance: e.target.value })}
+              />
+            )}
+          </div>
+
+          <Select
             label="Nationalité"
-            placeholder="ex. Française"
+            options={PAYS_OPTIONS}
             value={values.nationalite}
             onChange={(e) => set({ nationalite: e.target.value })}
           />

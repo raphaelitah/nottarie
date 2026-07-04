@@ -84,6 +84,8 @@ export interface Personne {
   adresse: string | null
   date_naissance: string | null
   lieu_naissance: string | null
+  pays_naissance: string | null
+  departement_naissance: string | null
   nationalite: string | null
   situation_matrimoniale: string | null
   regime_matrimonial: string | null
