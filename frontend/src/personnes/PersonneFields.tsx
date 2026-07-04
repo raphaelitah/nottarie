@@ -172,19 +172,19 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
               value={values.date_naissance}
               onChange={(e) => set({ date_naissance: e.target.value })}
             />
-            <Input
-              label="Lieu de naissance"
-              value={values.lieu_naissance}
-              onChange={(e) => set({ lieu_naissance: e.target.value })}
-            />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: values.pays_naissance === 'France' ? '1fr 1fr' : '1fr', gap: '16px' }}>
             <Select
               label="Pays de naissance"
               options={PAYS_OPTIONS}
               value={values.pays_naissance}
               onChange={(e) => setPaysNaissance(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: values.pays_naissance === 'France' ? '1fr 1fr' : '1fr', gap: '16px' }}>
+            <Input
+              label="Lieu de naissance"
+              value={values.lieu_naissance}
+              onChange={(e) => set({ lieu_naissance: e.target.value })}
             />
             {values.pays_naissance === 'France' && (
               <Select
