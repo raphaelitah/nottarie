@@ -269,6 +269,12 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
               <label style={labelStyle}>Créé par</label>
               <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
             </div>
+            {dossier.dossier_parent_id && (
+              <div>
+                <label style={labelStyle}>Dossier parent</label>
+                <div style={valueStyle}>{dossierParent?.numero ?? '…'}</div>
+              </div>
+            )}
           </div>
         </div>
 
