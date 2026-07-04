@@ -8,10 +8,11 @@ import { AccesGrantDrawer } from './AccesGrantDrawer'
 
 interface AccesSectionProps {
   dossier: Dossier
+  canManage: boolean
   onUpdated: (dossier: Dossier) => void
 }
 
-export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
+export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProps) {
   const [grants, setGrants] = useState<DossierAcces[]>([])
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,6 +91,7 @@ export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
     if (u.id === dossier.notaire_id) tags.push('Notaire du dossier')
     else if (u.roles.includes('notaire')) tags.push('Notaire')
     if (u.roles.includes('administrateur')) tags.push('Administrateur')
+    if (u.id === dossier.clerc_attitre_id) tags.push('Clerc attitré')
     if (u.id === dossier.cree_par) tags.push('Créateur')
     if (tags.length > 0) implied.push({ utilisateur: u, tags })
   }
@@ -101,10 +103,16 @@ export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Accès au dossier</h3>
-        <Button variant="secondary" size="sm" disabled={togglingRestriction} onClick={handleToggleRestriction}>
-          {dossier.acces_restreint ? "Ouvrir à toute l'étude" : "Restreindre l'accès"}
-        </Button>
+        {canManage && (
+          <Button variant="secondary" size="sm" disabled={togglingRestriction} onClick={handleToggleRestriction}>
+            {dossier.acces_restreint ? "Ouvrir à toute l'étude" : "Restreindre l'accès"}
+          </Button>
+        )}
       </div>
+
+      {!canManage && (
+        <p style={subtitle}>Seuls les notaires, les administrateurs et le clerc attitré peuvent modifier ces accès.</p>
+      )}
 
       {error && (
         <div style={{
@@ -132,7 +140,9 @@ export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
             <div style={subheading}>Accès supplémentaire</div>
-            <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Donner accès</Button>
+            {canManage && (
+              <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Donner accès</Button>
+            )}
           </div>
 
           {loading ? (
@@ -144,9 +154,11 @@ export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
               {additionalGrants.map((g) => (
                 <div key={g.id} style={row}>
                   <span style={name}>{utilisateurLabel(g.utilisateur)}</span>
-                  <Button variant="ghost" size="sm" disabled={removingId === g.id} onClick={() => handleRevoke(g)}>
-                    {removingId === g.id ? '…' : 'Retirer'}
-                  </Button>
+                  {canManage && (
+                    <Button variant="ghost" size="sm" disabled={removingId === g.id} onClick={() => handleRevoke(g)}>
+                      {removingId === g.id ? '…' : 'Retirer'}
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -154,14 +166,16 @@ export function AccesSection({ dossier, onUpdated }: AccesSectionProps) {
         </>
       )}
 
-      <AccesGrantDrawer
-        open={drawerOpen}
-        utilisateurs={utilisateurs}
-        grantedIds={excludedIds}
-        saving={saving}
-        onSave={handleGrant}
-        onClose={() => setDrawerOpen(false)}
-      />
+      {canManage && (
+        <AccesGrantDrawer
+          open={drawerOpen}
+          utilisateurs={utilisateurs}
+          grantedIds={excludedIds}
+          saving={saving}
+          onSave={handleGrant}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -172,6 +186,13 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
+}
+
+const subtitle: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  color: 'var(--text-muted)',
+  margin: '0 0 var(--space-4)',
 }
 
 const subheading: CSSProperties = {

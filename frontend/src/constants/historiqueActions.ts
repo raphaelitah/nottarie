@@ -1,0 +1,38 @@
+const HISTORIQUE_ACTION_LABELS: Record<string, string> = {
+  dossiers_insert: 'Dossier créé',
+  dossiers_update: 'Dossier modifié',
+  dossiers_delete: 'Dossier supprimé',
+  dossier_acces_insert: 'Accès accordé',
+  dossier_acces_update: 'Accès modifié',
+  dossier_acces_delete: 'Accès retiré',
+  comparants_insert: 'Comparant ajouté',
+  comparants_update: 'Comparant modifié',
+  comparants_delete: 'Comparant retiré',
+  dossier_immeubles_insert: 'Immeuble rattaché',
+  dossier_immeubles_update: 'Immeuble modifié',
+  dossier_immeubles_delete: 'Immeuble détaché',
+  actes_insert: 'Acte créé',
+  actes_update: 'Acte modifié',
+  actes_delete: 'Acte supprimé',
+  courriers_insert: 'Courrier ajouté',
+  courriers_update: 'Courrier modifié',
+  courriers_delete: 'Courrier supprimé',
+  formalites_insert: 'Formalité créée',
+  formalites_update: 'Formalité mise à jour',
+  formalites_delete: 'Formalité supprimée',
+  documents_insert: 'Document ajouté',
+  documents_update: 'Document modifié',
+  documents_delete: 'Document supprimé',
+  emails_insert: 'Email consigné',
+  emails_update: 'Email modifié',
+  emails_delete: 'Email supprimé',
+  simulations_insert: 'Simulation créée',
+  simulations_update: 'Simulation modifiée',
+  simulations_delete: 'Simulation supprimée',
+  evenement_dossiers_insert: 'Événement lié au dossier',
+  evenement_dossiers_delete: 'Événement délié du dossier',
+}
+
+export function historiqueActionLabel(action: string): string {
+  return HISTORIQUE_ACTION_LABELS[action] ?? action
+}

@@ -58,9 +58,21 @@ export interface Dossier {
   acces_restreint: boolean
   notaire_id: string
   cree_par: string | null
+  clerc_attitre_id: string
   created_at: string
   updated_at: string
   mis_a_jour_par: string | null
+}
+
+export interface Historique {
+  id: string
+  tenant_id: string
+  utilisateur_id: string | null
+  dossier_id: string | null
+  action: string
+  details: Record<string, unknown> | null
+  created_at: string
+  utilisateur?: Utilisateur | null
 }
 
 export interface DossierAcces {

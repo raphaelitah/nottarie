@@ -7,6 +7,7 @@ import type { Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import type { Utilisateur } from '../types/database'
+import { useAuth } from '../auth/AuthContext'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
@@ -19,8 +20,11 @@ interface DossierListPageProps {
 }
 
 export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
+  const { memberships } = useAuth()
+  const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
+  const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -49,7 +53,17 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     setNotaires(data ?? [])
   }
 
-  useEffect(() => { loadDossiers(); loadNotaires() }, [tenantId])
+  async function loadClercs() {
+    const { data } = await supabase
+      .from('utilisateurs')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('actif', true)
+      .contains('roles', ['redacteur'])
+    setClercs(data ?? [])
+  }
+
+  useEffect(() => { loadDossiers(); loadNotaires(); loadClercs() }, [tenantId])
 
   async function handleCreate(values: DossierFormValues) {
     setSaving(true)
@@ -60,6 +74,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       type_acte: values.type_acte,
       numero: values.numero || null,
       notaire_id: values.notaire_id,
+      clerc_attitre_id: values.clerc_attitre_id,
     })
     setSaving(false)
     if (error) { setError('Erreur lors de la création : ' + error.message); return }
@@ -115,6 +130,8 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
         open={drawerOpen}
         saving={saving}
         notaires={notaires}
+        clercs={clercs}
+        defaultClercId={membership?.roles.includes('redacteur') ? membership.id : undefined}
         onSave={handleCreate}
         onClose={() => setDrawerOpen(false)}
       />

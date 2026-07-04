@@ -4,12 +4,25 @@ import { supabase } from '../lib/supabase'
 import { Badge, Button, Select } from '../design-system'
 import type { Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
+import { useAuth } from '../auth/AuthContext'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
 import { ActesSection } from './ActesSection'
 import { AccesSection } from './AccesSection'
+import { HistoriqueSection } from './HistoriqueSection'
+
+const TABS = [
+  { key: 'general', label: 'Général' },
+  { key: 'comparants', label: 'Comparants' },
+  { key: 'immeubles', label: 'Immeubles' },
+  { key: 'actes', label: 'Actes' },
+  { key: 'acces', label: 'Accès' },
+  { key: 'log', label: 'Log' },
+] as const
+
+type TabKey = typeof TABS[number]['key']
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -26,6 +39,7 @@ interface GeneralInfoDraft {
   statut: string
   type_acte: string
   notaire_id: string
+  clerc_attitre_id: string
 }
 
 interface DossierDetailPageProps {
@@ -36,18 +50,31 @@ interface DossierDetailPageProps {
 }
 
 export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }: DossierDetailPageProps) {
+  const { memberships } = useAuth()
+  const membership = memberships.find((m) => m.tenant_id === dossier.tenant_id) ?? null
+  const canManageAcces = !!membership && (
+    membership.roles.includes('administrateur')
+    || membership.roles.includes('notaire')
+    || membership.id === dossier.clerc_attitre_id
+  )
+
+  const [tab, setTab] = useState<TabKey>('general')
   const [editingGeneral, setEditingGeneral] = useState(false)
-  const [draft, setDraft] = useState<GeneralInfoDraft>({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id })
+  const [draft, setDraft] = useState<GeneralInfoDraft>({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notaire, setNotaire] = useState<Utilisateur | null>(null)
+  const [clercAttitre, setClercAttitre] = useState<Utilisateur | null>(null)
   const [createur, setCreateur] = useState<Utilisateur | null>(null)
   const [misAJourPar, setMisAJourPar] = useState<Utilisateur | null>(null)
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
+  const [clercs, setClercs] = useState<Utilisateur[]>([])
 
   useEffect(() => {
     supabase.from('utilisateurs').select('*').eq('id', dossier.notaire_id).maybeSingle()
       .then(({ data }) => setNotaire(data))
+    supabase.from('utilisateurs').select('*').eq('id', dossier.clerc_attitre_id).maybeSingle()
+      .then(({ data }) => setClercAttitre(data))
     if (dossier.cree_par) {
       supabase.from('utilisateurs').select('*').eq('id', dossier.cree_par).maybeSingle()
         .then(({ data }) => setCreateur(data))
@@ -60,7 +87,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
     } else {
       setMisAJourPar(null)
     }
-  }, [dossier.notaire_id, dossier.cree_par, dossier.mis_a_jour_par])
+  }, [dossier.notaire_id, dossier.clerc_attitre_id, dossier.cree_par, dossier.mis_a_jour_par])
 
   useEffect(() => {
     supabase.from('utilisateurs').select('*')
@@ -68,10 +95,15 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
       .eq('actif', true)
       .contains('roles', ['notaire'])
       .then(({ data }) => setNotaires(data ?? []))
+    supabase.from('utilisateurs').select('*')
+      .eq('tenant_id', dossier.tenant_id)
+      .eq('actif', true)
+      .contains('roles', ['redacteur'])
+      .then(({ data }) => setClercs(data ?? []))
   }, [dossier.tenant_id])
 
   function handleStartEditGeneral() {
-    setDraft({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id })
+    setDraft({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
     setError(null)
     setEditingGeneral(true)
   }
@@ -82,7 +114,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
     const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === draft.type_acte)?.branche ?? dossier.branche
     const { data, error } = await supabase
       .from('dossiers')
-      .update({ statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id })
+      .update({ statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id, clerc_attitre_id: draft.clerc_attitre_id })
       .eq('id', dossier.id)
       .select()
       .single()
@@ -113,95 +145,134 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
         }}>{error}</div>
       )}
 
-      <div style={{ ...card, marginTop: 'var(--space-6)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
-          <div style={{ ...sectionLabel, marginBottom: 0 }}>Informations générales</div>
-          {editingGeneral ? (
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <Button size="sm" variant="secondary" onClick={() => setEditingGeneral(false)}>Annuler</Button>
-              <Button size="sm" variant="primary" disabled={savingGeneral} onClick={handleSaveGeneral}>
-                {savingGeneral ? '…' : 'Enregistrer'}
-              </Button>
+      <div style={tabBar}>
+        {TABS.map((t) => (
+          <button key={t.key} type="button" onClick={() => setTab(t.key)} style={tabBtn(tab === t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'general' && (
+        <div style={{ ...card, marginTop: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+            <div style={{ ...sectionLabel, marginBottom: 0 }}>Informations générales</div>
+            {editingGeneral ? (
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <Button size="sm" variant="secondary" onClick={() => setEditingGeneral(false)}>Annuler</Button>
+                <Button size="sm" variant="primary" disabled={savingGeneral} onClick={handleSaveGeneral}>
+                  {savingGeneral ? '…' : 'Enregistrer'}
+                </Button>
+              </div>
+            ) : (
+              <EditPenButton onClick={handleStartEditGeneral} />
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={grid2}>
+              <div>
+                <label style={labelStyle}>Numéro de dossier</label>
+                <div style={valueStyle}>{dossier.numero || '—'}</div>
+              </div>
+              <div>
+                <label style={labelStyle}>Statut</label>
+                {editingGeneral ? (
+                  <Select
+                    value={draft.statut}
+                    options={DOSSIER_STATUT_OPTIONS}
+                    onChange={(e) => setDraft((d) => ({ ...d, statut: e.target.value }))}
+                  />
+                ) : (
+                  <div style={valueStyle}>{dossierStatutLabel(dossier.statut)}</div>
+                )}
+              </div>
             </div>
-          ) : (
-            <EditPenButton onClick={handleStartEditGeneral} />
-          )}
+
+            <div style={grid2}>
+              <div>
+                <label style={labelStyle}>Type de dossier</label>
+                {editingGeneral ? (
+                  <Select
+                    value={draft.type_acte}
+                    options={ACTE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                    onChange={(e) => setDraft((d) => ({ ...d, type_acte: e.target.value }))}
+                  />
+                ) : (
+                  <div style={valueStyle}>{acteTypeLabel(dossier.type_acte)}</div>
+                )}
+              </div>
+              <div>
+                <label style={labelStyle}>Créé le</label>
+                <div style={valueStyle}>{new Date(dossier.created_at).toLocaleDateString('fr-FR')}</div>
+              </div>
+            </div>
+
+            <div style={grid2}>
+              <div>
+                <label style={labelStyle}>Notaire responsable</label>
+                {editingGeneral ? (
+                  <Select
+                    value={draft.notaire_id}
+                    options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
+                    onChange={(e) => setDraft((d) => ({ ...d, notaire_id: e.target.value }))}
+                  />
+                ) : (
+                  <div style={valueStyle}>{utilisateurLabel(notaire)}</div>
+                )}
+              </div>
+              <div>
+                <label style={labelStyle}>Clerc attitré</label>
+                {editingGeneral ? (
+                  <Select
+                    value={draft.clerc_attitre_id}
+                    options={clercs.map((c) => ({ value: c.id, label: utilisateurLabel(c) }))}
+                    onChange={(e) => setDraft((d) => ({ ...d, clerc_attitre_id: e.target.value }))}
+                  />
+                ) : (
+                  <div style={valueStyle}>{utilisateurLabel(clercAttitre)}</div>
+                )}
+              </div>
+            </div>
+
+            <div style={grid2}>
+              <div>
+                <label style={labelStyle}>Créé par</label>
+                <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <div style={grid2}>
-            <div>
-              <label style={labelStyle}>Numéro de dossier</label>
-              <div style={valueStyle}>{dossier.numero || '—'}</div>
-            </div>
-            <div>
-              <label style={labelStyle}>Statut</label>
-              {editingGeneral ? (
-                <Select
-                  value={draft.statut}
-                  options={DOSSIER_STATUT_OPTIONS}
-                  onChange={(e) => setDraft((d) => ({ ...d, statut: e.target.value }))}
-                />
-              ) : (
-                <div style={valueStyle}>{dossierStatutLabel(dossier.statut)}</div>
-              )}
-            </div>
-          </div>
+      )}
 
-          <div style={grid2}>
-            <div>
-              <label style={labelStyle}>Type de dossier</label>
-              {editingGeneral ? (
-                <Select
-                  value={draft.type_acte}
-                  options={ACTE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                  onChange={(e) => setDraft((d) => ({ ...d, type_acte: e.target.value }))}
-                />
-              ) : (
-                <div style={valueStyle}>{acteTypeLabel(dossier.type_acte)}</div>
-              )}
-            </div>
-            <div>
-              <label style={labelStyle}>Créé le</label>
-              <div style={valueStyle}>{new Date(dossier.created_at).toLocaleDateString('fr-FR')}</div>
-            </div>
-          </div>
-
-          <div style={grid2}>
-            <div>
-              <label style={labelStyle}>Notaire responsable</label>
-              {editingGeneral ? (
-                <Select
-                  value={draft.notaire_id}
-                  options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
-                  onChange={(e) => setDraft((d) => ({ ...d, notaire_id: e.target.value }))}
-                />
-              ) : (
-                <div style={valueStyle}>{utilisateurLabel(notaire)}</div>
-              )}
-            </div>
-            <div>
-              <label style={labelStyle}>Créé par</label>
-              <div style={valueStyle}>{createur ? utilisateurLabel(createur) : '—'}</div>
-            </div>
-          </div>
+      {tab === 'comparants' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
-      </div>
+      )}
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
-        <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
-      </div>
+      {tab === 'immeubles' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+        </div>
+      )}
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
-        <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
-      </div>
+      {tab === 'actes' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
+        </div>
+      )}
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
-        <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
-      </div>
+      {tab === 'acces' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <AccesSection dossier={dossier} canManage={canManageAcces} onUpdated={onUpdated} />
+        </div>
+      )}
 
-      <div style={{ marginTop: 'var(--space-6)' }}>
-        <AccesSection dossier={dossier} onUpdated={onUpdated} />
-      </div>
+      {tab === 'log' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <HistoriqueSection dossierId={dossier.id} />
+        </div>
+      )}
     </div>
   )
 }
@@ -228,6 +299,28 @@ const card: CSSProperties = {
   borderRadius: 'var(--radius-lg)',
   padding: 'var(--space-6)',
   boxShadow: 'var(--shadow-sm)',
+}
+
+const tabBar: CSSProperties = {
+  display: 'flex',
+  gap: 'var(--space-1)',
+  borderBottom: '1px solid var(--border-default)',
+  marginTop: 'var(--space-6)',
+}
+
+function tabBtn(active: boolean): CSSProperties {
+  return {
+    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-sm)',
+    fontWeight: 600,
+    color: active ? 'var(--n-900)' : 'var(--text-muted)',
+    background: 'none',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--n-900)' : '2px solid transparent',
+    padding: 'var(--space-3) var(--space-1)',
+    marginBottom: '-1px',
+    cursor: 'pointer',
+  }
 }
 
 const sectionLabel: CSSProperties = {

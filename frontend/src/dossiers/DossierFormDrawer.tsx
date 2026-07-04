@@ -8,36 +8,41 @@ export interface DossierFormValues {
   type_acte: string
   numero: string
   notaire_id: string
+  clerc_attitre_id: string
 }
 
 const EMPTY: DossierFormValues = {
   type_acte: '',
   numero: '',
   notaire_id: '',
+  clerc_attitre_id: '',
 }
 
 interface DossierFormDrawerProps {
   open: boolean
   saving: boolean
   notaires: Utilisateur[]
+  clercs: Utilisateur[]
+  defaultClercId?: string
   onSave: (values: DossierFormValues) => void
   onClose: () => void
 }
 
-export function DossierFormDrawer({ open, saving, notaires, onSave, onClose }: DossierFormDrawerProps) {
+export function DossierFormDrawer({ open, saving, notaires, clercs, defaultClercId, onSave, onClose }: DossierFormDrawerProps) {
   const [values, setValues] = useState<DossierFormValues>(EMPTY)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
-      setValues(EMPTY)
+      setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '' })
       setError(null)
     }
-  }, [open])
+  }, [open, defaultClercId])
 
   function handleSubmit() {
     if (!values.type_acte) { setError("Le type de dossier est obligatoire."); return }
     if (!values.notaire_id) { setError("Le notaire responsable est obligatoire."); return }
+    if (!values.clerc_attitre_id) { setError("Le clerc attitré est obligatoire."); return }
     setError(null)
     onSave({ ...values, numero: values.numero.trim() })
   }
@@ -88,6 +93,15 @@ export function DossierFormDrawer({ open, saving, notaires, onSave, onClose }: D
           options={notaires.map((n) => ({ value: n.id, label: utilisateurLabel(n) }))}
           value={values.notaire_id}
           onChange={(e) => setValues((v) => ({ ...v, notaire_id: e.target.value }))}
+        />
+
+        <Select
+          label="Clerc attitré"
+          required
+          helper="Responsable du suivi du dossier. Par défaut, la personne qui le crée si c'est un clerc."
+          options={clercs.map((c) => ({ value: c.id, label: utilisateurLabel(c) }))}
+          value={values.clerc_attitre_id}
+          onChange={(e) => setValues((v) => ({ ...v, clerc_attitre_id: e.target.value }))}
         />
       </div>
     </Drawer>
