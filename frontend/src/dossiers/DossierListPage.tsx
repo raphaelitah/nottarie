@@ -3,12 +3,24 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, Table, type TableColumn } from '../design-system'
 import { Badge } from '../design-system/Badge'
+import { Modal } from '../design-system/Modal'
 import type { Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import type { Utilisateur } from '../types/database'
 import { useAuth } from '../auth/AuthContext'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -22,6 +34,7 @@ interface DossierListPageProps {
 export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
+  const isAdmin = membership?.roles.includes('administrateur') ?? false
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
@@ -29,6 +42,8 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Dossier | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function loadDossiers() {
     setLoading(true)
@@ -36,6 +51,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       .from('dossiers')
       .select('*')
       .eq('tenant_id', tenantId)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
     if (error) setError('Impossible de charger les dossiers : ' + error.message)
     else setError(null)
@@ -72,13 +88,29 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       tenant_id: tenantId,
       branche,
       type_acte: values.type_acte,
-      numero: values.numero || null,
       notaire_id: values.notaire_id,
       clerc_attitre_id: values.clerc_attitre_id,
+      dossier_parent_id: values.dossier_parent_id,
     })
     setSaving(false)
-    if (error) { setError('Erreur lors de la création : ' + error.message); return }
+    if (error) {
+      setError(error.code === '23505' ? 'Un dossier avec ce numéro existe déjà.' : 'Erreur lors de la création : ' + error.message)
+      return
+    }
     setDrawerOpen(false)
+    loadDossiers()
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    const { error } = await supabase
+      .from('dossiers')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', deleteTarget.id)
+    setDeleting(false)
+    if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
+    setDeleteTarget(null)
     loadDossiers()
   }
 
@@ -97,6 +129,20 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       key: 'updated_at', label: 'Mis à jour', width: '20%', sortable: true,
       render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
     },
+    ...(isAdmin ? [{
+      key: 'actions', label: '', width: '5%', align: 'right' as const,
+      render: (_: unknown, row: Dossier) => (
+        <button
+          type="button"
+          title="Supprimer le dossier"
+          aria-label="Supprimer le dossier"
+          onClick={(e) => { e.stopPropagation(); setDeleteTarget(row) }}
+          style={deleteBtn}
+        >
+          <TrashIcon />
+        </button>
+      ),
+    }] : []),
   ]
 
   return (
@@ -131,12 +177,44 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
         saving={saving}
         notaires={notaires}
         clercs={clercs}
+        dossiers={dossiers}
         defaultClercId={membership?.roles.includes('redacteur') ? membership.id : undefined}
         onSave={handleCreate}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Supprimer le dossier"
+        subtitle={deleteTarget ? `${deleteTarget.numero || 'Dossier sans numéro'} — ${acteTypeLabel(deleteTarget.type_acte)}` : undefined}
+        size="sm"
+        footer={(
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)}>Annuler</Button>
+            <Button variant="destructive" size="sm" disabled={deleting} onClick={handleDelete}>
+              {deleting ? 'Suppression…' : 'Supprimer'}
+            </Button>
+          </>
+        )}
+      >
+        Ce dossier n'apparaîtra plus dans la liste. Il restera consultable et restaurable depuis l'onglet Archive de l'Administration de l'étude.
+      </Modal>
     </div>
   )
+}
+
+const deleteBtn: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid transparent',
+  background: 'transparent',
+  color: 'var(--n-400)',
+  cursor: 'pointer',
 }
 
 const h1: CSSProperties = {

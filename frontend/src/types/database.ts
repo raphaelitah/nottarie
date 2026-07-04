@@ -17,6 +17,7 @@ export interface Etude {
   code_postal: string | null
   ville: string | null
   pays: string
+  dossier_numero_format: string
   created_at: string
 }
 
@@ -59,9 +60,11 @@ export interface Dossier {
   notaire_id: string
   cree_par: string | null
   clerc_attitre_id: string
+  dossier_parent_id: string | null
   created_at: string
   updated_at: string
   mis_a_jour_par: string | null
+  archived_at: string | null
 }
 
 export interface Historique {

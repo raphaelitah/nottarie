@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, Select } from '../design-system'
+import { Badge, Button, Input, Select } from '../design-system'
+import { Modal } from '../design-system/Modal'
 import type { Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { useAuth } from '../auth/AuthContext'
@@ -33,6 +34,7 @@ function formatDateTimeFr(iso: string): string {
 }
 
 interface GeneralInfoDraft {
+  numero: string
   statut: string
   type_acte: string
   notaire_id: string
@@ -49,6 +51,7 @@ interface DossierDetailPageProps {
 export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }: DossierDetailPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === dossier.tenant_id) ?? null
+  const isAdmin = membership?.roles.includes('administrateur') ?? false
   const canManageAcces = !!membership && (
     membership.roles.includes('administrateur')
     || membership.roles.includes('notaire')
@@ -57,7 +60,9 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
 
   const [tab, setTab] = useState<TabKey>('general')
   const [editingGeneral, setEditingGeneral] = useState(false)
-  const [draft, setDraft] = useState<GeneralInfoDraft>({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [draft, setDraft] = useState<GeneralInfoDraft>({ numero: dossier.numero ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notaire, setNotaire] = useState<Utilisateur | null>(null)
@@ -66,6 +71,16 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
   const [misAJourPar, setMisAJourPar] = useState<Utilisateur | null>(null)
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
+  const [dossierParent, setDossierParent] = useState<Dossier | null>(null)
+
+  useEffect(() => {
+    if (dossier.dossier_parent_id) {
+      supabase.from('dossiers').select('*').eq('id', dossier.dossier_parent_id).maybeSingle()
+        .then(({ data }) => setDossierParent(data))
+    } else {
+      setDossierParent(null)
+    }
+  }, [dossier.dossier_parent_id])
 
   useEffect(() => {
     supabase.from('utilisateurs').select('*').eq('id', dossier.notaire_id).maybeSingle()
@@ -100,7 +115,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
   }, [dossier.tenant_id])
 
   function handleStartEditGeneral() {
-    setDraft({ statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
+    setDraft({ numero: dossier.numero ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
     setError(null)
     setEditingGeneral(true)
   }
@@ -111,28 +126,51 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
     const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === draft.type_acte)?.branche ?? dossier.branche
     const { data, error } = await supabase
       .from('dossiers')
-      .update({ statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id, clerc_attitre_id: draft.clerc_attitre_id })
+      .update({ numero: draft.numero.trim() || null, statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id, clerc_attitre_id: draft.clerc_attitre_id })
       .eq('id', dossier.id)
       .select()
       .single()
     setSavingGeneral(false)
-    if (error) { setError('Erreur lors de l\'enregistrement : ' + error.message); return }
+    if (error) {
+      setError(error.code === '23505' ? 'Ce numéro de dossier existe déjà. Choisissez-en un autre.' : 'Erreur lors de l\'enregistrement : ' + error.message)
+      return
+    }
     setEditingGeneral(false)
     onUpdated(data)
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    setError(null)
+    const { error } = await supabase
+      .from('dossiers')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', dossier.id)
+    setDeleting(false)
+    if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
+    setConfirmDelete(false)
+    onBack()
   }
 
   return (
     <div>
       <button onClick={onBack} style={breadcrumbBtn}>‹ Dossiers</button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
-        <h1 style={h1}>{dossier.numero || 'Dossier sans numéro'}</h1>
-        <Badge status={statutBadgeStatus(dossier.statut)} label={dossierStatutLabel(dossier.statut)} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
+            <h1 style={h1}>{dossier.numero || 'Dossier sans numéro'}</h1>
+            <Badge status={statutBadgeStatus(dossier.statut)} label={dossierStatutLabel(dossier.statut)} />
+          </div>
+          <p style={subtitle}>
+            {acteTypeLabel(dossier.type_acte)}
+            {' · Mis à jour : '}{formatDateTimeFr(dossier.updated_at)}{' par '}{misAJourPar ? utilisateurLabel(misAJourPar) : '…'}
+          </p>
+        </div>
+        {isAdmin && (
+          <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>Supprimer le dossier</Button>
+        )}
       </div>
-      <p style={subtitle}>
-        {acteTypeLabel(dossier.type_acte)}
-        {' · Mis à jour : '}{formatDateTimeFr(dossier.updated_at)}{' par '}{misAJourPar ? utilisateurLabel(misAJourPar) : '…'}
-      </p>
 
       {error && (
         <div style={{
@@ -169,7 +207,11 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
           <div style={grid3}>
             <div>
               <label style={labelStyle}>Numéro de dossier</label>
-              <div style={valueStyle}>{dossier.numero || '—'}</div>
+              {editingGeneral ? (
+                <Input value={draft.numero} onChange={(e) => setDraft((d) => ({ ...d, numero: e.target.value }))} />
+              ) : (
+                <div style={valueStyle}>{dossier.numero || '—'}</div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Statut</label>
@@ -252,6 +294,24 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
           <HistoriqueSection dossierId={dossier.id} />
         </div>
       )}
+
+      <Modal
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Supprimer le dossier"
+        subtitle={`${dossier.numero || 'Dossier sans numéro'} — ${acteTypeLabel(dossier.type_acte)}`}
+        size="sm"
+        footer={(
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Annuler</Button>
+            <Button variant="destructive" size="sm" disabled={deleting} onClick={handleDelete}>
+              {deleting ? 'Suppression…' : 'Supprimer'}
+            </Button>
+          </>
+        )}
+      >
+        Ce dossier n'apparaîtra plus dans la liste. Il restera consultable et restaurable depuis l'onglet Archive de l'Administration de l'étude.
+      </Modal>
     </div>
   )
 }

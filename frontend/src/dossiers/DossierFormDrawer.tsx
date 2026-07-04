@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Drawer, Button, Input, Select } from '../design-system'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
-import type { Utilisateur } from '../types/database'
+import type { Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 
 export interface DossierFormValues {
   type_acte: string
-  numero: string
   notaire_id: string
   clerc_attitre_id: string
+  dossier_parent_id: string | null
 }
 
 const EMPTY: DossierFormValues = {
   type_acte: '',
-  numero: '',
   notaire_id: '',
   clerc_attitre_id: '',
+  dossier_parent_id: null,
 }
 
 interface DossierFormDrawerProps {
@@ -23,28 +24,40 @@ interface DossierFormDrawerProps {
   saving: boolean
   notaires: Utilisateur[]
   clercs: Utilisateur[]
+  dossiers: Dossier[]
   defaultClercId?: string
   onSave: (values: DossierFormValues) => void
   onClose: () => void
 }
 
-export function DossierFormDrawer({ open, saving, notaires, clercs, defaultClercId, onSave, onClose }: DossierFormDrawerProps) {
+export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, defaultClercId, onSave, onClose }: DossierFormDrawerProps) {
   const [values, setValues] = useState<DossierFormValues>(EMPTY)
+  const [linking, setLinking] = useState(false)
+  const [parentSearch, setParentSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (open) {
       setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '' })
+      setLinking(false)
+      setParentSearch('')
       setError(null)
     }
   }, [open, defaultClercId])
+
+  const parentQuery = parentSearch.trim().toLowerCase()
+  const parentResults = parentQuery
+    ? dossiers.filter((d) => d.numero && d.numero.toLowerCase().includes(parentQuery)).slice(0, 8)
+    : []
+  const selectedParent = dossiers.find((d) => d.id === values.dossier_parent_id) ?? null
 
   function handleSubmit() {
     if (!values.type_acte) { setError("Le type de dossier est obligatoire."); return }
     if (!values.notaire_id) { setError("Le notaire responsable est obligatoire."); return }
     if (!values.clerc_attitre_id) { setError("Le clerc attitré est obligatoire."); return }
+    if (linking && !values.dossier_parent_id) { setError("Sélectionnez le dossier auquel lier ce nouveau dossier."); return }
     setError(null)
-    onSave({ ...values, numero: values.numero.trim() })
+    onSave(linking ? values : { ...values, dossier_parent_id: null })
   }
 
   return (
@@ -78,14 +91,6 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, defaultClerc
           onChange={(e) => setValues((v) => ({ ...v, type_acte: e.target.value }))}
         />
 
-        <Input
-          label="Numéro de dossier"
-          placeholder="ex. 2026-0142"
-          helper="Facultatif — peut être renseigné plus tard."
-          value={values.numero}
-          onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))}
-        />
-
         <Select
           label="Notaire responsable"
           required
@@ -103,7 +108,108 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, defaultClerc
           value={values.clerc_attitre_id}
           onChange={(e) => setValues((v) => ({ ...v, clerc_attitre_id: e.target.value }))}
         />
+
+        <label style={checkboxRow}>
+          <input
+            type="checkbox"
+            checked={linking}
+            onChange={(e) => {
+              setLinking(e.target.checked)
+              if (!e.target.checked) setValues((v) => ({ ...v, dossier_parent_id: null }))
+            }}
+          />
+          Lier ce dossier à un dossier existant
+        </label>
+
+        {linking && (
+          selectedParent ? (
+            <div style={selectedCard}>
+              <span>{selectedParent.numero ?? 'Dossier sans numéro'}</span>
+              <button type="button" style={linkBtn} onClick={() => setValues((v) => ({ ...v, dossier_parent_id: null }))}>Changer</button>
+            </div>
+          ) : (
+            <div>
+              <Input
+                label="Dossier parent"
+                required
+                placeholder="Rechercher par numéro…"
+                value={parentSearch}
+                onChange={(e) => setParentSearch(e.target.value)}
+                helper="Le numéro du nouveau dossier sera dérivé de celui du parent."
+              />
+              {parentResults.length > 0 && (
+                <div style={resultsList}>
+                  {parentResults.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      style={resultRow}
+                      onClick={() => { setValues((v) => ({ ...v, dossier_parent_id: d.id })); setParentSearch('') }}
+                    >
+                      {d.numero ?? 'Dossier sans numéro'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        )}
       </div>
     </Drawer>
   )
+}
+
+const checkboxRow: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: '13px',
+  color: '#2D2C3C',
+  cursor: 'pointer',
+}
+
+const selectedCard: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '10px 14px',
+  background: 'var(--surface-muted)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-md)',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  color: 'var(--n-900)',
+}
+
+const linkBtn: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 500,
+  color: 'var(--color-accent)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+}
+
+const resultsList: CSSProperties = {
+  marginTop: '8px',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-md)',
+  overflow: 'hidden',
+}
+
+const resultRow: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textAlign: 'left',
+  padding: '10px 14px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  color: 'var(--n-900)',
+  background: 'var(--surface-base)',
+  border: 'none',
+  borderBottom: '1px solid var(--border-default)',
+  cursor: 'pointer',
 }

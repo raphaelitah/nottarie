@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import { Button } from './design-system/Button'
-import { IconButton } from './design-system/IconButton'
+import { UserMenu } from './design-system/UserMenu'
 import { AppFooter } from './design-system/AppFooter'
 import { Badge } from './design-system/Badge'
 import { Select } from './design-system/Select'
@@ -11,8 +11,9 @@ import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
 import { ImmeublesPage } from './immeubles/ImmeublesPage'
 import { GlobalSearch } from './recherche/GlobalSearch'
+import { AdministrationPage } from './administration/AdministrationPage'
 
-type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles'
+type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'administration'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
@@ -91,28 +92,14 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
-          <span style={{
-            fontFamily: 'var(--font-sans)',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--n-400)',
-          }}>{user?.email}</span>
-          {membership && (
-            activeRole
-              ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
-              : <Badge status="archived" label="Aucun rôle" />
-          )}
-          <IconButton
-            title="Se déconnecter"
-            onClick={signOut}
-            icon={(
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
+        <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <UserMenu email={user?.email} onSignOut={signOut}>
+            {membership && (
+              activeRole
+                ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
+                : <Badge status="archived" label="Aucun rôle" />
             )}
-          />
+          </UserMenu>
         </div>
       </header>
 
@@ -176,6 +163,12 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             <SidebarLink active={section === 'dossiers'} onClick={() => { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
             <SidebarLink active={section === 'personnes'} onClick={() => { setSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
             <SidebarLink active={section === 'immeubles'} onClick={() => { setSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
+            {isAdmin && (
+              <>
+                <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
+                <SidebarLink active={section === 'administration'} onClick={() => setSection('administration')}>Administration de l'étude</SidebarLink>
+              </>
+            )}
           </nav>
 
           <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
@@ -185,6 +178,8 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
             ) : section === 'immeubles' ? (
               <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
+            ) : section === 'administration' && isAdmin ? (
+              <AdministrationPage tenantId={membership.tenant_id} />
             ) : (
               <div>
                 <h1 style={{

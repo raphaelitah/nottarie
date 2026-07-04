@@ -37,7 +37,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
           .or(`nom.ilike.${pattern},prenom.ilike.${pattern},raison_sociale.ilike.${pattern},email.ilike.${pattern}`),
         supabase.from('immeubles').select('*').eq('tenant_id', tenantId)
           .or(`designation.ilike.${pattern},references_cadastrales.ilike.${pattern}`),
-        supabase.from('dossiers').select('*').eq('tenant_id', tenantId).ilike('numero', pattern),
+        supabase.from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).ilike('numero', pattern),
       ])
 
       const firstError = personnesRes.error ?? immeublesRes.error ?? dossiersByNumeroRes.error
@@ -63,7 +63,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
         const dossierIds = [...new Set((comparants ?? []).map((c) => c.dossier_id))]
         if (dossierIds.length > 0) {
           const { data: linkedDossiers, error: linkedError } = await supabase
-            .from('dossiers').select('*').eq('tenant_id', tenantId).in('id', dossierIds)
+            .from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).in('id', dossierIds)
           if (linkedError) {
             if (!cancelled) { setError('Erreur lors de la recherche : ' + linkedError.message); setLoading(false) }
             return
