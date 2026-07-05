@@ -12,6 +12,7 @@ export interface ImmeubleFormValues {
   ville: string
   code_postal: string
   pays: string
+  valeur_declaree: string
 }
 
 export const EMPTY_IMMEUBLE_FORM: ImmeubleFormValues = {
@@ -23,6 +24,7 @@ export const EMPTY_IMMEUBLE_FORM: ImmeubleFormValues = {
   ville: '',
   code_postal: '',
   pays: 'France',
+  valeur_declaree: '',
 }
 
 export function immeubleToForm(i: Immeuble): ImmeubleFormValues {
@@ -35,6 +37,7 @@ export function immeubleToForm(i: Immeuble): ImmeubleFormValues {
     ville: i.ville ?? '',
     code_postal: i.code_postal ?? '',
     pays: i.pays ?? 'France',
+    valeur_declaree: i.valeur_declaree != null ? String(i.valeur_declaree) : '',
   }
 }
 
@@ -60,6 +63,7 @@ export function immeubleFormToInsertPayload(values: ImmeubleFormValues, tenantId
     ville: values.ville.trim() || null,
     code_postal: values.code_postal.trim() || null,
     pays: values.pays.trim() || 'France',
+    valeur_declaree: values.valeur_declaree.trim() ? Number(values.valeur_declaree) : null,
   }
 }
 
@@ -126,6 +130,14 @@ export function ImmeubleFields({ values, onChange }: ImmeubleFieldsProps) {
         placeholder="ex. Section AB n°123"
         value={values.references_cadastrales}
         onChange={(e) => set({ references_cadastrales: e.target.value })}
+      />
+
+      <Input
+        label="Valeur déclarée (€)"
+        type="number"
+        placeholder="ex. 250000"
+        value={values.valeur_declaree}
+        onChange={(e) => set({ valeur_declaree: e.target.value })}
       />
     </div>
   )

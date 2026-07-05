@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Button, UserMenu, AppFooter, Input } from '../design-system'
 import type { Etude } from '../types/database'
 import { TrameLibraryPage } from './trames/TrameLibraryPage'
+import { BaremeLibraryPage } from './baremes/BaremeLibraryPage'
 import { EtudeUsersSection } from '../administration/EtudeUsersSection'
 
 interface EtudeForm {
@@ -46,8 +47,9 @@ function etudeToForm(e: Etude): EtudeForm {
 
 export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () => void }) {
   const { user, signOut } = useAuth()
-  const [section, setSection] = useState<'etudes' | 'trames'>('etudes')
+  const [section, setSection] = useState<'etudes' | 'trames' | 'baremes'>('etudes')
   const [trameLibraryKey, setTrameLibraryKey] = useState(0)
+  const [baremeLibraryKey, setBaremeLibraryKey] = useState(0)
   const [etudes, setEtudes] = useState<Etude[]>([])
   const [form, setForm] = useState<EtudeForm>(EMPTY_ETUDE_FORM)
   const [saving, setSaving] = useState(false)
@@ -164,10 +166,13 @@ export function AdminPage({ onSwitchToDashboard }: { onSwitchToDashboard?: () =>
         }}>
           <SidebarLink active={section === 'etudes'} onClick={() => setSection('etudes')}>Études</SidebarLink>
           <SidebarLink active={section === 'trames'} onClick={() => { setSection('trames'); setTrameLibraryKey(k => k + 1) }}>Trames</SidebarLink>
+          <SidebarLink active={section === 'baremes'} onClick={() => { setSection('baremes'); setBaremeLibraryKey(k => k + 1) }}>Barèmes</SidebarLink>
         </nav>
 
         <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0 }}>
-          {section === 'trames' ? <TrameLibraryPage key={trameLibraryKey} /> : <>
+          {section === 'trames' ? <TrameLibraryPage key={trameLibraryKey} />
+          : section === 'baremes' ? <BaremeLibraryPage key={baremeLibraryKey} />
+          : <>
 
         {/* Breadcrumb */}
         {mode !== 'list' && (

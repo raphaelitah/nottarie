@@ -65,6 +65,8 @@ export interface Dossier {
   updated_at: string
   mis_a_jour_par: string | null
   archived_at: string | null
+  autres_actifs: number | null
+  passif: number | null
 }
 
 export interface Historique {
@@ -145,6 +147,33 @@ export interface Immeuble {
   ville: string | null
   code_postal: string | null
   pays: string
+  valeur_declaree: number | null
+  created_at: string
+}
+
+export type BaremeSousType = 'acceptee' | 'non_acceptee' | 'sur_acceptation' | 'valeurs_mobilieres'
+
+export interface BaremeTranche {
+  jusqu_a: number | null
+  taux: number
+}
+
+export interface BaremeContent {
+  source: string
+  effective_date: string
+  tva_taux: number
+  csi_taux: number
+  debours_estimation_defaut: number
+  tranches: BaremeTranche[]
+}
+
+export interface Bareme {
+  id: string
+  version: number
+  libelle: string
+  type_acte: string
+  sous_type: BaremeSousType | null
+  bareme: BaremeContent
   created_at: string
 }
 
@@ -224,4 +253,59 @@ export interface Utilisateur {
   email?: string | null
   created_at: string
   etude?: { raison_sociale: string } | null
+}
+
+export type EvenementDisponibilite = 'disponible' | 'occupe' | 'indisponible'
+export type EvenementParticipantStatut = 'en_attente' | 'accepte' | 'decline'
+
+export interface EvenementCategorie {
+  id: string
+  tenant_id: string
+  nom: string
+  couleur: string
+  created_at: string
+}
+
+export interface EvenementParticipant {
+  id: string
+  tenant_id: string
+  evenement_id: string
+  utilisateur_id: string
+  is_organisateur: boolean
+  statut: EvenementParticipantStatut
+  created_at: string
+  utilisateur?: Utilisateur
+}
+
+export interface EvenementDossier {
+  id: string
+  tenant_id: string
+  evenement_id: string
+  dossier_id: string
+  dossier?: Dossier
+}
+
+export interface Evenement {
+  id: string
+  tenant_id: string
+  titre: string
+  description: string | null
+  lieu: string | null
+  debut: string
+  fin: string | null
+  all_day: boolean
+  categorie_id: string | null
+  couleur: string | null
+  disponibilite: EvenementDisponibilite
+  organisateur_id: string | null
+  rrule: string | null
+  rrule_exdates: string[]
+  recurrence_id: string | null
+  recurrence_original_start: string | null
+  outlook_event_id: string | null
+  created_at: string
+  categorie?: EvenementCategorie | null
+  organisateur?: Utilisateur | null
+  participants?: EvenementParticipant[]
+  dossiers?: EvenementDossier[]
 }

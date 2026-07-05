@@ -14,11 +14,13 @@ import { ActesSection } from './ActesSection'
 import { DocumentsSection } from './DocumentsSection'
 import { CourriersSection } from './CourriersSection'
 import { FormalitesSection } from './FormalitesSection'
+import { CoutEstimationSection } from './CoutEstimationSection'
 import { AccesSection } from './AccesSection'
 import { HistoriqueSection } from './HistoriqueSection'
 
 const TABS = [
   { key: 'general', label: 'Général' },
+  { key: 'frais', label: 'Estimation des frais' },
   { key: 'acces', label: 'Accès' },
   { key: 'log', label: 'Log' },
 ] as const
@@ -302,6 +304,12 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
           <FormalitesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
         </>
+      )}
+
+      {tab === 'frais' && (
+        <div style={{ ...card, marginTop: 'var(--space-6)' }}>
+          <CoutEstimationSection dossier={dossier} onUpdated={onUpdated} />
+        </div>
       )}
 
       {tab === 'acces' && (
