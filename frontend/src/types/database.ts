@@ -166,6 +166,26 @@ export interface DocumentRow {
   created_at: string
 }
 
+export interface Courrier {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  acte_id: string | null
+  objet: string | null
+  contenu: string | null
+  created_at: string
+}
+
+export interface Formalite {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  type: string
+  statut: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Acte {
   id: string
   tenant_id: string

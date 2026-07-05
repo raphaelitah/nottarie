@@ -11,6 +11,9 @@ import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossier
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
 import { ActesSection } from './ActesSection'
+import { DocumentsSection } from './DocumentsSection'
+import { CourriersSection } from './CourriersSection'
+import { FormalitesSection } from './FormalitesSection'
 import { AccesSection } from './AccesSection'
 import { HistoriqueSection } from './HistoriqueSection'
 
@@ -285,6 +288,18 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
 
         <div style={{ marginTop: 'var(--space-6)' }}>
           <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
+        </div>
+
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <DocumentsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+        </div>
+
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <CourriersSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+        </div>
+
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <FormalitesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
         </>
       )}
