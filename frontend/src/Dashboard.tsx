@@ -10,10 +10,11 @@ import type { RoleNotarial } from './types/database'
 import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
 import { ImmeublesPage } from './immeubles/ImmeublesPage'
+import { AgendaPage } from './agenda/AgendaPage'
 import { GlobalSearch } from './recherche/GlobalSearch'
 import { AdministrationPage } from './administration/AdministrationPage'
 
-type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'administration'
+type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
@@ -163,6 +164,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             <SidebarLink active={section === 'dossiers'} onClick={() => { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
             <SidebarLink active={section === 'personnes'} onClick={() => { setSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
             <SidebarLink active={section === 'immeubles'} onClick={() => { setSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
+            <SidebarLink active={section === 'agenda'} onClick={() => setSection('agenda')}>Agenda</SidebarLink>
             {isAdmin && (
               <>
                 <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
@@ -178,6 +180,8 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
             ) : section === 'immeubles' ? (
               <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
+            ) : section === 'agenda' ? (
+              <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
             ) : section === 'administration' && isAdmin ? (
               <AdministrationPage tenantId={membership.tenant_id} />
             ) : (
