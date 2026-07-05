@@ -196,6 +196,21 @@ export interface Acte {
   donnees: Record<string, string>
   created_at: string
   documents?: DocumentRow[]
+  signature_requests?: SignatureRequestRow[]
+}
+
+export interface SignatureRequestRow {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  acte_id: string
+  provider: string
+  statut: string
+  external_reference: string | null
+  document_signe_storage_path: string | null
+  accuse_reception_storage_path: string | null
+  created_at: string
+  updated_at: string
 }
 
 export interface Utilisateur {

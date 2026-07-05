@@ -16,7 +16,9 @@ interface SignatureRequestRow {
 
 interface SignataireRow {
   id: string
-  comparant_id: string
+  role: Signataire['role']
+  comparant_id: string | null
+  utilisateur_id: string | null
   statut: Signataire['statut']
   signed_at: string | null
 }
@@ -34,7 +36,9 @@ function mapRequest(row: SignatureRequestRow, signataires: SignataireRow[]): Sig
     accuseReceptionStoragePath: row.accuse_reception_storage_path,
     signataires: signataires.map((s) => ({
       id: s.id,
+      role: s.role,
       comparantId: s.comparant_id,
+      utilisateurId: s.utilisateur_id,
       statut: s.statut,
       signedAt: s.signed_at,
     })),
@@ -47,6 +51,11 @@ function mapRequest(row: SignatureRequestRow, signataires: SignataireRow[]): Sig
  * real provider would, and produces plausible signed-document + archival-
  * receipt artifacts so downstream code (retrieval, downloads) has something
  * real to work with — but nothing here talks to an actual signature network.
+ *
+ * Reminders/notifications to nag outstanding signataires are deferred: a
+ * scheduled job could scan signature_signataires for statut='en_attente'
+ * rows past some age and notify, but that needs email sending to exist
+ * first (it doesn't yet).
  */
 export class MockSignatureProvider implements SignatureProvider {
   constructor(private readonly admin: SupabaseClient) {}
@@ -71,9 +80,7 @@ export class MockSignatureProvider implements SignatureProvider {
     return data ?? []
   }
 
-  async designateSigners(tenantId: string, acteId: string, comparantIds: string[]): Promise<SignatureRequest> {
-    if (comparantIds.length === 0) throw new Error('Au moins un signataire est requis.')
-
+  async designateSigners(tenantId: string, acteId: string): Promise<SignatureRequest> {
     const { data: acte, error: acteError } = await this.admin
       .from('actes')
       .select('id, tenant_id, dossier_id')
@@ -82,15 +89,31 @@ export class MockSignatureProvider implements SignatureProvider {
       .maybeSingle()
     if (acteError || !acte) throw new Error('Acte introuvable.')
 
+    const { data: active } = await this.admin
+      .from('signature_requests')
+      .select('id')
+      .eq('acte_id', acteId)
+      .in('statut', ['brouillon', 'en_cours'])
+      .maybeSingle()
+    if (active) throw new Error('Une demande de signature est déjà en cours pour cet acte.')
+
+    const { data: dossier, error: dossierError } = await this.admin
+      .from('dossiers')
+      .select('id, notaire_id')
+      .eq('id', acte.dossier_id)
+      .maybeSingle()
+    if (dossierError || !dossier) throw new Error('Dossier introuvable.')
+
+    // Every living party must sign; a deceased comparant can't.
     const { data: comparants, error: comparantsError } = await this.admin
       .from('comparants')
-      .select('id')
+      .select('id, personne:personnes(date_deces)')
       .eq('dossier_id', acte.dossier_id)
-      .in('id', comparantIds)
-    if (comparantsError) throw new Error('Erreur lors de la vérification des signataires : ' + comparantsError.message)
-    if ((comparants ?? []).length !== comparantIds.length) {
-      throw new Error('Un ou plusieurs signataires ne sont pas comparants de ce dossier.')
-    }
+    if (comparantsError) throw new Error('Erreur lors du chargement des comparants : ' + comparantsError.message)
+    const livingComparantIds = (comparants ?? [])
+      .filter((c: { personne: { date_deces: string | null } | null }) => !c.personne?.date_deces)
+      .map((c: { id: string }) => c.id)
+    if (livingComparantIds.length === 0) throw new Error('Aucune partie vivante à faire signer sur ce dossier.')
 
     const { data: request, error: requestError } = await this.admin
       .from('signature_requests')
@@ -99,14 +122,23 @@ export class MockSignatureProvider implements SignatureProvider {
       .single()
     if (requestError || !request) throw new Error('Erreur lors de la création de la demande de signature : ' + requestError?.message)
 
-    const { error: signataireError } = await this.admin
-      .from('signature_signataires')
-      .insert(comparantIds.map((comparantId) => ({
+    const signataireRows = [
+      ...livingComparantIds.map((comparantId: string) => ({
         tenant_id: tenantId,
         dossier_id: acte.dossier_id,
         signature_request_id: request.id,
+        role: 'partie',
         comparant_id: comparantId,
-      })))
+      })),
+      {
+        tenant_id: tenantId,
+        dossier_id: acte.dossier_id,
+        signature_request_id: request.id,
+        role: 'notaire',
+        utilisateur_id: dossier.notaire_id,
+      },
+    ]
+    const { error: signataireError } = await this.admin.from('signature_signataires').insert(signataireRows)
     if (signataireError) throw new Error("Erreur lors de l'enregistrement des signataires : " + signataireError.message)
 
     return mapRequest(request, await this.loadSignataires(request.id))
@@ -123,6 +155,9 @@ export class MockSignatureProvider implements SignatureProvider {
       .select()
       .single()
     if (error || !request) throw new Error("Erreur lors de l'envoi en signature : " + error?.message)
+
+    // The acte itself is now awaiting signature — see ActesSection's statut badge.
+    await this.admin.from('actes').update({ statut: 'a_signer' }).eq('id', existing.acte_id)
 
     return mapRequest(request, await this.loadSignataires(signatureRequestId))
   }
@@ -174,7 +209,7 @@ export class MockSignatureProvider implements SignatureProvider {
       `Demande : ${signatureRequestId}`,
       `Référence externe : ${existing.external_reference}`,
       `Acte : ${existing.acte_id}`,
-      `Signataires (${signataires.length}) : ${signataires.map((s) => s.comparant_id).join(', ')}`,
+      `Signataires (${signataires.length}) : ${signataires.map((s) => s.role === 'notaire' ? `notaire ${s.utilisateur_id}` : `partie ${s.comparant_id}`).join(', ')}`,
       `Horodatage : ${new Date().toISOString()}`,
     ].join('\n')
     const { error: uploadError } = await this.admin.storage

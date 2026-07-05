@@ -37,16 +37,16 @@ Deno.serve(async (req) => {
     const provider = getSignatureProvider(supabaseAdmin)
 
     if (action === 'designate') {
-      const { acte_id, comparant_ids } = body
-      if (!acte_id || !Array.isArray(comparant_ids)) {
-        return new Response(JSON.stringify({ error: 'acte_id et comparant_ids sont requis' }), { status: 400, headers: corsHeaders })
+      const { acte_id } = body
+      if (!acte_id) {
+        return new Response(JSON.stringify({ error: 'acte_id est requis' }), { status: 400, headers: corsHeaders })
       }
       const { data: acte } = await supabaseAdmin.from('actes').select('tenant_id').eq('id', acte_id).maybeSingle()
       if (!acte) return new Response(JSON.stringify({ error: 'Acte introuvable.' }), { status: 404, headers: corsHeaders })
       if (!(await isTenantMember(supabaseAdmin, caller.id, acte.tenant_id))) {
         return new Response(JSON.stringify({ error: 'Accès refusé.' }), { status: 403, headers: corsHeaders })
       }
-      const result = await provider.designateSigners(acte.tenant_id, acte_id, comparant_ids)
+      const result = await provider.designateSigners(acte.tenant_id, acte_id)
       return new Response(JSON.stringify({ signatureRequest: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 

@@ -1,9 +1,14 @@
 export type SignatureRequestStatut = 'brouillon' | 'en_cours' | 'signee' | 'refusee' | 'annulee'
 export type SignataireStatut = 'en_attente' | 'signe' | 'refuse'
+export type SignataireRole = 'partie' | 'notaire'
 
 export interface Signataire {
   id: string
-  comparantId: string
+  role: SignataireRole
+  /** Set when role is 'partie'. */
+  comparantId: string | null
+  /** Set when role is 'notaire'. */
+  utilisateurId: string | null
   statut: SignataireStatut
   signedAt: string | null
 }

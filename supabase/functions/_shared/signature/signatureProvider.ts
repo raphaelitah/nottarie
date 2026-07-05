@@ -8,8 +8,13 @@ import type { SignatureRequest, SignedDocument } from './types.ts'
  * plugs in here without any caller needing to change.
  */
 export interface SignatureProvider {
-  /** EF-SIG-01: designate which comparants must sign the given acte. */
-  designateSigners(tenantId: string, acteId: string, comparantIds: string[]): Promise<SignatureRequest>
+  /**
+   * EF-SIG-01: designate who must sign the given acte — every living
+   * comparant on its dossier (a deceased party can't sign) plus the
+   * dossier's notaire. Not a manual picker: the signer set is a fixed
+   * business rule, derived from the dossier itself.
+   */
+  designateSigners(tenantId: string, acteId: string): Promise<SignatureRequest>
 
   /** EF-SIG-02: hand the signature process to the provider. */
   requestSignature(tenantId: string, signatureRequestId: string): Promise<SignatureRequest>
