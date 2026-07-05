@@ -31,6 +31,12 @@ const HISTORIQUE_ACTION_LABELS: Record<string, string> = {
   simulations_delete: 'Simulation supprimée',
   evenement_dossiers_insert: 'Événement lié au dossier',
   evenement_dossiers_delete: 'Événement délié du dossier',
+  signature_requests_insert: 'Signature demandée',
+  signature_requests_update: 'Statut de signature mis à jour',
+  signature_requests_delete: 'Demande de signature supprimée',
+  signature_signataires_insert: 'Signataire désigné',
+  signature_signataires_update: 'Statut de signataire mis à jour',
+  signature_signataires_delete: 'Signataire retiré',
 }
 
 export function historiqueActionLabel(action: string): string {
