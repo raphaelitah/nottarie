@@ -25,6 +25,7 @@ export interface EventFormResult {
   categorieId: string | null
   couleur: string | null
   disponibilite: EvenementDisponibilite
+  estPrive: boolean
   recurrence: RecurrenceOptions
   dossierIds: string[]
   participantIds: string[]
@@ -70,6 +71,7 @@ export function EventFormDrawer({
   const [categorieId, setCategorieId] = useState('')
   const [couleur, setCouleur] = useState('')
   const [disponibilite, setDisponibilite] = useState<EvenementDisponibilite>('occupe')
+  const [estPrive, setEstPrive] = useState(false)
   const [recurrence, setRecurrence] = useState<RecurrenceOptions>(DEFAULT_RECURRENCE)
   const [dossierIds, setDossierIds] = useState<string[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
@@ -102,6 +104,7 @@ export function EventFormDrawer({
       setCategorieId(initialEvent.categorie_id ?? '')
       setCouleur(initialEvent.couleur ?? '')
       setDisponibilite(initialEvent.disponibilite)
+      setEstPrive(initialEvent.est_prive)
       setRecurrence(parseRRuleString(initialEvent.rrule))
       setDossierIds((initialEvent.dossiers ?? []).map((d) => d.dossier_id))
       setParticipantIds((initialEvent.participants ?? []).filter((p) => !p.is_organisateur).map((p) => p.utilisateur_id))
@@ -115,6 +118,7 @@ export function EventFormDrawer({
       setCategorieId('')
       setCouleur('')
       setDisponibilite('occupe')
+      setEstPrive(false)
       setRecurrence(DEFAULT_RECURRENCE)
       setDossierIds([])
       setParticipantIds([])
@@ -135,6 +139,7 @@ export function EventFormDrawer({
       categorieId: categorieId || null,
       couleur: couleur || null,
       disponibilite,
+      estPrive,
       recurrence,
       dossierIds,
       participantIds,
@@ -265,6 +270,11 @@ export function EventFormDrawer({
             value={disponibilite}
             onChange={(e) => setDisponibilite(e.target.value as EvenementDisponibilite)}
           />
+
+          <label style={checkboxRow}>
+            <input type="checkbox" checked={estPrive} onChange={(e) => setEstPrive(e.target.checked)} />
+            Événement privé (les autres membres le verront comme occupé, sans le détail)
+          </label>
 
           <RecurrenceBuilder value={recurrence} onChange={setRecurrence} />
 

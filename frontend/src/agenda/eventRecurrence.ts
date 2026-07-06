@@ -111,3 +111,10 @@ export function recurrenceSummary(options: RecurrenceOptions): string {
     : ''
   return base + days + end
 }
+
+/** Occurrence start dates (within [rangeStart, rangeEnd], exdates already excluded) for a recurring event. */
+export function expandOccurrences(rrule: string, debut: string, rruleExdates: string[], rangeStart: Date, rangeEnd: Date): Date[] {
+  const rule = new RRule({ ...RRule.parseString(rrule), dtstart: new Date(debut) })
+  const excluded = new Set(rruleExdates.map((d) => new Date(d).getTime()))
+  return rule.between(rangeStart, rangeEnd, true).filter((d) => !excluded.has(d.getTime()))
+}

@@ -304,6 +304,8 @@ export interface Evenement {
   recurrence_original_start: string | null
   outlook_event_id: string | null
   created_at: string
+  est_prive: boolean
+  peut_voir_details: boolean
   categorie?: EvenementCategorie | null
   organisateur?: Utilisateur | null
   participants?: EvenementParticipant[]

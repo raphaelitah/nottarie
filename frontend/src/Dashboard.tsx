@@ -11,6 +11,7 @@ import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
 import { ImmeublesPage } from './immeubles/ImmeublesPage'
 import { AgendaPage } from './agenda/AgendaPage'
+import { WeekStrip } from './agenda/WeekStrip'
 import { GlobalSearch } from './recherche/GlobalSearch'
 import { AdministrationPage } from './administration/AdministrationPage'
 
@@ -161,10 +162,10 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             gap: 'var(--space-1)',
           }}>
             <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
+            <SidebarLink active={section === 'agenda'} onClick={() => setSection('agenda')}>Agenda</SidebarLink>
             <SidebarLink active={section === 'dossiers'} onClick={() => { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
             <SidebarLink active={section === 'personnes'} onClick={() => { setSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
             <SidebarLink active={section === 'immeubles'} onClick={() => { setSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
-            <SidebarLink active={section === 'agenda'} onClick={() => setSection('agenda')}>Agenda</SidebarLink>
             {isAdmin && (
               <>
                 <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
@@ -200,6 +201,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                   color: 'var(--text-muted)',
                   margin: 0,
                 }}>Bienvenue dans votre espace Nottarie.</p>
+                <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => setSection('agenda')} />
               </div>
             )}
           </main>

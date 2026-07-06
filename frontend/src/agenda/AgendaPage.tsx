@@ -45,7 +45,7 @@ function toEventInput(e: Evenement): RRuleEventInput {
   const color = resolveEventColor(e)
   const base: RRuleEventInput = {
     id: e.id,
-    title: e.titre,
+    title: e.est_prive ? `🔒 ${e.titre}` : e.titre,
     backgroundColor: color,
     borderColor: color,
     allDay: e.all_day,
@@ -120,24 +120,32 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
 
+  // The evenements_agenda view can't embed evenement_categories (its
+  // categorie_id column is a CASE expression, so PostgREST can't trace the FK
+  // through it) — resolve it client-side from the tenant's category list instead.
+  const hydratedEvents = useMemo(() => events.map((e) => ({
+    ...e,
+    categorie: e.categorie_id ? categories.find((c) => c.id === e.categorie_id) ?? null : null,
+  })), [events, categories])
+
   useEffect(() => {
     if (!selectedEvent) return
-    const updated = events.find((e) => e.id === selectedEvent.id)
+    const updated = hydratedEvents.find((e) => e.id === selectedEvent.id)
     if (updated) setSelectedEvent(updated)
-  }, [events, selectedEvent])
+  }, [hydratedEvents, selectedEvent])
 
   function canManageEvent(e: Evenement): boolean {
     return isAdminOrNotaire || (!!membership && e.organisateur_id === membership.id)
   }
 
-  const filteredEvents = useMemo(() => events.filter((e) => {
+  const filteredEvents = useMemo(() => hydratedEvents.filter((e) => {
     if (e.categorie_id && hiddenCategoryIds.has(e.categorie_id)) return false
     if (showMyEventsOnly && membership) {
       const mine = e.organisateur_id === membership.id || (e.participants ?? []).some((p) => p.utilisateur_id === membership.id)
       if (!mine) return false
     }
     return true
-  }), [events, hiddenCategoryIds, showMyEventsOnly, membership])
+  }), [hydratedEvents, hiddenCategoryIds, showMyEventsOnly, membership])
 
   const calendarEvents = useMemo(() => {
     const base = filteredEvents.map(toEventInput)
@@ -169,7 +177,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
   }
 
   function handleEventClick(clickInfo: EventClickArg) {
-    const found = events.find((e) => e.id === clickInfo.event.id)
+    const found = hydratedEvents.find((e) => e.id === clickInfo.event.id)
     if (!found) return
     setSelectedEvent(found)
     setSelectedOccurrenceStart(clickInfo.event.start ? clickInfo.event.start.toISOString() : null)
@@ -220,6 +228,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
         categorie_id: result.categorieId,
         couleur: result.couleur,
         disponibilite: result.disponibilite,
+        est_prive: result.estPrive,
         organisateur_id: membership.id,
         rrule: buildRRuleString(result.recurrence),
       })
@@ -258,6 +267,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
           categorie_id: result.categorieId,
           couleur: result.couleur,
           disponibilite: result.disponibilite,
+          est_prive: result.estPrive,
           organisateur_id: formInitialEvent.organisateur_id,
           recurrence_id: formInitialEvent.id,
           recurrence_original_start: selectedOccurrenceStart,
@@ -309,6 +319,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
           categorie_id: result.categorieId,
           couleur: result.couleur,
           disponibilite: result.disponibilite,
+          est_prive: result.estPrive,
           rrule: buildRRuleString(result.recurrence),
           rrule_exdates: shiftedExdates,
         })

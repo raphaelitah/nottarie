@@ -90,10 +90,16 @@ export function EventDetailModal({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: resolveEventColor(event), flexShrink: 0 }} />
-            {event.categorie && <span style={metaText}>{event.categorie.nom}</span>}
+            {event.est_prive && <span style={metaText}>🔒 Privé</span>}
+            {event.categorie && <span style={metaText}>· {event.categorie.nom}</span>}
             <span style={metaText}>· {DISPONIBILITE_LABELS[event.disponibilite]}</span>
             {event.rrule && <span style={metaText}>· {recurrenceSummary(parseRRuleString(event.rrule))}</span>}
           </div>
+          {!event.peut_voir_details && (
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>
+              Cet événement est privé — seuls l'organisateur, les participants invités et les administrateurs/notaires peuvent en voir le détail.
+            </p>
+          )}
 
           {event.lieu && (
             <div style={fieldRow}>
