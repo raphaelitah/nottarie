@@ -3,11 +3,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 interface UserMenuProps {
   email?: string | null
   onSignOut: () => void
+  onOpenAccount?: () => void
   /** Extra content shown above the sign-out action, e.g. a role badge. */
   children?: ReactNode
 }
 
-export function UserMenu({ email, onSignOut, children }: UserMenuProps) {
+export function UserMenu({ email, onSignOut, onOpenAccount, children }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -75,6 +76,33 @@ export function UserMenu({ email, onSignOut, children }: UserMenuProps) {
             )}
             {children}
           </div>
+          {onOpenAccount && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onOpenAccount() }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 500,
+                color: 'var(--n-900)',
+                background: 'transparent',
+                border: 'none',
+                borderTop: '1px solid var(--border-default)',
+                paddingTop: 'var(--space-3)',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              Mon compte
+            </button>
+          )}
           <button
             type="button"
             onClick={() => { setOpen(false); onSignOut() }}

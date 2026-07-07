@@ -4,6 +4,8 @@ import { Drawer, Button, Input, Textarea } from '../design-system'
 export interface CourrierFormResult {
   objet: string
   contenu: string
+  destinataire: string | null
+  send: boolean
 }
 
 interface CourrierFormDrawerProps {
@@ -16,19 +18,22 @@ interface CourrierFormDrawerProps {
 export function CourrierFormDrawer({ open, saving, onSave, onClose }: CourrierFormDrawerProps) {
   const [objet, setObjet] = useState('')
   const [contenu, setContenu] = useState('')
+  const [destinataire, setDestinataire] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setObjet('')
     setContenu('')
+    setDestinataire('')
     setError(null)
   }, [open])
 
-  function handleSubmit() {
+  function handleSubmit(send: boolean) {
     if (!objet.trim()) { setError("L'objet est obligatoire."); return }
+    if (send && !destinataire.trim()) { setError("L'adresse du destinataire est obligatoire pour envoyer par email."); return }
     setError(null)
-    onSave({ objet: objet.trim(), contenu: contenu.trim() })
+    onSave({ objet: objet.trim(), contenu: contenu.trim(), destinataire: destinataire.trim() || null, send })
   }
 
   return (
@@ -40,8 +45,11 @@ export function CourrierFormDrawer({ open, saving, onSave, onClose }: CourrierFo
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose}>Annuler</Button>
-          <Button variant="primary" size="sm" onClick={handleSubmit} disabled={saving}>
+          <Button variant="secondary" size="sm" onClick={() => handleSubmit(false)} disabled={saving}>
             {saving ? 'Enregistrement…' : 'Enregistrer'}
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => handleSubmit(true)} disabled={saving}>
+            {saving ? 'Envoi…' : 'Enregistrer et envoyer par email'}
           </Button>
         </>
       }
@@ -59,6 +67,13 @@ export function CourrierFormDrawer({ open, saving, onSave, onClose }: CourrierFo
           placeholder="ex. Demande de pièces complémentaires"
           value={objet}
           onChange={(e) => setObjet(e.target.value)}
+        />
+        <Input
+          label="Destinataire"
+          type="email"
+          placeholder="ex. client@exemple.fr"
+          value={destinataire}
+          onChange={(e) => setDestinataire(e.target.value)}
         />
         <Textarea
           label="Contenu"

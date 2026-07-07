@@ -277,6 +277,21 @@ export interface EvenementParticipant {
   utilisateur?: Utilisateur
 }
 
+export type MailboxProvider = 'outlook'
+export type MailboxConnectionStatus = 'active' | 'revoked' | 'error'
+
+export interface MailboxConnection {
+  id: string
+  tenant_id: string
+  utilisateur_id: string
+  provider: MailboxProvider
+  email_address: string
+  status: MailboxConnectionStatus
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface EvenementDossier {
   id: string
   tenant_id: string
