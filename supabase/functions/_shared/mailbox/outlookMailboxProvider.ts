@@ -95,19 +95,27 @@ export class OutlookMailboxProvider implements MailboxProvider {
     const accessToken = await this.ensureFreshAccessToken(connection)
 
     try {
-      // Two-step create-then-send: /me/sendMail returns an empty 202 with no
-      // message id, which would leave provider_message_id permanently null.
-      const draft = await this.graphFetch(accessToken, '/me/messages', {
+      // /me/sendMail only needs Mail.Send. The two-step create-then-send
+      // alternative (POST /me/messages, then /send) looks appealing because
+      // it returns a real message id, but POST /me/messages is a mailbox
+      // *write* and actually requires Mail.ReadWrite — a broader permission
+      // we deliberately didn't request. Using it caused every send to fail
+      // with ErrorAccessDenied regardless of account or consent state.
+      // provider_message_id stays null; that's an acceptable trade-off for
+      // keeping the consent screen to Mail.Send only.
+      await this.graphFetch(accessToken, '/me/sendMail', {
         method: 'POST',
         body: {
-          subject: input.subject,
-          body: { contentType: 'HTML', content: input.bodyHtml },
-          toRecipients: input.to.map((address) => ({ emailAddress: { address } })),
-          ccRecipients: (input.cc ?? []).map((address) => ({ emailAddress: { address } })),
+          message: {
+            subject: input.subject,
+            body: { contentType: 'HTML', content: input.bodyHtml },
+            toRecipients: input.to.map((address) => ({ emailAddress: { address } })),
+            ccRecipients: (input.cc ?? []).map((address) => ({ emailAddress: { address } })),
+          },
+          saveToSentItems: true,
         },
       })
-      await this.graphFetch(accessToken, `/me/messages/${draft.id}/send`, { method: 'POST', body: {} })
-      return { providerMessageId: draft.id }
+      return { providerMessageId: null }
     } catch (err) {
       if (err instanceof GraphAuthError) {
         await this.admin
