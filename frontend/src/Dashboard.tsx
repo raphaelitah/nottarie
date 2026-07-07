@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useAuth } from './auth/useAuth'
 import { Button } from './design-system/Button'
 import { UserMenu } from './design-system/UserMenu'
@@ -10,11 +10,12 @@ import type { RoleNotarial } from './types/database'
 import { DossiersPage } from './dossiers/DossiersPage'
 import { PersonnesPage } from './personnes/PersonnesPage'
 import { ImmeublesPage } from './immeubles/ImmeublesPage'
-import { AgendaPage } from './agenda/AgendaPage'
 import { WeekStrip } from './agenda/WeekStrip'
 import { GlobalSearch } from './recherche/GlobalSearch'
 import { AdministrationPage } from './administration/AdministrationPage'
 import { MonComptePage } from './account/MonComptePage'
+
+const AgendaPage = lazy(() => import('./agenda/AgendaPage').then((m) => ({ default: m.AgendaPage })))
 
 type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration' | 'mon-compte'
 
@@ -189,7 +190,9 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             ) : section === 'immeubles' ? (
               <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} />
             ) : section === 'agenda' ? (
-              <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
+              <Suspense fallback={<p>Chargement…</p>}>
+                <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
+              </Suspense>
             ) : section === 'administration' && isAdmin ? (
               <AdministrationPage tenantId={membership.tenant_id} />
             ) : section === 'mon-compte' ? (

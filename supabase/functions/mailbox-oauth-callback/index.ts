@@ -7,8 +7,16 @@
 // forwards everything to the frontend, which pairs the forwarded code/state
 // with its stored verifier and calls mailbox-oauth-exchange (authenticated).
 Deno.serve((req) => {
+  const configuredFrontendUrl = Deno.env.get('FRONTEND_URL')
+  if (!configuredFrontendUrl) {
+    return new Response(
+      "Configuration incomplète : le secret FRONTEND_URL n'est pas défini sur ce projet Supabase.",
+      { status: 500 },
+    )
+  }
+
   const url = new URL(req.url)
-  const frontendUrl = new URL(Deno.env.get('FRONTEND_URL')!)
+  const frontendUrl = new URL(configuredFrontendUrl)
 
   frontendUrl.searchParams.set('mailbox_oauth', '1')
   for (const key of ['code', 'state', 'error', 'error_description']) {

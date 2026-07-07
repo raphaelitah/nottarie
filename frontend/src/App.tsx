@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/useAuth'
 import { LoginPage } from './auth/LoginPage'
 import { SetPasswordPage } from './auth/SetPasswordPage'
 import { Dashboard } from './Dashboard'
-import { AdminPage } from './admin/AdminPage'
 import './App.css'
+
+const AdminPage = lazy(() => import('./admin/AdminPage').then((m) => ({ default: m.AdminPage })))
 
 function AppRoutes() {
   const { session, isPlatformAdmin, loading, needsPasswordChange, setNewPassword } = useAuth()
@@ -16,7 +17,7 @@ function AppRoutes() {
   if (needsPasswordChange) return <SetPasswordPage onSubmit={setNewPassword} />
   if (!isPlatformAdmin) return <Dashboard />
   return view === 'admin'
-    ? <AdminPage onSwitchToDashboard={() => setView('dashboard')} />
+    ? <Suspense fallback={<p>Chargement…</p>}><AdminPage onSwitchToDashboard={() => setView('dashboard')} /></Suspense>
     : <Dashboard onSwitchToAdmin={() => setView('admin')} />
 }
 

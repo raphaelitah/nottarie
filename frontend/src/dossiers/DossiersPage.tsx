@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Dossier } from '../types/database'
 import { DossierListPage } from './DossierListPage'
 import { DossierDetailPage } from './DossierDetailPage'
-import { ActeComposerPage } from './composer/ActeComposerPage'
+
+const ActeComposerPage = lazy(() => import('./composer/ActeComposerPage').then((m) => ({ default: m.ActeComposerPage })))
 
 interface DossiersPageProps {
   tenantId: string
@@ -26,11 +27,13 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled }: DossiersPage
 
   if (selected && composing) {
     return (
-      <ActeComposerPage
-        dossier={selected}
-        onBack={() => setComposing(false)}
-        onGenerated={() => setComposing(false)}
-      />
+      <Suspense fallback={<p>Chargement…</p>}>
+        <ActeComposerPage
+          dossier={selected}
+          onBack={() => setComposing(false)}
+          onGenerated={() => setComposing(false)}
+        />
+      </Suspense>
     )
   }
 
