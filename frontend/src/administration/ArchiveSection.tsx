@@ -48,7 +48,10 @@ export function ArchiveSection({ etudeId }: { etudeId: string }) {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [etudeId])
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etudeId])
 
   async function handleRestore(dossier: Dossier) {
     setRestoringId(dossier.id)

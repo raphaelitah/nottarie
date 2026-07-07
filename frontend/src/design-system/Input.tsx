@@ -1,4 +1,4 @@
-import React, { useState, type ReactNode, type ChangeEvent } from 'react'
+import { useState, type ReactNode, type ChangeEvent } from 'react'
 
 interface InputProps {
   label?: string

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from './auth/AuthContext'
+import { useAuth } from './auth/useAuth'
 import { Button } from './design-system/Button'
 import { UserMenu } from './design-system/UserMenu'
 import { AppFooter } from './design-system/AppFooter'
@@ -14,12 +14,19 @@ import { AgendaPage } from './agenda/AgendaPage'
 import { WeekStrip } from './agenda/WeekStrip'
 import { GlobalSearch } from './recherche/GlobalSearch'
 import { AdministrationPage } from './administration/AdministrationPage'
+import { MonComptePage } from './account/MonComptePage'
 
-type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration'
+type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration' | 'mon-compte'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
-  const [section, setSection] = useState<Section>('accueil')
+  // Returning from the Outlook OAuth redirect lands here with ?mailbox_oauth=1
+  // in the URL — jump straight to Mon compte so MailboxConnectionSection
+  // mounts and finishes the exchange, instead of stranding the callback on
+  // whatever section happened to be default.
+  const [section, setSection] = useState<Section>(() =>
+    new URLSearchParams(window.location.search).get('mailbox_oauth') === '1' ? 'mon-compte' : 'accueil'
+  )
   const [focusDossierId, setFocusDossierId] = useState<string | null>(null)
   const [focusPersonneId, setFocusPersonneId] = useState<string | null>(null)
   const [focusImmeubleId, setFocusImmeubleId] = useState<string | null>(null)
@@ -95,7 +102,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <UserMenu email={user?.email} onSignOut={signOut}>
+          <UserMenu email={user?.email} onSignOut={signOut} onOpenAccount={membership ? () => setSection('mon-compte') : undefined}>
             {membership && (
               activeRole
                 ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
@@ -185,6 +192,8 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
             ) : section === 'administration' && isAdmin ? (
               <AdministrationPage tenantId={membership.tenant_id} />
+            ) : section === 'mon-compte' ? (
+              <MonComptePage tenantId={membership.tenant_id} utilisateurId={membership.id} />
             ) : (
               <div>
                 <h1 style={{

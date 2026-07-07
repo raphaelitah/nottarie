@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { acteTypeLabel } from '../constants/acteTypes'
-import { personneDisplayName } from '../personnes/PersonneFields'
-import { immeubleDisplayName } from '../immeubles/ImmeubleFields'
+import { personneDisplayName } from '../personnes/personneForm'
+import { immeubleDisplayName } from '../immeubles/immeubleForm'
 import { useCrossEntitySearch } from './useCrossEntitySearch'
 
 interface GlobalSearchProps {

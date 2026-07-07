@@ -1,23 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import type { Session, User } from '@supabase/supabase-js'
+import { useEffect, useState, type ReactNode } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { RoleNotarial, Utilisateur } from '../types/database'
-
-interface AuthState {
-  session: Session | null
-  user: User | null
-  memberships: Utilisateur[]
-  isPlatformAdmin: boolean
-  loading: boolean
-  needsPasswordChange: boolean
-  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string) => Promise<{ error: string | null }>
-  setNewPassword: (password: string) => Promise<{ error: string | null }>
-  signOut: () => Promise<void>
-  /** Role an administrateur is currently previewing the app as, per étude (EF-ROL testing aid). */
-  activeRoles: Record<string, RoleNotarial>
-  setActiveRole: (tenantId: string, role: RoleNotarial) => void
-}
+import { AuthContext } from './authContextObject'
 
 const ACTIVE_ROLE_STORAGE_KEY = 'nottarie:active-roles'
 
@@ -28,8 +13,6 @@ function loadStoredActiveRoles(): Record<string, RoleNotarial> {
     return {}
   }
 }
-
-const AuthContext = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -136,10 +119,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider')
-  return ctx
 }

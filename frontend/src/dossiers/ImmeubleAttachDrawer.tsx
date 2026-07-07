@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Drawer, Button, Input } from '../design-system'
 import type { Immeuble } from '../types/database'
+import { ImmeubleFields } from '../immeubles/ImmeubleFields'
 import {
-  ImmeubleFields,
   EMPTY_IMMEUBLE_FORM,
   immeubleDisplayName,
   immeubleFormError,
   type ImmeubleFormValues,
-} from '../immeubles/ImmeubleFields'
+} from '../immeubles/immeubleForm'
 
 export interface ImmeubleAttachResult {
   immeubleId: string | null

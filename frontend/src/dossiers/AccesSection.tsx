@@ -43,7 +43,10 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
     setUtilisateurs(data ?? [])
   }
 
-  useEffect(() => { loadGrants(); loadUtilisateurs() }, [dossier.id, dossier.tenant_id])
+  useEffect(() => {
+    loadGrants(); loadUtilisateurs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossier.id, dossier.tenant_id])
 
   async function handleToggleRestriction() {
     setTogglingRestriction(true)

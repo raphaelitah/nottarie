@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Drawer, Button, Input, Select } from '../../design-system'
-import type { BaremeSousType, BaremeTranche } from '../../types/database'
+import type { BaremeSousType } from '../../types/database'
 
 export interface BaremeFormValues {
   libelle: string
@@ -159,13 +159,6 @@ export function BaremeFormDrawer({ open, typeActe, saving, onSave, onClose }: Ba
       </div>
     </Drawer>
   )
-}
-
-export function baremeFormToTranches(values: BaremeFormValues): BaremeTranche[] {
-  return values.tranches.map((t, i) => ({
-    jusqu_a: i === values.tranches.length - 1 ? null : Number(t.jusqu_a),
-    taux: Number(t.taux_pct) / 100,
-  }))
 }
 
 const grid3: CSSProperties = {

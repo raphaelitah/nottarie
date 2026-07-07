@@ -6,7 +6,7 @@ import type { Immeuble } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
-import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './ImmeubleFields'
+import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './immeubleForm'
 
 interface ImmeublesPageProps {
   tenantId: string
@@ -45,7 +45,10 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
     setLoading(false)
   }
 
-  useEffect(() => { loadImmeubles() }, [tenantId])
+  useEffect(() => {
+    loadImmeubles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId])
 
   function openCreate() {
     setEditing(null)

@@ -1,4 +1,4 @@
-import React, { useState, type ReactNode, type CSSProperties } from 'react'
+import { useState, type ReactNode, type CSSProperties } from 'react'
 
 export interface TableColumn<T = Record<string, unknown>> {
   key: string

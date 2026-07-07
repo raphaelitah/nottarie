@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Badge, Button } from '../../design-system'
 import type { Bareme } from '../../types/database'
-import { BaremeFormDrawer, baremeFormToTranches, type BaremeFormValues } from './BaremeFormDrawer'
+import { BaremeFormDrawer, type BaremeFormValues } from './BaremeFormDrawer'
+import { baremeFormToTranches } from './baremeForm'
 
 const TYPE_LABELS: Record<string, string> = { succession: 'Succession', donation: 'Donation' }
 const SOUS_TYPE_LABELS: Record<string, string> = {

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useAuth } from './AuthContext'
+import { useAuth } from './useAuth'
 import { Button } from '../design-system/Button'
 import { Input } from '../design-system/Input'
 

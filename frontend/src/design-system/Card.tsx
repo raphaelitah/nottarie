@@ -1,4 +1,3 @@
-import React from 'react'
 import { type BadgeStatus } from './Badge'
 
 type ActType = 'vente' | 'succession' | 'bail' | 'procuration' | 'donation' | 'hypotheque'
@@ -33,8 +32,8 @@ interface CardProps {
 }
 
 export function Card({ reference, actType, parties, notary, date, status, selected = false, onClick }: CardProps) {
-  const act = (actType && ACT_TYPES[actType]) ?? { label: actType ?? '', bg: '#EDECF2', color: '#575468' }
-  const st  = (status && STATUS[status])  ?? STATUS.ongoing
+  const act = (actType ? ACT_TYPES[actType] : undefined) ?? { label: actType ?? '', bg: '#EDECF2', color: '#575468' }
+  const st  = (status ? STATUS[status] : undefined) ?? STATUS.ongoing
 
   return (
     <div

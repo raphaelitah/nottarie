@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Drawer, Button } from '../design-system'
 import type { Personne } from '../types/database'
+import { PersonneFields } from './PersonneFields'
 import {
-  PersonneFields,
   EMPTY_PERSONNE_FORM,
   personneToForm,
   personneFormError,
   type PersonneFormValues,
-} from './PersonneFields'
+} from './personneForm'
 
 interface PersonneFormDrawerProps {
   open: boolean

@@ -5,7 +5,7 @@ import { Button, Input, Table, type TableColumn } from '../design-system'
 import type { Personne } from '../types/database'
 import { PERSONNE_TYPE_OPTIONS } from '../constants/personneTypes'
 import { PersonneFormDrawer } from './PersonneFormDrawer'
-import { personneDisplayName, personneFormToInsertPayload, type PersonneFormValues } from './PersonneFields'
+import { personneDisplayName, personneFormToInsertPayload, type PersonneFormValues } from './personneForm'
 
 function personneTypeLabel(type: string): string {
   return PERSONNE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type
@@ -48,7 +48,10 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
     setLoading(false)
   }
 
-  useEffect(() => { loadPersonnes() }, [tenantId])
+  useEffect(() => {
+    loadPersonnes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId])
 
   function openCreate() {
     setEditing(null)

@@ -8,7 +8,7 @@ import type { Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import type { Utilisateur } from '../types/database'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
 
 function TrashIcon() {
@@ -79,7 +79,10 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     setClercs(data ?? [])
   }
 
-  useEffect(() => { loadDossiers(); loadNotaires(); loadClercs() }, [tenantId])
+  useEffect(() => {
+    loadDossiers(); loadNotaires(); loadClercs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId])
 
   async function handleCreate(values: DossierFormValues) {
     setSaving(true)

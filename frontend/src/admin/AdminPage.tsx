@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { Button, UserMenu, AppFooter, Input } from '../design-system'
 import type { Etude } from '../types/database'
 import { TrameLibraryPage } from './trames/TrameLibraryPage'
@@ -378,15 +378,7 @@ function SidebarLink({ active, onClick, children }: { active: boolean; onClick: 
   )
 }
 
-function MetaItem({ label, value }: { label: string; value: string }) {
-  return (
-    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-      <span style={{ fontWeight: 600 }}>{label} : </span>{value}
-    </span>
-  )
-}
-
-const ICON_SVGS: Record<string, (color: string) => JSX.Element> = {
+const ICON_SVGS: Record<string, (color: string) => React.JSX.Element> = {
   users: (c) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -457,7 +449,7 @@ function IconButton({ icon, label, onClick, disabled }: { icon: keyof typeof ICO
   )
 }
 
-const ICONS: Record<string, JSX.Element> = {
+const ICONS: Record<string, React.JSX.Element> = {
   phone: (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A07600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.6 3.4 2 2 0 0 1 3.58 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l1.62-1.62a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -606,17 +598,6 @@ const emptyIcon: React.CSSProperties = {
   justifyContent: 'center',
   margin: '0 auto var(--space-4)',
   fontSize: '22px',
-}
-
-const roleBadge: React.CSSProperties = {
-  fontFamily: 'var(--font-sans)',
-  fontSize: '11px',
-  fontWeight: 600,
-  color: 'var(--n-700)',
-  background: 'var(--n-100)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-full)',
-  padding: '2px 8px',
 }
 
 const breadcrumbBtn: React.CSSProperties = {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { AuthProvider, useAuth } from './auth/AuthContext'
+import { AuthProvider } from './auth/AuthContext'
+import { useAuth } from './auth/useAuth'
 import { LoginPage } from './auth/LoginPage'
 import { SetPasswordPage } from './auth/SetPasswordPage'
 import { Dashboard } from './Dashboard'

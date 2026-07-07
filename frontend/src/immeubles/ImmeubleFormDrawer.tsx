@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Drawer, Button } from '../design-system'
 import type { Immeuble } from '../types/database'
+import { ImmeubleFields } from './ImmeubleFields'
 import {
-  ImmeubleFields,
   EMPTY_IMMEUBLE_FORM,
   immeubleToForm,
   immeubleFormError,
   type ImmeubleFormValues,
-} from './ImmeubleFields'
+} from './immeubleForm'
 
 interface ImmeubleFormDrawerProps {
   open: boolean

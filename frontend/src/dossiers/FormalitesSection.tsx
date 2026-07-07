@@ -34,7 +34,10 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
     setLoading(false)
   }
 
-  useEffect(() => { loadFormalites() }, [dossierId])
+  useEffect(() => {
+    loadFormalites()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossierId])
 
   async function handleAdd(type: string) {
     setSaving(true)

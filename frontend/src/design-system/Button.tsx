@@ -1,4 +1,4 @@
-import React, { type ReactNode, type CSSProperties } from 'react'
+import { type ReactNode, type CSSProperties } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'accent' | 'destructive'
 type Size = 'sm' | 'md' | 'lg'

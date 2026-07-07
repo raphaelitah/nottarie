@@ -32,7 +32,10 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
     setLoading(false)
   }
 
-  useEffect(() => { loadDocuments() }, [dossierId])
+  useEffect(() => {
+    loadDocuments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossierId])
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

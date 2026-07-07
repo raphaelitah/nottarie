@@ -1,4 +1,4 @@
-import React, { useState, type ChangeEvent } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
 interface TextareaProps {
   label?: string

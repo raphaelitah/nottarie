@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from '../design-system'
 import type { DossierImmeuble, Immeuble } from '../types/database'
-import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/ImmeubleFields'
+import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/immeubleForm'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
 import { ImmeubleAttachDrawer, type ImmeubleAttachResult } from './ImmeubleAttachDrawer'
@@ -39,7 +39,10 @@ export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps)
     setImmeubles(data ?? [])
   }
 
-  useEffect(() => { loadLinks(); loadImmeubles() }, [tenantId, dossierId])
+  useEffect(() => {
+    loadLinks(); loadImmeubles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, dossierId])
 
   async function handleAttach(result: ImmeubleAttachResult) {
     setSaving(true)

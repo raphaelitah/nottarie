@@ -47,7 +47,10 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
     setLoading(false)
   }
 
-  useEffect(() => { loadUsers() }, [etudeId])
+  useEffect(() => {
+    loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etudeId])
 
   async function invokeUserAction(body: object) {
     const { data: { session } } = await supabase.auth.getSession()
@@ -253,7 +256,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
   )
 }
 
-const ICON_SVGS: Record<string, (color: string) => JSX.Element> = {
+const ICON_SVGS: Record<string, (color: string) => React.JSX.Element> = {
   pencil: (c) => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>

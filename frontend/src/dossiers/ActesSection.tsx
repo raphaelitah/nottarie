@@ -36,7 +36,10 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
     setLoading(false)
   }
 
-  useEffect(() => { loadActes() }, [dossier.id])
+  useEffect(() => {
+    loadActes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossier.id])
 
   async function handleDownload(document: DocumentRow) {
     setDownloadingId(document.id)

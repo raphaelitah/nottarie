@@ -4,13 +4,13 @@ import { supabase } from '../lib/supabase'
 import { Drawer, Button, Input, Select } from '../design-system'
 import type { Personne } from '../types/database'
 import { QUALITE_SUGGESTIONS } from '../constants/personneTypes'
+import { PersonneFields } from '../personnes/PersonneFields'
 import {
-  PersonneFields,
   EMPTY_PERSONNE_FORM,
   personneDisplayName,
   personneFormError,
   type PersonneFormValues,
-} from '../personnes/PersonneFields'
+} from '../personnes/personneForm'
 
 const ADD_QUALITE_VALUE = '__add__'
 

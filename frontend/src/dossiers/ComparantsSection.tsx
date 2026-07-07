@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from '../design-system'
 import type { Comparant, Personne } from '../types/database'
-import { personneDisplayName, personneFormToInsertPayload } from '../personnes/PersonneFields'
+import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
 
 interface ComparantsSectionProps {
@@ -38,7 +38,10 @@ export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProp
     setPersonnes(data ?? [])
   }
 
-  useEffect(() => { loadComparants(); loadPersonnes() }, [tenantId, dossierId])
+  useEffect(() => {
+    loadComparants(); loadPersonnes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, dossierId])
 
   async function handleAdd(result: ComparantFormResult) {
     setSaving(true)
