@@ -44,6 +44,11 @@ export class OutlookMailboxProvider implements MailboxProvider {
     url.searchParams.set('redirect_uri', params.redirectUri)
     url.searchParams.set('response_mode', 'query')
     url.searchParams.set('scope', SCOPES.join(' '))
+    // Forces a fresh consent screen every time. Without this, Microsoft can
+    // silently reuse a prior partial consent grant on a returning session
+    // instead of re-prompting for scopes added after the first connect —
+    // which is exactly what caused offline_access to go missing here.
+    url.searchParams.set('prompt', 'consent')
     url.searchParams.set('state', params.state)
     url.searchParams.set('code_challenge', params.codeChallenge)
     url.searchParams.set('code_challenge_method', 'S256')
@@ -217,7 +222,7 @@ export class OutlookMailboxProvider implements MailboxProvider {
       body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
     })
     if (res.status === 401 || res.status === 403) {
-      throw new GraphAuthError(`Microsoft Graph a refusé la requête (${res.status}).`)
+      throw new GraphAuthError(`Microsoft Graph a refusé la requête (${res.status}) : ${await res.text()}`)
     }
     if (!res.ok) {
       throw new Error(`Erreur Microsoft Graph (${res.status}) : ${await res.text()}`)
