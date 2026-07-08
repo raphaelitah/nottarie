@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
 
 interface DrawerProps {
   open?: boolean
@@ -32,8 +33,9 @@ export function Drawer({
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  const fullScreen = useMediaQuery(MOBILE_QUERY)
   const widths = { sm: '360px', md: '480px', lg: '640px' }
-  const width = widths[size] ?? widths.md
+  const width = fullScreen ? '100%' : widths[size] ?? widths.md
   const translateOut = side === 'right' ? 'translateX(100%)' : 'translateX(-100%)'
 
   return (

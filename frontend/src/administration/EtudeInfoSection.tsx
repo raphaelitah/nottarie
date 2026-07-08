@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, EditPenButton, Input } from '../design-system'
+import { Button, EditPenButton, Input, MOBILE_QUERY, STACK_QUERY, useMediaQuery } from '../design-system'
 import type { Etude } from '../types/database'
 
 interface EtudeForm {
@@ -30,6 +30,8 @@ function etudeToForm(e: Etude): EtudeForm {
 }
 
 export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated: (etude: Etude) => void }) {
+  const stack = useMediaQuery(STACK_QUERY)
+  const mobile = useMediaQuery(MOBILE_QUERY)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<EtudeForm>(etudeToForm(etude))
   const [saving, setSaving] = useState(false)
@@ -71,7 +73,7 @@ export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated
           <div style={sectionLabel}>Informations de l'étude</div>
           <EditPenButton label="Modifier les informations de l'étude" onClick={startEdit} />
         </div>
-        <div style={grid3}>
+        <div style={grid3(stack, mobile)}>
           <Field label="Raison sociale" value={etude.raison_sociale} />
           <Field label="SIRET" value={etude.siret ?? '—'} />
           <Field label="N° Chambre" value={etude.numero_chambre ?? '—'} />
@@ -97,7 +99,7 @@ export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated
               <label style={labelStyle}>Raison sociale *</label>
               <Input placeholder="ex. Étude Maître Dupont" value={form.raison_sociale} onChange={e => setForm(f => ({ ...f, raison_sociale: e.target.value }))} />
             </div>
-            <div style={grid2}>
+            <div style={grid2(stack)}>
               <div>
                 <label style={labelStyle}>SIRET</label>
                 <Input placeholder="ex. 123 456 789 00012" value={form.siret} onChange={e => setForm(f => ({ ...f, siret: e.target.value }))} />
@@ -114,7 +116,7 @@ export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated
 
         <section>
           <div style={sectionLabel}>Contact</div>
-          <div style={grid2}>
+          <div style={grid2(stack)}>
             <div>
               <label style={labelStyle}>Téléphone</label>
               <Input placeholder="ex. 01 23 45 67 89" value={form.telephone} onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))} />
@@ -135,7 +137,7 @@ export function EtudeInfoSection({ etude, onUpdated }: { etude: Etude; onUpdated
               <label style={labelStyle}>Adresse</label>
               <Input placeholder="ex. 12 rue de la Paix" value={form.adresse_ligne1} onChange={e => setForm(f => ({ ...f, adresse_ligne1: e.target.value }))} />
             </div>
-            <div style={grid3}>
+            <div style={grid3(stack, mobile)}>
               <div>
                 <label style={labelStyle}>Code postal</label>
                 <Input placeholder="ex. 75002" value={form.code_postal} onChange={e => setForm(f => ({ ...f, code_postal: e.target.value }))} />
@@ -203,16 +205,20 @@ const valueStyle: React.CSSProperties = {
   color: 'var(--n-900)',
 }
 
-const grid2: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 'var(--space-4)',
+function grid2(stack: boolean): React.CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: stack ? '1fr' : '1fr 1fr',
+    gap: 'var(--space-4)',
+  }
 }
 
-const grid3: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr 1fr',
-  gap: 'var(--space-4)',
+function grid3(stack: boolean, mobile: boolean): React.CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: mobile ? '1fr' : stack ? '1fr 1fr' : '1fr 1fr 1fr',
+    gap: 'var(--space-4)',
+  }
 }
 
 const divider: React.CSSProperties = {

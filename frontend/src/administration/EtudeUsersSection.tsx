@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Select } from '../design-system'
+import { Button, Input, MOBILE_QUERY, Select, useMediaQuery } from '../design-system'
 import type { RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
 
@@ -19,6 +19,7 @@ const EMPTY_INVITE: InviteForm = {
 }
 
 export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
+  const mobile = useMediaQuery(MOBILE_QUERY)
   const [users, setUsers] = useState<Utilisateur[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -145,7 +146,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
               <label style={labelStyle}>Email *</label>
               <Input type="email" placeholder="ex. m.dupont@etude.fr" value={inviteForm.email} onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))} />
             </div>
-            <div style={grid2}>
+            <div style={grid2(mobile)}>
               <div>
                 <label style={labelStyle}>Prénom</label>
                 <Input placeholder="ex. Marie" value={inviteForm.prenom} onChange={e => setInviteForm(f => ({ ...f, prenom: e.target.value }))} />
@@ -337,10 +338,12 @@ const card: React.CSSProperties = {
   boxShadow: 'var(--shadow-xs)',
 }
 
-const grid2: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 'var(--space-4)',
+function grid2(mobile: boolean): React.CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: mobile ? '1fr' : '1fr 1fr',
+    gap: 'var(--space-4)',
+  }
 }
 
 const roleBadge: React.CSSProperties = {

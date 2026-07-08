@@ -94,6 +94,7 @@ export function Table<T extends { id: string | number }>({
     color: '#1A1924',
     borderBottom: '1px solid #F0EFF4',
     verticalAlign: 'middle',
+    whiteSpace: 'nowrap',
   })
 
   const sortIcon = (col: TableColumn<T>) => {
@@ -111,7 +112,7 @@ export function Table<T extends { id: string | number }>({
       boxShadow: '0 1px 3px rgba(30,45,69,.06)',
     }}>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
           <thead>
             <tr>
               {selectable && (

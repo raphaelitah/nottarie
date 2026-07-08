@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, EditPenButton, Input, Select } from '../design-system'
+import { Badge, Button, EditPenButton, Input, MOBILE_QUERY, Select, STACK_QUERY, useMediaQuery } from '../design-system'
 import { Modal } from '../design-system/Modal'
 import type { Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
@@ -54,6 +54,8 @@ interface DossierDetailPageProps {
 }
 
 export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }: DossierDetailPageProps) {
+  const stack = useMediaQuery(STACK_QUERY)
+  const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === dossier.tenant_id) ?? null
   const isAdmin = membership?.roles.includes('administrateur') ?? false
@@ -209,7 +211,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
               <EditPenButton label="Modifier les informations générales" onClick={handleStartEditGeneral} />
             )}
           </div>
-          <div style={grid3}>
+          <div style={grid3(stack, mobile)}>
             <div>
               <label style={labelStyle}>Numéro de dossier</label>
               {editingGeneral ? (
@@ -283,24 +285,18 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
           </div>
         </div>
 
-        <div style={{ ...grid2, marginTop: 'var(--space-6)' }}>
+        <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
           <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
           <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
 
-        <div style={{ marginTop: 'var(--space-6)' }}>
+        <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
           <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
-        </div>
-
-        <div style={{ marginTop: 'var(--space-6)' }}>
           <DocumentsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
 
-        <div style={{ marginTop: 'var(--space-6)' }}>
+        <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
           <CourriersSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
-        </div>
-
-        <div style={{ marginTop: 'var(--space-6)' }}>
           <FormalitesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
         </>
@@ -416,16 +412,20 @@ const valueStyle: CSSProperties = {
   color: 'var(--n-900)',
 }
 
-const grid2: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 'var(--space-4)',
+function grid2(stack: boolean): CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: stack ? '1fr' : '1fr 1fr',
+    gap: 'var(--space-4)',
+  }
 }
 
-const grid3: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr 1fr',
-  gap: 'var(--space-4)',
+function grid3(stack: boolean, mobile: boolean): CSSProperties {
+  return {
+    display: 'grid',
+    gridTemplateColumns: mobile ? '1fr' : stack ? '1fr 1fr' : '1fr 1fr 1fr',
+    gap: 'var(--space-4)',
+  }
 }
 
 const breadcrumbBtn: CSSProperties = {

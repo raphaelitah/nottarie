@@ -5,6 +5,8 @@ import { UserMenu } from './design-system/UserMenu'
 import { AppFooter } from './design-system/AppFooter'
 import { Badge } from './design-system/Badge'
 import { Select } from './design-system/Select'
+import { Drawer } from './design-system/Drawer'
+import { NAV_QUERY, useMediaQuery } from './design-system/useMediaQuery'
 import { ROLE_OPTIONS } from './constants/roles'
 import type { RoleNotarial } from './types/database'
 import { DossiersPage } from './dossiers/DossiersPage'
@@ -20,6 +22,8 @@ const AgendaPage = lazy(() => import('./agenda/AgendaPage').then((m) => ({ defau
 type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration' | 'mon-compte'
 
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
+  const isMobileNav = useMediaQuery(NAV_QUERY)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
   // Returning from the Outlook OAuth redirect lands here with ?mailbox_oauth=1
   // in the URL — jump straight to Mon compte so MailboxConnectionSection
@@ -47,12 +51,33 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
     ? activeRoles[membership.tenant_id] ?? (isAdmin ? 'administrateur' : membership.roles[0])
     : null
 
+  function selectSection(next: Section) {
+    setSection(next)
+    setMobileNavOpen(false)
+  }
+
+  const navLinks = (
+    <>
+      <SidebarLink active={section === 'accueil'} onClick={() => selectSection('accueil')}>Accueil</SidebarLink>
+      <SidebarLink active={section === 'agenda'} onClick={() => selectSection('agenda')}>Agenda</SidebarLink>
+      <SidebarLink active={section === 'dossiers'} onClick={() => { selectSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
+      <SidebarLink active={section === 'personnes'} onClick={() => { selectSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
+      <SidebarLink active={section === 'immeubles'} onClick={() => { selectSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
+      {isAdmin && (
+        <>
+          <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
+          <SidebarLink active={section === 'administration'} onClick={() => selectSection('administration')}>Administration de l'étude</SidebarLink>
+        </>
+      )}
+    </>
+  )
+
   return (
     <div style={{ minHeight: '100svh', background: 'var(--surface-subtle)', display: 'flex', flexDirection: 'column' }}>
       {/* Top nav */}
       <header style={{
         background: 'var(--color-ink)',
-        padding: '0 var(--space-8)',
+        padding: isMobileNav ? '0 var(--space-4)' : '0 var(--space-8)',
         height: '56px',
         display: 'flex',
         alignItems: 'center',
@@ -61,6 +86,33 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         boxShadow: 'var(--shadow-md)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0, flexShrink: 1 }}>
+          {membership && isMobileNav && (
+            <button
+              type="button"
+              title="Navigation"
+              aria-label="Ouvrir la navigation"
+              onClick={() => setMobileNavOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '30px',
+                height: '30px',
+                flexShrink: 0,
+                borderRadius: 'var(--radius-md, 6px)',
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'var(--n-400)',
+                cursor: 'pointer',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </svg>
+            </button>
+          )}
           <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
           <span style={{
             fontFamily: 'var(--font-sans)',
@@ -70,7 +122,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             letterSpacing: 'var(--tracking-tight)',
             flexShrink: 0,
           }}>Nottarie</span>
-          {membership?.etude && (
+          {membership?.etude && !isMobileNav && (
             <>
               <span style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
               <span
@@ -90,7 +142,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         </div>
 
         {membership && (
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0, padding: '0 var(--space-6)' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', minWidth: 0, padding: isMobileNav ? '0 var(--space-2)' : '0 var(--space-6)' }}>
             <div style={{ width: '100%', maxWidth: '640px' }}>
               <GlobalSearch
                 tenantId={membership.tenant_id}
@@ -159,30 +211,28 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         </main>
       ) : (
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          {/* Left nav */}
-          <nav style={{
-            width: '220px',
-            flexShrink: 0,
-            background: 'var(--surface-subtle)',
-            padding: 'var(--space-5) var(--space-3)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-1)',
-          }}>
-            <SidebarLink active={section === 'accueil'} onClick={() => setSection('accueil')}>Accueil</SidebarLink>
-            <SidebarLink active={section === 'agenda'} onClick={() => setSection('agenda')}>Agenda</SidebarLink>
-            <SidebarLink active={section === 'dossiers'} onClick={() => { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
-            <SidebarLink active={section === 'personnes'} onClick={() => { setSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
-            <SidebarLink active={section === 'immeubles'} onClick={() => { setSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
-            {isAdmin && (
-              <>
-                <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
-                <SidebarLink active={section === 'administration'} onClick={() => setSection('administration')}>Administration de l'étude</SidebarLink>
-              </>
-            )}
-          </nav>
+          {/* Left nav — static on desktop, a drawer triggered by the header hamburger on mobile */}
+          {!isMobileNav && (
+            <nav style={{
+              width: '220px',
+              flexShrink: 0,
+              background: 'var(--surface-subtle)',
+              padding: 'var(--space-5) var(--space-3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--space-1)',
+            }}>
+              {navLinks}
+            </nav>
+          )}
 
-          <main style={{ flex: 1, padding: 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
+          <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} side="left" size="sm" title="Nottarie">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+              {navLinks}
+            </div>
+          </Drawer>
+
+          <main style={{ flex: 1, padding: isMobileNav ? 'var(--space-4)' : 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
             {section === 'dossiers' ? (
               <DossiersPage key={dossiersResetKey} tenantId={membership.tenant_id} focusId={focusDossierId} onFocusHandled={() => setFocusDossierId(null)} />
             ) : section === 'personnes' ? (
