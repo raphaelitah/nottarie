@@ -35,3 +35,16 @@ export async function isTenantMember(admin: SupabaseClient, authUserId: string, 
     .maybeSingle()
   return !!data
 }
+
+/** Notaire or administrateur of the given étude — used for actions with legal
+ * significance (e.g. designating/requesting/completing a signature). */
+export async function isNotaireOrAdmin(admin: SupabaseClient, authUserId: string, tenantId: string): Promise<boolean> {
+  const { data } = await admin
+    .from('utilisateurs')
+    .select('roles')
+    .eq('auth_user_id', authUserId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  const roles: string[] = data?.roles ?? []
+  return roles.includes('administrateur') || roles.includes('notaire')
+}
