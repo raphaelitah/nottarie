@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Drawer, Button, Input, Select } from '../../design-system'
+import { Drawer, Button, Input, NumberInput, Select } from '../../design-system'
 import type { BaremeSousType } from '../../types/database'
 
 export interface BaremeFormValues {
@@ -124,7 +124,7 @@ export function BaremeFormDrawer({ open, typeActe, saving, onSave, onClose }: Ba
         <div style={grid3}>
           <Input label="TVA (%)" type="number" value={values.tva_taux_pct} onChange={(e) => set({ tva_taux_pct: e.target.value })} />
           <Input label="CSI (%)" type="number" value={values.csi_taux_pct} onChange={(e) => set({ csi_taux_pct: e.target.value })} />
-          <Input label="Débours estimés (€)" type="number" value={values.debours_estimation_defaut} onChange={(e) => set({ debours_estimation_defaut: e.target.value })} />
+          <NumberInput label="Débours estimés (€)" value={values.debours_estimation_defaut} onChange={(e) => set({ debours_estimation_defaut: e.target.value })} />
         </div>
 
         <div>
@@ -134,9 +134,8 @@ export function BaremeFormDrawer({ open, typeActe, saving, onSave, onClose }: Ba
               const isLast = i === values.tranches.length - 1
               return (
                 <div key={i} style={trancheRow}>
-                  <Input
+                  <NumberInput
                     placeholder={isLast ? 'Illimité' : 'Jusqu\'à (€)'}
-                    type="number"
                     disabled={isLast}
                     value={isLast ? '' : t.jusqu_a}
                     onChange={(e) => setTranche(i, { jusqu_a: e.target.value })}

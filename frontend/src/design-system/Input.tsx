@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type ChangeEvent } from 'react'
+import { forwardRef, useState, type ReactNode, type ChangeEvent } from 'react'
 
 interface InputProps {
   label?: string
@@ -11,13 +11,14 @@ interface InputProps {
   disabled?: boolean
   required?: boolean
   type?: string
+  inputMode?: 'text' | 'numeric' | 'decimal' | 'search' | 'email' | 'tel' | 'url' | 'none'
   prefix?: ReactNode
   suffix?: ReactNode
   id?: string
   list?: string
 }
 
-export function Input({
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input({
   label,
   placeholder,
   value,
@@ -28,11 +29,12 @@ export function Input({
   disabled = false,
   required = false,
   type = 'text',
+  inputMode,
   prefix,
   suffix,
   id,
   list,
-}: InputProps) {
+}, ref) {
   const [focused, setFocused] = useState(false)
   const inputId = id ?? (label ? label.replace(/\s+/g, '-').toLowerCase() : undefined)
 
@@ -70,8 +72,10 @@ export function Input({
           }}>{prefix}</span>
         )}
         <input
+          ref={ref}
           id={inputId}
           type={type}
+          inputMode={inputMode}
           value={value}
           defaultValue={defaultValue}
           onChange={onChange}
@@ -117,4 +121,4 @@ export function Input({
       )}
     </div>
   )
-}
+})

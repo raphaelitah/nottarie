@@ -1,4 +1,4 @@
-import { Input, Select } from '../design-system'
+import { Input, NumberInput, Select } from '../design-system'
 import type { RegimeBien } from '../types/database'
 import { REGIME_BIEN_OPTIONS } from '../constants/regimeBien'
 import { TYPE_BIEN_OPTIONS } from '../constants/typeBien'
@@ -69,10 +69,9 @@ export function ImmeubleFields({ values, onChange }: ImmeubleFieldsProps) {
         onChange={(e) => set({ references_cadastrales: e.target.value })}
       />
 
-      <Input
+      <NumberInput
         label="Valeur déclarée (€)"
-        type="number"
-        placeholder="ex. 250000"
+        placeholder="ex. 250 000"
         value={values.valeur_declaree}
         onChange={(e) => set({ valeur_declaree: e.target.value })}
       />

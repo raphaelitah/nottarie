@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Select } from '../design-system'
+import { Button, NumberInput, Select } from '../design-system'
 import type { Bareme, BaremeSousType, Dossier } from '../types/database'
 import { computeCout } from '../lib/bareme/computeCout'
 
@@ -133,24 +133,21 @@ export function CoutEstimationSection({ dossier, onUpdated }: CoutEstimationSect
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: dossier.type_acte === 'succession' ? '1fr 1fr' : '1fr', gap: 'var(--space-4)' }}>
-            <Input
+            <NumberInput
               label="Valeur des immeubles rattachés (€)"
-              type="number"
               value={immeubleTotal}
               onChange={(e) => setImmeubleTotal(e.target.value)}
               helper="Somme des valeurs déclarées des immeubles attachés au dossier — ajustable ici."
             />
-            <Input
+            <NumberInput
               label="Autres actifs (€)"
-              type="number"
               placeholder="ex. comptes, meubles, parts sociales…"
               value={autresActifs}
               onChange={(e) => setAutresActifs(e.target.value)}
             />
             {dossier.type_acte === 'succession' && (
-              <Input
+              <NumberInput
                 label="Passif déductible (€)"
-                type="number"
                 value={passif}
                 onChange={(e) => setPassif(e.target.value)}
               />
