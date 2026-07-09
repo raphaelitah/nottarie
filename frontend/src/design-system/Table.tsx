@@ -1,4 +1,5 @@
 import { useState, type ReactNode, type CSSProperties } from 'react'
+import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
 
 export interface TableColumn<T = Record<string, unknown>> {
   key: string
@@ -33,6 +34,7 @@ export function Table<T extends { id: string | number }>({
   emptyLabel = 'Aucun résultat',
   defaultSort,
 }: TableProps<T>) {
+  const cardView = useMediaQuery(MOBILE_QUERY)
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(defaultSort ?? null)
 
   const handleSort = (col: TableColumn<T>) => {
@@ -66,6 +68,112 @@ export function Table<T extends { id: string | number }>({
       selectedIds.includes(id)
         ? selectedIds.filter((x) => x !== id)
         : [...selectedIds, id]
+    )
+  }
+
+  const cellValue = (col: TableColumn<T>, row: T): ReactNode =>
+    col.render
+      ? col.render((row as Record<string, unknown>)[col.key], row)
+      : ((row as Record<string, unknown>)[col.key] as ReactNode) ?? '—'
+
+  if (cardView) {
+    const [titleCol, ...restCols] = columns
+    const actionCols = restCols.filter((col) => !col.label)
+    const fieldCols = restCols.filter((col) => col.label)
+
+    if (loading) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} style={cardStyle(false)}>
+              <div style={{ height: '14px', borderRadius: '4px', background: '#F0EFF4', width: `${55 + (i * 17) % 35}%` }} />
+              <div style={{ height: '11px', borderRadius: '4px', background: '#F0EFF4', width: `${35 + (i * 11) % 30}%`, marginTop: '10px' }} />
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (sorted.length === 0) {
+      return (
+        <div style={{
+          background: '#FFFFFF', border: '1px solid #E0DFE8', borderRadius: '10px',
+          padding: '40px 24px', textAlign: 'center',
+          fontFamily: "'Sora', system-ui, sans-serif", fontSize: '14px', color: '#9B98AC',
+        }}>
+          {emptyLabel}
+        </div>
+      )
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {sorted.map((row) => {
+          const isSelected = selectedIds.includes(row.id)
+          return (
+            <div
+              key={row.id}
+              onClick={() => onRowClick?.(row)}
+              style={cardStyle(isSelected, !!onRowClick)}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  {selectable && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={() => toggleRow(row.id)}
+                      style={{ cursor: 'pointer', accentColor: '#1E2D45', flexShrink: 0 }}
+                    />
+                  )}
+                  {titleCol && (
+                    <div style={{
+                      fontFamily: titleCol.mono ? "'JetBrains Mono', monospace" : "'Sora', system-ui, sans-serif",
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#1A1924',
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {cellValue(titleCol, row)}
+                    </div>
+                  )}
+                </div>
+                {actionCols.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    {actionCols.map((col) => <span key={col.key}>{cellValue(col, row)}</span>)}
+                  </div>
+                )}
+              </div>
+
+              {fieldCols.length > 0 && (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', gap: '6px',
+                  marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #F0EFF4',
+                }}>
+                  {fieldCols.map((col) => (
+                    <div key={col.key} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                      <span style={{
+                        fontFamily: "'Sora', system-ui, sans-serif",
+                        fontSize: '11px', fontWeight: 600, color: '#9B98AC',
+                        letterSpacing: '0.04em', textTransform: 'uppercase',
+                        flexShrink: 0,
+                      }}>{col.label}</span>
+                      <span style={{
+                        fontFamily: col.mono ? "'JetBrains Mono', monospace" : "'Sora', system-ui, sans-serif",
+                        fontSize: '13px', color: '#1A1924', textAlign: 'right',
+                        minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>{cellValue(col, row)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     )
   }
 
@@ -191,9 +299,7 @@ export function Table<T extends { id: string | number }>({
                     )}
                     {columns.map((col) => (
                       <td key={col.key} style={tdStyle(col)}>
-                        {col.render
-                          ? col.render((row as Record<string, unknown>)[col.key], row)
-                          : ((row as Record<string, unknown>)[col.key] as ReactNode) ?? '—'}
+                        {cellValue(col, row)}
                       </td>
                     ))}
                   </tr>
@@ -205,4 +311,16 @@ export function Table<T extends { id: string | number }>({
       </div>
     </div>
   )
+}
+
+function cardStyle(selected: boolean, clickable = false): CSSProperties {
+  return {
+    background: selected ? '#F6F3EE' : '#FFFFFF',
+    border: '1px solid #E0DFE8',
+    borderRadius: '10px',
+    padding: '14px 16px',
+    boxShadow: '0 1px 3px rgba(30,45,69,.06)',
+    cursor: clickable ? 'pointer' : 'default',
+    transition: 'background 150ms ease',
+  }
 }
