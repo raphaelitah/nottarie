@@ -1,5 +1,5 @@
 import { useState, type ReactNode, type CSSProperties } from 'react'
-import { MOBILE_QUERY, useMediaQuery } from './useMediaQuery'
+import { NAV_QUERY, useMediaQuery } from './useMediaQuery'
 
 export interface TableColumn<T = Record<string, unknown>> {
   key: string
@@ -34,7 +34,7 @@ export function Table<T extends { id: string | number }>({
   emptyLabel = 'Aucun résultat',
   defaultSort,
 }: TableProps<T>) {
-  const cardView = useMediaQuery(MOBILE_QUERY)
+  const cardView = useMediaQuery(NAV_QUERY)
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(defaultSort ?? null)
 
   const handleSort = (col: TableColumn<T>) => {
