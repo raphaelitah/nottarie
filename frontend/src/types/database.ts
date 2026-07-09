@@ -228,6 +228,14 @@ export interface Acte {
   signature_requests?: SignatureRequestRow[]
 }
 
+export interface ActeBrouillon {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  content: Record<string, unknown>
+  updated_at: string
+}
+
 export interface SignatureRequestRow {
   id: string
   tenant_id: string

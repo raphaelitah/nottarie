@@ -154,3 +154,7 @@
   --transition-normal: 200ms ease;
   --transition-slow:   300ms ease;
 }
+
+@keyframes acte-composer-spin {
+  to { transform: rotate(360deg); }
+}

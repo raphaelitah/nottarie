@@ -10,6 +10,16 @@ import { acteTypeLabel } from '../../constants/acteTypes'
 import { FillFieldNode } from './fillFieldNode'
 import { createChampResolver, withResolvedValues, type ChampResolver, type TiptapNode } from './resolveChampValue'
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+const AUTOSAVE_DELAY_MS = 1200
+
+function formatSavedAt(date: Date) {
+  const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const day = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return `Acte mis à jour à ${time} le ${day}`
+}
+
 interface ActeComposerPageProps {
   dossier: Dossier
   onBack: () => void
@@ -23,12 +33,52 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const resolveRef = useRef<ChampResolver>(() => null)
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const readyForAutosave = useRef(false)
 
   const editor = useEditor({
     extensions: [StarterKit, FillFieldNode],
     content: { type: 'doc', content: [{ type: 'paragraph' }] },
+    onUpdate: () => scheduleAutosave(),
   })
+
+  function scheduleAutosave() {
+    if (!readyForAutosave.current) return
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    setSaveStatus('saving')
+    autosaveTimer.current = setTimeout(saveDraft, AUTOSAVE_DELAY_MS)
+  }
+
+  async function saveDraft() {
+    if (!editor) return
+    setSaveStatus('saving')
+    const { error: saveError } = await supabase
+      .from('acte_brouillons')
+      .upsert(
+        {
+          tenant_id: dossier.tenant_id,
+          dossier_id: dossier.id,
+          content: editor.getJSON(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'dossier_id' },
+      )
+    if (saveError) {
+      setSaveStatus('error')
+      return
+    }
+    setLastSavedAt(new Date())
+    setSaveStatus('saved')
+  }
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!editor) return
@@ -37,15 +87,17 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
     async function load() {
       setLoading(true)
       setError(null)
+      readyForAutosave.current = false
 
       const membership = memberships.find((m) => m.tenant_id === dossier.tenant_id)
       const notaireNom = [membership?.prenom, membership?.nom].filter(Boolean).join(' ')
 
-      const [{ data: etude }, { data: sections, error: sectionsError }, { data: comparants, error: comparantsError }] = await Promise.all([
+      const [{ data: etude }, { data: sections, error: sectionsError }, { data: comparants, error: comparantsError }, { data: brouillon }] = await Promise.all([
         supabase.from('etudes').select('*').eq('id', dossier.tenant_id).maybeSingle<Etude>(),
         supabase.from('trame_sections').select('*').eq('type_acte', dossier.type_acte).eq('is_published', true)
           .order('category').order('title'),
         supabase.from('comparants').select('*, personne:personnes(*)').eq('dossier_id', dossier.id).returns<Comparant[]>(),
+        supabase.from('acte_brouillons').select('*').eq('dossier_id', dossier.id).maybeSingle<{ content: unknown; updated_at: string }>(),
       ])
 
       if (cancelled) return
@@ -63,11 +115,16 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
       setStandard(std)
       setOptionalSections(optional)
 
-      if (std) {
+      if (brouillon?.content) {
+        editor.commands.setContent(brouillon.content as never)
+        setLastSavedAt(new Date(brouillon.updated_at))
+        setSaveStatus('saved')
+      } else if (std) {
         const resolved = withResolvedValues(std.content as unknown as TiptapNode, resolveRef.current)
         editor.commands.setContent(resolved as never)
       }
       setLoading(false)
+      readyForAutosave.current = true
     }
 
     load()
@@ -111,6 +168,8 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
     const resJson = await response.json()
     setSaving(false)
     if (!response.ok) { setError(resJson.error ?? 'Erreur lors de la génération.'); return }
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    await supabase.from('acte_brouillons').delete().eq('dossier_id', dossier.id)
     onGenerated(resJson.acte, resJson.document)
   }
 
@@ -123,9 +182,12 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
           <button onClick={onBack} style={backBtn}>‹ Annuler</button>
           <span style={title}>{dossier.numero || 'Dossier sans numéro'} — {acteTypeLabel(dossier.type_acte)}</span>
         </div>
-        <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !standard}>
-          {saving ? 'Génération…' : 'Générer'}
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
+          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !standard}>
+            {saving ? 'Génération…' : 'Générer'}
+          </Button>
+        </div>
       </div>
 
       {error && <div style={alertStyle}>{error}</div>}
@@ -273,6 +335,45 @@ const documentPage: CSSProperties = {
   lineHeight: 1.7,
   color: 'var(--n-900)',
   marginBottom: 'var(--space-8)',
+}
+
+function SaveIndicator({ status, lastSavedAt }: { status: SaveStatus; lastSavedAt: Date | null }) {
+  if (status === 'idle') return null
+
+  if (status === 'saving') {
+    return (
+      <span style={saveIndicatorStyle}>
+        <span style={spinnerStyle} />
+        Enregistrement…
+      </span>
+    )
+  }
+
+  if (status === 'error') {
+    return <span style={{ ...saveIndicatorStyle, color: '#DC2626' }}>Échec de l'enregistrement automatique</span>
+  }
+
+  if (!lastSavedAt) return null
+  return <span style={saveIndicatorStyle}>{formatSavedAt(lastSavedAt)}</span>
+}
+
+const saveIndicatorStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  color: 'var(--text-muted)',
+  whiteSpace: 'nowrap',
+}
+
+const spinnerStyle: CSSProperties = {
+  width: '11px',
+  height: '11px',
+  borderRadius: '50%',
+  border: '2px solid var(--border-default)',
+  borderTopColor: 'var(--n-700)',
+  animation: 'acte-composer-spin 0.7s linear infinite',
 }
 
 const alertStyle: CSSProperties = {
