@@ -20,6 +20,7 @@ import type { RecurrenceScope } from './RecurrenceScopeModal'
 import { buildRRuleString } from './eventRecurrence'
 import { resolveEventColor } from './agendaColors'
 import { frenchHolidays } from './frenchHolidays'
+import './AgendaPage.css'
 
 interface AgendaPageProps {
   tenantId: string
@@ -429,7 +430,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
             key={calendarKey}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
             initialView="dayGridMonth"
-            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek' }}
+            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth timeGridWeek timeGridDay listWeek' }}
             locale={frLocale}
             firstDay={1}
             height="auto"

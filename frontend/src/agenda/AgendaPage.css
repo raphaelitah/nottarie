@@ -1,0 +1,22 @@
+.fc .fc-button {
+  border-radius: var(--radius-md) !important;
+  height: 30px;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+.fc .fc-button-group {
+  gap: var(--space-2);
+}
+
+.fc .fc-button-group .fc-button {
+  border-radius: var(--radius-md) !important;
+  margin: 0 !important;
+}
+
+.fc .fc-toolbar-title::first-letter {
+  text-transform: uppercase;
+}
