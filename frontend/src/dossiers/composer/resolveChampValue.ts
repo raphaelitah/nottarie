@@ -43,6 +43,16 @@ export interface TiptapNode {
   marks?: unknown[]
 }
 
+// The acte's title is the document's own level-1 heading — there is no
+// separate "nom" independent of what appears at the top of the document.
+export function extractHeadingText(doc: TiptapNode): string {
+  const heading = doc.content?.find((n) => n.type === 'heading' && Number(n.attrs?.level ?? 1) === 1)
+  if (!heading) return ''
+  // Not trimmed: this mirrors live typing in the title field, where a
+  // trailing space is a valid in-progress state, not something to strip.
+  return (heading.content ?? []).map((n) => n.text ?? '').join('')
+}
+
 // Applied to a section's content before it's fed into the composer's editor
 // (initial standard model, or a section inserted at the cursor) — champ nodes
 // get their `value` pre-filled wherever the source resolves.

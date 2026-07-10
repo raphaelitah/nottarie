@@ -125,7 +125,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
           {draft && (
             <div style={{ ...row, cursor: 'pointer' }} onClick={onOpenComposer}>
               <div style={{ minWidth: 0 }}>
-                <span style={name}>{draft.nom || 'Brouillon sans nom'}</span>
+                <span style={name}>{draft.nom || 'Brouillon sans titre'}</span>
                 <span style={meta}>Modifié le {formatDateTime(draft.updated_at)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>

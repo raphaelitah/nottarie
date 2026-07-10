@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     }
     const trimmedNom = typeof nom === 'string' ? nom.trim() : ''
     if (!trimmedNom) {
-      return new Response(JSON.stringify({ error: "Le nom de l'acte est requis" }), { status: 400, headers: corsHeaders })
+      return new Response(JSON.stringify({ error: "Le titre de l'acte est requis" }), { status: 400, headers: corsHeaders })
     }
 
     const { data: dossier, error: dossierError } = await supabaseAdmin

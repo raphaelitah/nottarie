@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../auth/useAuth'
@@ -8,7 +8,26 @@ import { Button } from '../../design-system'
 import type { Acte, Comparant, DocumentRow, Dossier, Etude, TrameSection } from '../../types/database'
 import { acteTypeLabel } from '../../constants/acteTypes'
 import { FillFieldNode } from './fillFieldNode'
-import { createChampResolver, withResolvedValues, type ChampResolver, type TiptapNode } from './resolveChampValue'
+import { createChampResolver, extractHeadingText, withResolvedValues, type ChampResolver, type TiptapNode } from './resolveChampValue'
+
+// The title field above the editor and the document's own level-1 heading
+// are the same title — this pushes an edit made in the field into the
+// heading node so the two can never diverge.
+function applyTitreToHeading(editor: Editor | null, value: string) {
+  if (!editor) return
+  const { doc } = editor.state
+  let range: { from: number; to: number } | null = null
+  doc.descendants((node, pos) => {
+    if (range) return false
+    if (node.type.name === 'heading' && Number(node.attrs.level ?? 1) === 1) {
+      range = { from: pos + 1, to: pos + node.nodeSize - 1 }
+      return false
+    }
+    return true
+  })
+  if (!range) return
+  editor.chain().insertContentAt(range, value ? [{ type: 'text', text: value, marks: [{ type: 'bold' }] }] : []).run()
+}
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -45,7 +64,12 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
   const editor = useEditor({
     extensions: [StarterKit, FillFieldNode],
     content: { type: 'doc', content: [{ type: 'paragraph' }] },
-    onUpdate: () => scheduleAutosave(),
+    onUpdate: ({ editor }) => {
+      scheduleAutosave()
+      const heading = extractHeadingText(editor.getJSON() as TiptapNode)
+      setNom(heading)
+      nomRef.current = heading
+    },
   })
 
   function scheduleAutosave() {
@@ -59,6 +83,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
   function handleNomChange(value: string) {
     setNom(value)
     nomRef.current = value
+    applyTitreToHeading(editor, value)
     scheduleAutosave()
   }
 
@@ -126,20 +151,27 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
       setStandard(std)
       setOptionalSections(optional)
 
-      const initialNom = acte?.nom ?? brouillon?.nom ?? ''
-      setNom(initialNom)
-      nomRef.current = initialNom
-
+      let initialContent: TiptapNode | null = null
       if (acte?.content) {
+        initialContent = acte.content as unknown as TiptapNode
         editor.commands.setContent(acte.content as never)
       } else if (brouillon?.content) {
+        initialContent = brouillon.content as unknown as TiptapNode
         editor.commands.setContent(brouillon.content as never)
         setLastSavedAt(new Date(brouillon.updated_at))
         setSaveStatus('saved')
       } else if (std) {
         const resolved = withResolvedValues(std.content as unknown as TiptapNode, resolveRef.current)
+        initialContent = resolved
         editor.commands.setContent(resolved as never)
       }
+
+      // The title mirrors the document's own heading, so it's read back out
+      // of whichever content just got loaded rather than a separate field.
+      const initialNom = initialContent ? extractHeadingText(initialContent) : ''
+      setNom(initialNom)
+      nomRef.current = initialNom
+
       setLoading(false)
       readyForAutosave.current = true
     }
@@ -159,7 +191,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
   async function handleGenerate() {
     if (!editor) return
     if (!nom.trim()) {
-      setError("Le nom de l'acte est requis.")
+      setError("Le titre de l'acte est requis.")
       return
     }
     const json = editor.getJSON()
@@ -208,7 +240,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
         <input
           style={nomInput}
           type="text"
-          placeholder="Nom de l'acte"
+          placeholder="Titre de l'acte"
           value={nom}
           onChange={(e) => handleNomChange(e.target.value)}
         />
