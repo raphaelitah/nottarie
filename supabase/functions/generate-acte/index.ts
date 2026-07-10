@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Session invalide' }), { status: 401, headers: corsHeaders })
     }
 
-    const { dossier_id, content } = await req.json()
+    const { dossier_id, content, acte_id } = await req.json()
     if (!dossier_id || !content || typeof content !== 'object') {
       return new Response(JSON.stringify({ error: 'dossier_id et content sont requis' }), { status: 400, headers: corsHeaders })
     }
@@ -95,6 +95,25 @@ Deno.serve(async (req) => {
 
     if (!(await isTenantMember(supabaseAdmin, caller.id, dossier.tenant_id))) {
       return new Response(JSON.stringify({ error: 'Accès refusé à ce dossier.' }), { status: 403, headers: corsHeaders })
+    }
+
+    let existingActe: { id: string; statut: string; dossier_id: string; documents: { id: string; storage_path: string }[] } | null = null
+    if (acte_id) {
+      const { data: found, error: acteFetchError } = await supabaseAdmin
+        .from('actes')
+        .select('id, statut, dossier_id, documents(id, storage_path)')
+        .eq('id', acte_id)
+        .maybeSingle()
+      if (acteFetchError || !found) {
+        return new Response(JSON.stringify({ error: 'Acte introuvable.' }), { status: 404, headers: corsHeaders })
+      }
+      if (found.dossier_id !== dossier.id) {
+        return new Response(JSON.stringify({ error: "Cet acte n'appartient pas à ce dossier." }), { status: 403, headers: corsHeaders })
+      }
+      if (found.statut !== 'brouillon') {
+        return new Response(JSON.stringify({ error: "Seul un acte au statut brouillon peut être modifié." }), { status: 409, headers: corsHeaders })
+      }
+      existingActe = found
     }
 
     const { data: trame } = await supabaseAdmin
@@ -124,19 +143,40 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Erreur de stockage : ' + uploadError.message }), { status: 500, headers: corsHeaders })
     }
 
-    const { data: acte, error: acteError } = await supabaseAdmin
-      .from('actes')
-      .insert({
-        tenant_id: dossier.tenant_id,
-        dossier_id: dossier.id,
-        trame_id: trame.id,
-        statut: 'brouillon',
-        donnees,
-      })
-      .select()
-      .single()
-    if (acteError || !acte) {
-      return new Response(JSON.stringify({ error: "Erreur lors de l'enregistrement de l'acte : " + acteError?.message }), { status: 500, headers: corsHeaders })
+    let acte: { id: string; [key: string]: unknown }
+    if (existingActe) {
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from('actes')
+        .update({ donnees, content })
+        .eq('id', existingActe.id)
+        .select()
+        .single()
+      if (updateError || !updated) {
+        return new Response(JSON.stringify({ error: "Erreur lors de la mise à jour de l'acte : " + updateError?.message }), { status: 500, headers: corsHeaders })
+      }
+      acte = updated
+
+      for (const oldDoc of existingActe.documents) {
+        await supabaseAdmin.storage.from('documents').remove([oldDoc.storage_path])
+        await supabaseAdmin.from('documents').delete().eq('id', oldDoc.id)
+      }
+    } else {
+      const { data: inserted, error: acteError } = await supabaseAdmin
+        .from('actes')
+        .insert({
+          tenant_id: dossier.tenant_id,
+          dossier_id: dossier.id,
+          trame_id: trame.id,
+          statut: 'brouillon',
+          donnees,
+          content,
+        })
+        .select()
+        .single()
+      if (acteError || !inserted) {
+        return new Response(JSON.stringify({ error: "Erreur lors de l'enregistrement de l'acte : " + acteError?.message }), { status: 500, headers: corsHeaders })
+      }
+      acte = inserted
     }
 
     const { data: document, error: documentError } = await supabaseAdmin

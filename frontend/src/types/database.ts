@@ -255,6 +255,7 @@ export interface Acte {
   numero: string | null
   statut: string
   donnees: Record<string, string>
+  content: Record<string, unknown> | null
   created_at: string
   documents?: DocumentRow[]
   signature_requests?: SignatureRequestRow[]

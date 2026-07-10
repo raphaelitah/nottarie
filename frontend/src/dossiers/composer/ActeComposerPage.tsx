@@ -22,11 +22,12 @@ function formatSavedAt(date: Date) {
 
 interface ActeComposerPageProps {
   dossier: Dossier
+  acte?: Acte
   onBack: () => void
   onGenerated: (acte: Acte, document: DocumentRow) => void
 }
 
-export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerPageProps) {
+export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeComposerPageProps) {
   const { session, memberships } = useAuth()
   const [standard, setStandard] = useState<TrameSection | null>(null)
   const [optionalSections, setOptionalSections] = useState<TrameSection[]>([])
@@ -46,6 +47,7 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
   })
 
   function scheduleAutosave() {
+    if (acte) return
     if (!readyForAutosave.current) return
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     setSaveStatus('saving')
@@ -97,7 +99,7 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
         supabase.from('trame_sections').select('*').eq('type_acte', dossier.type_acte).eq('is_published', true)
           .order('category').order('title'),
         supabase.from('comparants').select('*, personne:personnes(*)').eq('dossier_id', dossier.id).returns<Comparant[]>(),
-        supabase.from('acte_brouillons').select('*').eq('dossier_id', dossier.id).maybeSingle<{ content: unknown; updated_at: string }>(),
+        acte ? Promise.resolve({ data: null }) : supabase.from('acte_brouillons').select('*').eq('dossier_id', dossier.id).maybeSingle<{ content: unknown; updated_at: string }>(),
       ])
 
       if (cancelled) return
@@ -115,7 +117,9 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
       setStandard(std)
       setOptionalSections(optional)
 
-      if (brouillon?.content) {
+      if (acte?.content) {
+        editor.commands.setContent(acte.content as never)
+      } else if (brouillon?.content) {
         editor.commands.setContent(brouillon.content as never)
         setLastSavedAt(new Date(brouillon.updated_at))
         setSaveStatus('saved')
@@ -163,13 +167,15 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ dossier_id: dossier.id, content: json }),
+      body: JSON.stringify({ dossier_id: dossier.id, content: json, acte_id: acte?.id }),
     })
     const resJson = await response.json()
     setSaving(false)
     if (!response.ok) { setError(resJson.error ?? 'Erreur lors de la génération.'); return }
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-    await supabase.from('acte_brouillons').delete().eq('dossier_id', dossier.id)
+    if (!acte) {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+      await supabase.from('acte_brouillons').delete().eq('dossier_id', dossier.id)
+    }
     onGenerated(resJson.acte, resJson.document)
   }
 
@@ -183,9 +189,9 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
           <span style={title}>{dossier.numero || 'Dossier sans numéro'} — {acteTypeLabel(dossier.type_acte)}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
-          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !standard}>
-            {saving ? 'Génération…' : 'Générer'}
+          {!acte && <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />}
+          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || (!standard && !acte?.content)}>
+            {saving ? 'Enregistrement…' : acte ? 'Enregistrer les modifications' : 'Générer'}
           </Button>
         </div>
       </div>
@@ -194,7 +200,7 @@ export function ActeComposerPage({ dossier, onBack, onGenerated }: ActeComposerP
 
       {loading ? (
         <p style={hint}>Chargement de la trame…</p>
-      ) : !standard ? (
+      ) : !standard && !acte?.content ? (
         <p style={hint}>Aucun modèle standard publié pour ce type d'acte.</p>
       ) : (
         <div style={{ display: 'flex', gap: 'var(--space-6)', flex: 1, alignItems: 'flex-start' }}>

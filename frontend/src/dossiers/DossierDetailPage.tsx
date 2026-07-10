@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button, EditPenButton, Input, MOBILE_QUERY, Select, STACK_QUERY, useMediaQuery } from '../design-system'
 import { Modal } from '../design-system/Modal'
-import type { Dossier, Utilisateur } from '../types/database'
+import type { Acte, Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { useAuth } from '../auth/useAuth'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
@@ -51,11 +51,12 @@ interface DossierDetailPageProps {
   onBack: () => void
   onUpdated: (dossier: Dossier) => void
   onOpenComposer: () => void
+  onEditActe: (acte: Acte) => void
   onSelectPersonne?: (id: string) => void
   onSelectImmeuble?: (id: string) => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onSelectPersonne, onSelectImmeuble }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onSelectPersonne, onSelectImmeuble }: DossierDetailPageProps) {
   const stack = useMediaQuery(STACK_QUERY)
   const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
@@ -293,7 +294,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
         </div>
 
         <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
-          <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} />
+          <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} onEditActe={onEditActe} />
           <DocumentsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
 

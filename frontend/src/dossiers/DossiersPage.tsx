@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Dossier } from '../types/database'
+import type { Acte, Dossier } from '../types/database'
 import { DossierListPage } from './DossierListPage'
 import { DossierDetailPage } from './DossierDetailPage'
 
@@ -16,7 +16,7 @@ interface DossiersPageProps {
 
 export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPersonne, onSelectImmeuble }: DossiersPageProps) {
   const [selected, setSelected] = useState<Dossier | null>(null)
-  const [composing, setComposing] = useState(false)
+  const [composerActe, setComposerActe] = useState<Acte | 'new' | null>(null)
 
   useEffect(() => {
     if (!focusId) return
@@ -27,13 +27,14 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPerson
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId])
 
-  if (selected && composing) {
+  if (selected && composerActe) {
     return (
       <Suspense fallback={<p>Chargement…</p>}>
         <ActeComposerPage
           dossier={selected}
-          onBack={() => setComposing(false)}
-          onGenerated={() => setComposing(false)}
+          acte={composerActe === 'new' ? undefined : composerActe}
+          onBack={() => setComposerActe(null)}
+          onGenerated={() => setComposerActe(null)}
         />
       </Suspense>
     )
@@ -45,7 +46,8 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPerson
         dossier={selected}
         onBack={() => setSelected(null)}
         onUpdated={setSelected}
-        onOpenComposer={() => setComposing(true)}
+        onOpenComposer={() => setComposerActe('new')}
+        onEditActe={(acte) => setComposerActe(acte)}
         onSelectPersonne={onSelectPersonne}
         onSelectImmeuble={onSelectImmeuble}
       />

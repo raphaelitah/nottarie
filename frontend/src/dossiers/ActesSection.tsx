@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, downloadIcon, eyeIcon, HoverIconButton, PdfViewerModal, SectionAddButton } from '../design-system'
+import { Badge, Button, downloadIcon, eyeIcon, HoverIconButton, pencilIcon, PdfViewerModal, SectionAddButton } from '../design-system'
 import type { Acte, DocumentRow, Dossier, SignatureRequestRow } from '../types/database'
 import { acteStatutBadgeStatus, acteStatutLabel } from '../constants/acteStatuts'
 
@@ -18,9 +18,10 @@ function latestSignatureRequest(acte: Acte): SignatureRequestRow | null {
 interface ActesSectionProps {
   dossier: Dossier
   onOpenComposer: () => void
+  onEditActe: (acte: Acte) => void
 }
 
-export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
+export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSectionProps) {
   const [actes, setActes] = useState<Acte[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -133,9 +134,12 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <Badge status={acteStatutBadgeStatus(acte.statut)} label={acteStatutLabel(acte.statut)} />
                   {acte.statut === 'brouillon' && (
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => handleRequestSignature(acte)}>
-                      {busy ? '…' : 'Demander la signature'}
-                    </Button>
+                    <>
+                      <HoverIconButton icon={pencilIcon} label="Modifier" onClick={() => onEditActe(acte)} />
+                      <Button variant="secondary" size="sm" disabled={busy} onClick={() => handleRequestSignature(acte)}>
+                        {busy ? '…' : 'Demander la signature'}
+                      </Button>
+                    </>
                   )}
                   {acte.statut === 'a_signer' && signatureRequest?.provider === 'mock' && signatureRequest.statut === 'en_cours' && (
                     <Button variant="secondary" size="sm" disabled={busy} onClick={() => handleSimulateSignature(signatureRequest)}>
