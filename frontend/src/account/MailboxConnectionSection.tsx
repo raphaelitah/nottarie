@@ -70,7 +70,7 @@ export function MailboxConnectionSection({ tenantId, utilisateurId }: { tenantId
       ) : !connection || connection.status === 'revoked' ? (
         <>
           <p style={mutedText}>
-            Connectez votre messagerie Outlook pour envoyer des emails et, bientôt, synchroniser votre agenda —
+            Connectez votre messagerie Outlook pour envoyer des emails et des invitations calendaires
             directement depuis votre propre compte (les emails envoyés apparaissent dans vos éléments envoyés).
           </p>
           <Button variant="primary" size="sm" onClick={handleConnect} disabled={connecting}>

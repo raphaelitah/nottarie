@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button } from '../design-system'
+import { Badge, Button, downloadIcon, eyeIcon, HoverIconButton, PdfViewerModal, SectionAddButton } from '../design-system'
 import type { Acte, DocumentRow, Dossier, SignatureRequestRow } from '../types/database'
 import { acteStatutBadgeStatus, acteStatutLabel } from '../constants/acteStatuts'
+
+function isPdf(name: string) {
+  return name.toLowerCase().endsWith('.pdf')
+}
 
 function latestSignatureRequest(acte: Acte): SignatureRequestRow | null {
   const requests = acte.signature_requests ?? []
@@ -22,6 +26,8 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [signatureActionId, setSignatureActionId] = useState<string | null>(null)
+  const [viewingDocument, setViewingDocument] = useState<DocumentRow | null>(null)
+  const [viewingUrl, setViewingUrl] = useState<string | null>(null)
 
   async function loadActes() {
     setLoading(true)
@@ -55,6 +61,14 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
     window.open(data.signedUrl, '_blank')
   }
 
+  async function handleView(document: DocumentRow) {
+    if (!isPdf(document.nom)) { handleDownload(document); return }
+    setViewingDocument(document)
+    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 300)
+    if (error || !data) { setError('Impossible de générer le lien de visualisation : ' + error?.message); setViewingDocument(null); return }
+    setViewingUrl(data.signedUrl)
+  }
+
   async function handleRequestSignature(acte: Acte) {
     setSignatureActionId(acte.id)
     setError(null)
@@ -85,7 +99,7 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Actes</h3>
-        <Button variant="primary" size="sm" onClick={onOpenComposer}>+ Générer un acte</Button>
+        <SectionAddButton label="Générer un acte" onClick={onOpenComposer} />
       </div>
 
       {error && (
@@ -107,12 +121,16 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
             const signatureRequest = latestSignatureRequest(acte)
             const busy = signatureActionId === acte.id
             return (
-              <div key={acte.id} style={row}>
+              <div
+                key={acte.id}
+                style={{ ...row, cursor: document ? 'pointer' : 'default' }}
+                onClick={() => { if (document) handleView(document) }}
+              >
                 <div style={{ minWidth: 0 }}>
                   <span style={name}>{document?.nom ?? 'Acte'}</span>
-                  <span style={meta}>{new Date(acte.created_at).toLocaleDateString('fr-FR')}</span>
+                  <span style={meta}>{formatDateTime(acte.created_at)}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <Badge status={acteStatutBadgeStatus(acte.statut)} label={acteStatutLabel(acte.statut)} />
                   {acte.statut === 'brouillon' && (
                     <Button variant="secondary" size="sm" disabled={busy} onClick={() => handleRequestSignature(acte)}>
@@ -125,14 +143,13 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
                     </Button>
                   )}
                   {signatureRequest?.accuse_reception_storage_path && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDownloadPath(signatureRequest.accuse_reception_storage_path!)}>
-                      Accusé de réception
-                    </Button>
+                    <HoverIconButton icon={downloadIcon} label="Accusé de réception" onClick={() => handleDownloadPath(signatureRequest.accuse_reception_storage_path!)} />
                   )}
                   {document && (
-                    <Button variant="ghost" size="sm" disabled={downloadingId === document.id} onClick={() => handleDownload(document)}>
-                      {downloadingId === document.id ? '…' : 'Télécharger'}
-                    </Button>
+                    <>
+                      <HoverIconButton icon={eyeIcon} label="Voir" onClick={() => handleView(document)} />
+                      <HoverIconButton icon={downloadIcon} label="Télécharger" disabled={downloadingId === document.id} onClick={() => handleDownload(document)} />
+                    </>
                   )}
                 </div>
               </div>
@@ -140,6 +157,13 @@ export function ActesSection({ dossier, onOpenComposer }: ActesSectionProps) {
           })}
         </div>
       )}
+
+      <PdfViewerModal
+        open={!!viewingDocument}
+        onClose={() => { setViewingDocument(null); setViewingUrl(null) }}
+        title={viewingDocument?.nom ?? 'Acte'}
+        url={viewingUrl}
+      />
     </div>
   )
 }
@@ -156,7 +180,11 @@ const emptyCard: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
+  minHeight: '60px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-3) var(--space-6)',
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-sm)',
@@ -168,6 +196,7 @@ const row: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-4)',
+  minHeight: '60px',
   padding: 'var(--space-3) var(--space-4)',
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
@@ -186,4 +215,9 @@ const meta: CSSProperties = {
   fontSize: 'var(--text-xs)',
   color: 'var(--text-muted)',
   marginLeft: 'var(--space-3)',
+}
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 }

@@ -1,15 +1,21 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import type { MailboxProvider } from './mailboxProvider.ts'
-import type { MailboxConnectionSummary, SendMailInput, SendMailResult } from './types.ts'
+import type {
+  CreateCalendarEventInput,
+  CreateCalendarEventResult,
+  MailboxConnectionSummary,
+  SendMailInput,
+  SendMailResult,
+} from './types.ts'
 
 const AUTHORITY = Deno.env.get('MAILBOX_OUTLOOK_AUTHORITY') ?? 'https://login.microsoftonline.com/common'
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
 
-// Not Calendars.ReadWrite yet: kept to the minimum needed for sending mail so
-// the initial consent screen is as small as possible. Calendar sync (a later,
-// separate phase) adds it via incremental consent — existing connections
-// don't need to be redone.
-const SCOPES = ['openid', 'profile', 'offline_access', 'https://graph.microsoft.com/Mail.Send', 'https://graph.microsoft.com/User.Read']
+// Calendars.ReadWrite lets us create calendar invites (POST /me/events with
+// attendees) alongside plain mail sending. `prompt=consent` below forces a
+// fresh consent screen so existing connections pick this up via reconnect
+// rather than needing a separate incremental-consent flow.
+const SCOPES = ['openid', 'profile', 'offline_access', 'https://graph.microsoft.com/Mail.Send', 'https://graph.microsoft.com/Calendars.ReadWrite', 'https://graph.microsoft.com/User.Read']
 
 interface ConnectionRow {
   id: string
@@ -111,11 +117,46 @@ export class OutlookMailboxProvider implements MailboxProvider {
             body: { contentType: 'HTML', content: input.bodyHtml },
             toRecipients: input.to.map((address) => ({ emailAddress: { address } })),
             ccRecipients: (input.cc ?? []).map((address) => ({ emailAddress: { address } })),
+            attachments: (input.attachments ?? []).map((a) => ({
+              '@odata.type': '#microsoft.graph.fileAttachment',
+              name: a.filename,
+              contentType: a.contentType,
+              contentBytes: a.contentBase64,
+            })),
           },
           saveToSentItems: true,
         },
       })
       return { providerMessageId: null }
+    } catch (err) {
+      if (err instanceof GraphAuthError) {
+        await this.admin
+          .from('mailbox_connections')
+          .update({ status: 'error', last_error: err.message })
+          .eq('id', connection.id)
+      }
+      throw err
+    }
+  }
+
+  async createCalendarEvent(input: CreateCalendarEventInput): Promise<CreateCalendarEventResult> {
+    const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
+    const accessToken = await this.ensureFreshAccessToken(connection)
+
+    try {
+      // Creating an event with attendees makes Graph send the invite email
+      // itself (no separate sendMail call needed for the invite).
+      const event = await this.graphFetch(accessToken, '/me/events', {
+        method: 'POST',
+        body: {
+          subject: input.titre,
+          location: input.lieu ? { displayName: input.lieu } : undefined,
+          start: { dateTime: input.debut, timeZone: 'Europe/Paris' },
+          end: { dateTime: input.fin, timeZone: 'Europe/Paris' },
+          attendees: input.attendees.map((address) => ({ emailAddress: { address }, type: 'required' })),
+        },
+      })
+      return { eventId: event.id as string }
     } catch (err) {
       if (err instanceof GraphAuthError) {
         await this.admin

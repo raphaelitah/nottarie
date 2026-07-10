@@ -1,7 +1,7 @@
 import type { Personne, PersonneType } from '../types/database'
 
 export interface PersonneFormValues {
-  type: PersonneType
+  type: PersonneType | ''
   civilite: string
   nom: string
   prenom: string
@@ -24,7 +24,7 @@ export interface PersonneFormValues {
 }
 
 export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
-  type: 'physique',
+  type: '',
   civilite: '',
   nom: '',
   prenom: '',
@@ -79,6 +79,9 @@ export function personneDisplayName(p: Pick<Personne, 'type' | 'civilite' | 'nom
 }
 
 export function personneFormError(values: PersonneFormValues): string | null {
+  if (!values.type) return 'Le type est obligatoire.'
+  if (values.type === 'physique' && !values.civilite.trim()) return 'La civilité est obligatoire.'
+  if (values.type === 'physique' && !values.prenom.trim()) return 'Le prénom est obligatoire.'
   if (values.type === 'physique' && !values.nom.trim()) return 'Le nom est obligatoire.'
   if (values.type !== 'physique' && !values.raison_sociale.trim()) return 'La raison sociale est obligatoire.'
   return null
@@ -88,7 +91,7 @@ export function personneFormToInsertPayload(values: PersonneFormValues, tenantId
   const isPhysique = values.type === 'physique'
   return {
     tenant_id: tenantId,
-    type: values.type,
+    type: values.type as PersonneType,
     civilite: isPhysique ? (values.civilite || null) : null,
     nom: isPhysique ? (values.nom.trim() || null) : null,
     prenom: isPhysique ? (values.prenom.trim() || null) : null,

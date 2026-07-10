@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button } from '../design-system'
-import type { Dossier, Utilisateur } from '../types/database'
+import type { Dossier, Immeuble, Personne, Utilisateur } from '../types/database'
 import { acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
+import { personneDisplayName } from '../personnes/personneForm'
+import { immeubleDisplayName } from '../immeubles/immeubleForm'
 
 function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
   return statut === 'cloture' ? 'archived' : 'ongoing'
@@ -92,6 +94,150 @@ export function ArchiveSection({ etudeId }: { etudeId: string }) {
                 </div>
                 <Button variant="secondary" size="sm" disabled={restoringId === d.id} onClick={() => handleRestore(d)}>
                   {restoringId === d.id ? 'Restauration…' : 'Restaurer'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 'var(--space-8)' }}>
+        <PersonnesArchiveSection etudeId={etudeId} />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-8)' }}>
+        <ImmeublesArchiveSection etudeId={etudeId} />
+      </div>
+    </div>
+  )
+}
+
+function PersonnesArchiveSection({ etudeId }: { etudeId: string }) {
+  const [personnes, setPersonnes] = useState<Personne[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
+
+  async function load() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('personnes')
+      .select('*')
+      .eq('tenant_id', etudeId)
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false })
+    if (error) { setError('Impossible de charger les personnes archivées : ' + error.message); setLoading(false); return }
+    setError(null)
+    setPersonnes(data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etudeId])
+
+  async function handleRestore(personne: Personne) {
+    setRestoringId(personne.id)
+    setError(null)
+    const { error } = await supabase.from('personnes').update({ archived_at: null }).eq('id', personne.id)
+    setRestoringId(null)
+    if (error) { setError('Erreur lors de la restauration : ' + error.message); return }
+    load()
+  }
+
+  return (
+    <div>
+      <h3 style={h3}>Personnes archivées</h3>
+      <p style={subtitle}>Personnes archivées par un notaire ou un administrateur. Elles restent conservées et peuvent être restaurées à tout moment.</p>
+
+      {error && <div style={alertStyle}>{error}</div>}
+
+      {loading ? (
+        <div style={emptyCard}>Chargement…</div>
+      ) : personnes.length === 0 ? (
+        <div style={emptyCard}>Aucune personne archivée.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+          {personnes.map((p) => (
+            <div key={p.id} style={card}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <span style={numero}>{personneDisplayName(p)}</span>
+                  <div style={meta}>
+                    {p.archived_at && <>Archivée le {formatDateTimeFr(p.archived_at)}</>}
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" disabled={restoringId === p.id} onClick={() => handleRestore(p)}>
+                  {restoringId === p.id ? 'Restauration…' : 'Restaurer'}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ImmeublesArchiveSection({ etudeId }: { etudeId: string }) {
+  const [immeubles, setImmeubles] = useState<Immeuble[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<string | null>(null)
+
+  async function load() {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('immeubles')
+      .select('*')
+      .eq('tenant_id', etudeId)
+      .not('archived_at', 'is', null)
+      .order('archived_at', { ascending: false })
+    if (error) { setError('Impossible de charger les immeubles archivés : ' + error.message); setLoading(false); return }
+    setError(null)
+    setImmeubles(data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etudeId])
+
+  async function handleRestore(immeuble: Immeuble) {
+    setRestoringId(immeuble.id)
+    setError(null)
+    const { error } = await supabase.from('immeubles').update({ archived_at: null }).eq('id', immeuble.id)
+    setRestoringId(null)
+    if (error) { setError('Erreur lors de la restauration : ' + error.message); return }
+    load()
+  }
+
+  return (
+    <div>
+      <h3 style={h3}>Immeubles archivés</h3>
+      <p style={subtitle}>Immeubles archivés par un notaire ou un administrateur. Ils restent conservés et peuvent être restaurés à tout moment.</p>
+
+      {error && <div style={alertStyle}>{error}</div>}
+
+      {loading ? (
+        <div style={emptyCard}>Chargement…</div>
+      ) : immeubles.length === 0 ? (
+        <div style={emptyCard}>Aucun immeuble archivé.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', marginTop: 'var(--space-4)' }}>
+          {immeubles.map((i) => (
+            <div key={i.id} style={card}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <span style={numero}>{immeubleDisplayName(i)}</span>
+                  <div style={meta}>
+                    {i.archived_at && <>Archivé le {formatDateTimeFr(i.archived_at)}</>}
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" disabled={restoringId === i.id} onClick={() => handleRestore(i)}>
+                  {restoringId === i.id ? 'Restauration…' : 'Restaurer'}
                 </Button>
               </div>
             </div>

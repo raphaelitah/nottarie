@@ -1,5 +1,4 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { encodeBase64 } from 'jsr:@std/encoding@1/base64'
 import { isTenantMember } from '../_shared/authorize.ts'
 import { getMailboxProvider, NoMailboxConnectedError } from '../_shared/mailbox/index.ts'
 
@@ -31,38 +30,15 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Session invalide' }), { status: 401, headers: corsHeaders })
     }
 
-    const { dossier_id, to, cc, subject, body_html, courrier_id, document_ids } = await req.json()
-    if (!dossier_id || !Array.isArray(to) || to.length === 0 || !subject) {
-      return new Response(JSON.stringify({ error: 'dossier_id, to et subject sont requis' }), { status: 400, headers: corsHeaders })
+    const { dossier_id, titre, lieu, debut, fin, attendees } = await req.json()
+    if (!dossier_id || !titre || !debut || !fin || !Array.isArray(attendees) || attendees.length === 0) {
+      return new Response(JSON.stringify({ error: 'dossier_id, titre, debut, fin et attendees sont requis' }), { status: 400, headers: corsHeaders })
     }
 
     const { data: dossier } = await supabaseAdmin.from('dossiers').select('tenant_id').eq('id', dossier_id).maybeSingle()
     if (!dossier) return new Response(JSON.stringify({ error: 'Dossier introuvable.' }), { status: 404, headers: corsHeaders })
     if (!(await isTenantMember(supabaseAdmin, caller.id, dossier.tenant_id))) {
       return new Response(JSON.stringify({ error: 'Accès refusé.' }), { status: 403, headers: corsHeaders })
-    }
-
-    let attachments: { filename: string; contentType: string; contentBase64: string }[] = []
-    if (Array.isArray(document_ids) && document_ids.length > 0) {
-      const { data: docs, error: docsError } = await supabaseAdmin
-        .from('documents')
-        .select('id, nom, storage_path, tenant_id, dossier_id')
-        .in('id', document_ids)
-      if (docsError) return new Response(JSON.stringify({ error: docsError.message }), { status: 500, headers: corsHeaders })
-      const invalid = (docs ?? []).find((d) => d.tenant_id !== dossier.tenant_id || d.dossier_id !== dossier_id)
-      if (invalid || (docs ?? []).length !== document_ids.length) {
-        return new Response(JSON.stringify({ error: 'Un ou plusieurs documents sont introuvables pour ce dossier.' }), { status: 400, headers: corsHeaders })
-      }
-      attachments = await Promise.all((docs ?? []).map(async (d) => {
-        const { data: fileData, error: downloadError } = await supabaseAdmin.storage.from('documents').download(d.storage_path)
-        if (downloadError || !fileData) throw new Error(`Impossible de récupérer le document "${d.nom}" : ${downloadError?.message}`)
-        const buffer = await fileData.arrayBuffer()
-        return {
-          filename: d.nom,
-          contentType: fileData.type || 'application/octet-stream',
-          contentBase64: encodeBase64(buffer),
-        }
-      }))
     }
 
     const { data: membre, error: membreError } = await supabaseAdmin
@@ -79,14 +55,14 @@ Deno.serve(async (req) => {
 
     let result
     try {
-      result = await provider.sendMail({
+      result = await provider.createCalendarEvent({
         tenantId: dossier.tenant_id,
         utilisateurId: membre.id,
-        to,
-        cc,
-        subject,
-        bodyHtml: body_html ?? '',
-        attachments,
+        titre,
+        lieu: lieu ?? null,
+        debut,
+        fin,
+        attendees,
       })
     } catch (err) {
       if (err instanceof NoMailboxConnectedError) {
@@ -95,28 +71,31 @@ Deno.serve(async (req) => {
       throw err
     }
 
-    const { data: email, error: emailError } = await supabaseAdmin
-      .from('emails')
+    const { data: evenement, error: evenementError } = await supabaseAdmin
+      .from('evenements')
       .insert({
         tenant_id: dossier.tenant_id,
-        dossier_id,
-        courrier_id: courrier_id ?? null,
-        sens: 'sortant',
-        objet: subject,
-        corps: body_html ?? null,
-        provider: 'outlook',
-        provider_message_id: result.providerMessageId,
-        utilisateur_id: membre.id,
-        destinataires: to,
-        cc: cc ?? [],
+        titre,
+        lieu: lieu ?? null,
+        debut,
+        fin,
+        organisateur_id: membre.id,
+        outlook_event_id: result.eventId,
       })
       .select()
       .single()
-    if (emailError) {
-      return new Response(JSON.stringify({ error: emailError.message }), { status: 500, headers: corsHeaders })
+    if (evenementError) {
+      return new Response(JSON.stringify({ error: evenementError.message }), { status: 500, headers: corsHeaders })
     }
 
-    return new Response(JSON.stringify({ email }), {
+    const { error: linkError } = await supabaseAdmin
+      .from('evenement_dossiers')
+      .insert({ tenant_id: dossier.tenant_id, evenement_id: evenement.id, dossier_id })
+    if (linkError) {
+      return new Response(JSON.stringify({ error: linkError.message }), { status: 500, headers: corsHeaders })
+    }
+
+    return new Response(JSON.stringify({ evenement }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {

@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, type TableColumn } from '../design-system'
+import { Button, Input, Table, Modal, type TableColumn } from '../design-system'
 import type { Personne } from '../types/database'
 import { PERSONNE_TYPE_OPTIONS } from '../constants/personneTypes'
+import { useAuth } from '../auth/useAuth'
 import { PersonneFormDrawer } from './PersonneFormDrawer'
 import { personneDisplayName, personneFormToInsertPayload, type PersonneFormValues } from './personneForm'
 
 function personneTypeLabel(type: string): string {
   return PERSONNE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
 }
 
 interface PersonnesPageProps {
@@ -18,6 +30,9 @@ interface PersonnesPageProps {
 }
 
 export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPageProps) {
+  const { memberships } = useAuth()
+  const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
+  const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -25,6 +40,8 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<Personne | null>(null)
   const [saving, setSaving] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState<Personne | null>(null)
+  const [archiving, setArchiving] = useState(false)
 
   useEffect(() => {
     if (!focusId) return
@@ -41,6 +58,7 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
       .from('personnes')
       .select('*')
       .eq('tenant_id', tenantId)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
     if (error) setError('Impossible de charger les personnes : ' + error.message)
     else setError(null)
@@ -75,6 +93,19 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
     loadPersonnes()
   }
 
+  async function handleArchive() {
+    if (!archiveTarget) return
+    setArchiving(true)
+    const { error } = await supabase
+      .from('personnes')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', archiveTarget.id)
+    setArchiving(false)
+    if (error) { setError("Erreur lors de l'archivage : " + error.message); return }
+    setArchiveTarget(null)
+    loadPersonnes()
+  }
+
   const query = search.trim().toLowerCase()
   const filtered = query
     ? personnes.filter((p) =>
@@ -88,6 +119,20 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
     { key: 'type', label: 'Type', width: '20%', render: (v) => personneTypeLabel(v as string) },
     { key: 'email', label: 'Email', width: '25%' },
     { key: 'telephone', label: 'Téléphone', width: '20%' },
+    ...(canArchive ? [{
+      key: 'actions', label: '', width: '5%', align: 'right' as const,
+      render: (_: unknown, row: Personne) => (
+        <button
+          type="button"
+          title="Archiver la personne"
+          aria-label="Archiver la personne"
+          onClick={(e) => { e.stopPropagation(); setArchiveTarget(row) }}
+          style={archiveBtn}
+        >
+          <TrashIcon />
+        </button>
+      ),
+    }] : []),
   ]
 
   return (
@@ -127,8 +172,39 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <Modal
+        open={!!archiveTarget}
+        onClose={() => setArchiveTarget(null)}
+        title="Archiver la personne"
+        subtitle={archiveTarget ? personneDisplayName(archiveTarget) : undefined}
+        size="sm"
+        footer={(
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setArchiveTarget(null)}>Annuler</Button>
+            <Button variant="destructive" size="sm" disabled={archiving} onClick={handleArchive}>
+              {archiving ? 'Archivage…' : 'Archiver'}
+            </Button>
+          </>
+        )}
+      >
+        Cette personne n'apparaîtra plus dans la liste. Elle restera consultable et restaurable depuis l'onglet Archive de l'Administration de l'étude.
+      </Modal>
     </div>
   )
+}
+
+const archiveBtn: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid transparent',
+  background: 'transparent',
+  color: 'var(--n-400)',
+  cursor: 'pointer',
 }
 
 const h1: CSSProperties = {

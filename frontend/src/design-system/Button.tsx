@@ -27,6 +27,7 @@ interface ButtonProps {
   iconLeft?: ReactNode
   iconRight?: ReactNode
   fullWidth?: boolean
+  title?: string
 }
 
 export function Button({
@@ -39,6 +40,7 @@ export function Button({
   iconLeft,
   iconRight,
   fullWidth = false,
+  title,
 }: ButtonProps) {
   const base: CSSProperties = {
     display: 'inline-flex',
@@ -60,7 +62,7 @@ export function Button({
   }
 
   return (
-    <button type={type} style={base} disabled={disabled} onClick={onClick}>
+    <button type={type} style={base} disabled={disabled} onClick={onClick} title={title}>
       {iconLeft && <span style={{ display: 'flex', alignItems: 'center' }}>{iconLeft}</span>}
       {children}
       {iconRight && <span style={{ display: 'flex', alignItems: 'center' }}>{iconRight}</span>}

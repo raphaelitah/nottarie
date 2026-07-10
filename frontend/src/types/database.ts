@@ -115,6 +115,7 @@ export interface Personne {
   date_deces: string | null
   lieu_deces: string | null
   created_at: string
+  archived_at: string | null
 }
 
 export interface Comparant {
@@ -149,6 +150,7 @@ export interface Immeuble {
   pays: string
   valeur_declaree: number | null
   created_at: string
+  archived_at: string | null
 }
 
 export type BaremeSousType = 'acceptee' | 'non_acceptee' | 'sur_acceptation' | 'valeurs_mobilieres'
@@ -202,7 +204,37 @@ export interface Courrier {
   acte_id: string | null
   objet: string | null
   contenu: string | null
+  destinataire: string | null
+  destinataires: string[]
   created_at: string
+  dernier_envoi_echec_at: string | null
+  dernier_envoi_erreur: string | null
+}
+
+export interface Email {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  courrier_id: string | null
+  sens: 'entrant' | 'sortant'
+  objet: string | null
+  corps: string | null
+  provider: MailboxProvider | null
+  provider_message_id: string | null
+  utilisateur_id: string | null
+  destinataires: string[]
+  cc: string[]
+  created_at: string
+  utilisateur?: Utilisateur | null
+}
+
+export interface CourrierDocument {
+  id: string
+  tenant_id: string
+  courrier_id: string
+  document_id: string
+  created_at: string
+  document?: DocumentRow
 }
 
 export interface Formalite {

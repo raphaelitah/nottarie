@@ -51,9 +51,11 @@ interface DossierDetailPageProps {
   onBack: () => void
   onUpdated: (dossier: Dossier) => void
   onOpenComposer: () => void
+  onSelectPersonne?: (id: string) => void
+  onSelectImmeuble?: (id: string) => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onSelectPersonne, onSelectImmeuble }: DossierDetailPageProps) {
   const stack = useMediaQuery(STACK_QUERY)
   const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
@@ -286,8 +288,8 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer }
         </div>
 
         <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
-          <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
-          <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+          <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} onSelectPersonne={onSelectPersonne} />
+          <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} onSelectImmeuble={onSelectImmeuble} />
         </div>
 
         <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>

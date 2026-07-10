@@ -39,11 +39,12 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 2fr', gap: '16px' }}>
           <Select
             label="Civilité"
+            required
             options={CIVILITE_OPTIONS}
             value={values.civilite}
             onChange={(e) => set({ civilite: e.target.value })}
           />
-          <Input label="Prénom" value={values.prenom} onChange={(e) => set({ prenom: e.target.value })} />
+          <Input label="Prénom" required value={values.prenom} onChange={(e) => set({ prenom: e.target.value })} />
           <Input label="Nom" required value={values.nom} onChange={(e) => set({ nom: e.target.value })} />
         </div>
       ) : (

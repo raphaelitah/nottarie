@@ -1,4 +1,10 @@
-import type { MailboxConnectionSummary, SendMailInput, SendMailResult } from './types.ts'
+import type {
+  CreateCalendarEventInput,
+  CreateCalendarEventResult,
+  MailboxConnectionSummary,
+  SendMailInput,
+  SendMailResult,
+} from './types.ts'
 
 /**
  * All external-mailbox flows (connect, send, disconnect) go through this
@@ -26,6 +32,9 @@ export interface MailboxProvider {
 
   /** Send an email as the connected user; refreshes the access token first if it's near expiry. */
   sendMail(input: SendMailInput): Promise<SendMailResult>
+
+  /** Create a calendar event with attendees; the provider sends the invite email itself. */
+  createCalendarEvent(input: CreateCalendarEventInput): Promise<CreateCalendarEventResult>
 
   /** Delete the stored tokens (Vault secrets) and soft-revoke the connection row. */
   disconnect(params: { tenantId: string; utilisateurId: string }): Promise<void>

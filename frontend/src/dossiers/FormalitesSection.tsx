@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, Select } from '../design-system'
+import { Badge, HoverIconButton, SectionAddButton, Select, trashIcon } from '../design-system'
 import type { Formalite } from '../types/database'
 import { formaliteTypeLabel } from '../constants/formaliteTypes'
 import { FORMALITE_STATUT_OPTIONS, formaliteBadgeStatus, formaliteStatutLabel } from '../constants/formaliteStatuts'
@@ -73,7 +73,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Formalités</h3>
-        <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Nouvelle formalité</Button>
+        <SectionAddButton label="Nouvelle formalité" onClick={() => setDrawerOpen(true)} />
       </div>
 
       {error && (
@@ -94,7 +94,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
             <div key={f.id} style={row}>
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{formaliteTypeLabel(f.type)}</span>
-                <span style={meta}>{new Date(f.updated_at).toLocaleDateString('fr-FR')}</span>
+                <span style={meta}>{formatDateTime(f.updated_at)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>
                 <Badge status={formaliteBadgeStatus(f.statut)} label={formaliteStatutLabel(f.statut)} />
@@ -106,9 +106,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
                     onChange={(e) => handleStatutChange(f, e.target.value)}
                   />
                 </div>
-                <Button variant="ghost" size="sm" disabled={removingId === f.id} onClick={() => handleRemove(f)}>
-                  {removingId === f.id ? '…' : 'Supprimer'}
-                </Button>
+                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === f.id} onClick={() => handleRemove(f)} />
               </div>
             </div>
           ))}
@@ -137,7 +135,11 @@ const emptyCard: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
+  minHeight: '60px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-3) var(--space-6)',
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-sm)',
@@ -149,6 +151,7 @@ const row: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-4)',
+  minHeight: '60px',
   padding: 'var(--space-3) var(--space-4)',
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
@@ -167,4 +170,9 @@ const meta: CSSProperties = {
   fontSize: 'var(--text-xs)',
   color: 'var(--text-muted)',
   marginLeft: 'var(--space-3)',
+}
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 }

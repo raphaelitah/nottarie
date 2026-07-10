@@ -6,7 +6,7 @@ interface ModalProps {
   title?: string
   subtitle?: string
   children?: ReactNode
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
   footer?: ReactNode
 }
 
@@ -20,7 +20,7 @@ export function Modal({ open = false, onClose, title, subtitle, children, size =
 
   if (!open) return null
 
-  const widths = { sm: '400px', md: '560px', lg: '720px' }
+  const widths = { sm: '400px', md: '560px', lg: '720px', xl: '960px' }
 
   return (
     <div

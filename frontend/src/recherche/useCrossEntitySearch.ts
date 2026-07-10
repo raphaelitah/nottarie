@@ -33,9 +33,9 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
       const pattern = toSearchPattern(q)
 
       const [personnesRes, immeublesRes, dossiersByNumeroRes] = await Promise.all([
-        supabase.from('personnes').select('*').eq('tenant_id', tenantId)
+        supabase.from('personnes').select('*').eq('tenant_id', tenantId).is('archived_at', null)
           .or(`nom.ilike.${pattern},prenom.ilike.${pattern},raison_sociale.ilike.${pattern},email.ilike.${pattern}`),
-        supabase.from('immeubles').select('*').eq('tenant_id', tenantId)
+        supabase.from('immeubles').select('*').eq('tenant_id', tenantId).is('archived_at', null)
           .or(`designation.ilike.${pattern},references_cadastrales.ilike.${pattern}`),
         supabase.from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).ilike('numero', pattern),
       ])

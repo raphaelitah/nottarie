@@ -1,12 +1,24 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, type TableColumn } from '../design-system'
+import { Button, Input, Table, Modal, type TableColumn } from '../design-system'
 import type { Immeuble } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
+import { useAuth } from '../auth/useAuth'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './immeubleForm'
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
 
 interface ImmeublesPageProps {
   tenantId: string
@@ -15,6 +27,9 @@ interface ImmeublesPageProps {
 }
 
 export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPageProps) {
+  const { memberships } = useAuth()
+  const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
+  const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
   const [immeubles, setImmeubles] = useState<Immeuble[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -22,6 +37,8 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editing, setEditing] = useState<Immeuble | null>(null)
   const [saving, setSaving] = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState<Immeuble | null>(null)
+  const [archiving, setArchiving] = useState(false)
 
   useEffect(() => {
     if (!focusId) return
@@ -38,6 +55,7 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
       .from('immeubles')
       .select('*')
       .eq('tenant_id', tenantId)
+      .is('archived_at', null)
       .order('created_at', { ascending: false })
     if (error) setError('Impossible de charger les immeubles : ' + error.message)
     else setError(null)
@@ -72,6 +90,19 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
     loadImmeubles()
   }
 
+  async function handleArchive() {
+    if (!archiveTarget) return
+    setArchiving(true)
+    const { error } = await supabase
+      .from('immeubles')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', archiveTarget.id)
+    setArchiving(false)
+    if (error) { setError("Erreur lors de l'archivage : " + error.message); return }
+    setArchiveTarget(null)
+    loadImmeubles()
+  }
+
   const query = search.trim().toLowerCase()
   const filtered = query
     ? immeubles.filter((i) =>
@@ -87,6 +118,20 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
     { key: 'ville', label: 'Ville', width: '20%' },
     { key: 'references_cadastrales', label: 'Références cadastrales', width: '20%' },
     { key: 'regime', label: 'Régime', width: '10%', render: (v) => regimeBienLabel(v as string | null) },
+    ...(canArchive ? [{
+      key: 'actions', label: '', width: '5%', align: 'right' as const,
+      render: (_: unknown, row: Immeuble) => (
+        <button
+          type="button"
+          title="Archiver l'immeuble"
+          aria-label="Archiver l'immeuble"
+          onClick={(e) => { e.stopPropagation(); setArchiveTarget(row) }}
+          style={archiveBtn}
+        >
+          <TrashIcon />
+        </button>
+      ),
+    }] : []),
   ]
 
   return (
@@ -126,8 +171,39 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <Modal
+        open={!!archiveTarget}
+        onClose={() => setArchiveTarget(null)}
+        title="Archiver l'immeuble"
+        subtitle={archiveTarget ? immeubleDisplayName(archiveTarget) : undefined}
+        size="sm"
+        footer={(
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setArchiveTarget(null)}>Annuler</Button>
+            <Button variant="destructive" size="sm" disabled={archiving} onClick={handleArchive}>
+              {archiving ? 'Archivage…' : 'Archiver'}
+            </Button>
+          </>
+        )}
+      >
+        Cet immeuble n'apparaîtra plus dans la liste. Il restera consultable et restaurable depuis l'onglet Archive de l'Administration de l'étude.
+      </Modal>
     </div>
   )
+}
+
+const archiveBtn: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid transparent',
+  background: 'transparent',
+  color: 'var(--n-400)',
+  cursor: 'pointer',
 }
 
 const h1: CSSProperties = {

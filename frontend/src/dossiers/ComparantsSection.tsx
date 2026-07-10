@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button } from '../design-system'
+import { HoverIconButton, SectionAddButton, trashIcon } from '../design-system'
 import type { Comparant, Personne } from '../types/database'
 import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
@@ -9,9 +9,10 @@ import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDr
 interface ComparantsSectionProps {
   tenantId: string
   dossierId: string
+  onSelectPersonne?: (id: string) => void
 }
 
-export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProps) {
+export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: ComparantsSectionProps) {
   const [comparants, setComparants] = useState<Comparant[]>([])
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,7 +35,7 @@ export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProp
   }
 
   async function loadPersonnes() {
-    const { data } = await supabase.from('personnes').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+    const { data } = await supabase.from('personnes').select('*').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false })
     setPersonnes(data ?? [])
   }
 
@@ -83,7 +84,7 @@ export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProp
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Comparants</h3>
-        <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Ajouter un comparant</Button>
+        <SectionAddButton label="Ajouter un comparant" onClick={() => setDrawerOpen(true)} />
       </div>
 
       {error && (
@@ -101,14 +102,18 @@ export function ComparantsSection({ tenantId, dossierId }: ComparantsSectionProp
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {comparants.map((c) => (
-            <div key={c.id} style={row}>
+            <div
+              key={c.id}
+              style={{ ...row, cursor: c.personne && onSelectPersonne ? 'pointer' : 'default' }}
+              onClick={() => { if (c.personne && onSelectPersonne) onSelectPersonne(c.personne.id) }}
+            >
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{c.personne ? personneDisplayName(c.personne) : 'Personne inconnue'}</span>
                 <span style={qualite}>{c.qualite}</span>
               </div>
-              <Button variant="ghost" size="sm" disabled={removingId === c.id} onClick={() => handleRemove(c)}>
-                {removingId === c.id ? '…' : 'Retirer'}
-              </Button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => handleRemove(c)} />
+              </div>
             </div>
           ))}
         </div>
@@ -138,7 +143,11 @@ const emptyCard: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
+  minHeight: '60px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-3) var(--space-6)',
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-sm)',
@@ -150,6 +159,7 @@ const row: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-4)',
+  minHeight: '60px',
   padding: 'var(--space-3) var(--space-4)',
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',

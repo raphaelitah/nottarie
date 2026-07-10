@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button } from '../design-system'
+import { downloadIcon, eyeIcon, HoverIconButton, PdfViewerModal, SectionAddButton, sendIcon, trashIcon } from '../design-system'
 import type { DocumentRow } from '../types/database'
+import { SendDocumentsModal } from './SendDocumentsModal'
+
+function isPdf(name: string) {
+  return name.toLowerCase().endsWith('.pdf')
+}
 
 interface DocumentsSectionProps {
   tenantId: string
@@ -16,6 +21,10 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
   const [uploading, setUploading] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [viewingDocument, setViewingDocument] = useState<DocumentRow | null>(null)
+  const [viewingUrl, setViewingUrl] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [sendTargets, setSendTargets] = useState<DocumentRow[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function loadDocuments() {
@@ -29,6 +38,7 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
     if (error) setError('Impossible de charger les documents : ' + error.message)
     else setError(null)
     setDocuments(data ?? [])
+    setSelectedIds(new Set())
     setLoading(false)
   }
 
@@ -67,6 +77,14 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
     window.open(data.signedUrl, '_blank')
   }
 
+  async function handleView(document: DocumentRow) {
+    if (!isPdf(document.nom)) { handleDownload(document); return }
+    setViewingDocument(document)
+    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 300)
+    if (error || !data) { setError('Impossible de générer le lien de visualisation : ' + error?.message); setViewingDocument(null); return }
+    setViewingUrl(data.signedUrl)
+  }
+
   async function handleRemove(document: DocumentRow) {
     setRemovingId(document.id)
     const { error: storageError } = await supabase.storage.from('documents').remove([document.storage_path])
@@ -77,14 +95,35 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
     loadDocuments()
   }
 
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', gap: 'var(--space-2)' }}>
         <h3 style={h3}>Documents</h3>
-        <Button variant="primary" size="sm" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-          {uploading ? 'Envoi…' : '+ Ajouter un document'}
-        </Button>
-        <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelected} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          {selectedIds.size > 0 && (
+            <HoverIconButton
+              icon={sendIcon}
+              label={`Envoyer (${selectedIds.size})`}
+              onClick={() => setSendTargets(documents.filter((d) => selectedIds.has(d.id)))}
+            />
+          )}
+          <SectionAddButton
+            label="Ajouter un document"
+            busyLabel={uploading ? 'Envoi…' : undefined}
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          />
+          <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleFileSelected} />
+        </div>
       </div>
 
       {error && (
@@ -102,25 +141,51 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {documents.map((d) => (
-            <div key={d.id} style={row}>
-              <div style={{ minWidth: 0 }}>
-                <span style={name}>{d.nom}</span>
-                <span style={meta}>{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
+            <div key={d.id} style={{ ...row, cursor: 'pointer' }} onClick={() => handleView(d)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(d.id)}
+                  onChange={() => toggleSelected(d.id)}
+                  style={{ width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
+                />
+                <div style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => handleView(d)}>
+                  <span style={name}>{d.nom}</span>
+                  <span style={meta}>{formatDateTime(d.created_at)}</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-                <Button variant="ghost" size="sm" disabled={downloadingId === d.id} onClick={() => handleDownload(d)}>
-                  {downloadingId === d.id ? '…' : 'Télécharger'}
-                </Button>
-                <Button variant="ghost" size="sm" disabled={removingId === d.id} onClick={() => handleRemove(d)}>
-                  {removingId === d.id ? '…' : 'Supprimer'}
-                </Button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                <HoverIconButton icon={eyeIcon} label="Voir" onClick={() => handleView(d)} />
+                <HoverIconButton icon={sendIcon} label="Envoyer" onClick={() => setSendTargets([d])} />
+                <HoverIconButton icon={downloadIcon} label="Télécharger" disabled={downloadingId === d.id} onClick={() => handleDownload(d)} />
+                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === d.id} onClick={() => handleRemove(d)} />
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <PdfViewerModal
+        open={!!viewingDocument}
+        onClose={() => { setViewingDocument(null); setViewingUrl(null) }}
+        title={viewingDocument?.nom ?? 'Document'}
+        url={viewingUrl}
+      />
+
+      <SendDocumentsModal
+        tenantId={tenantId}
+        dossierId={dossierId}
+        documents={sendTargets}
+        onClose={() => setSendTargets(null)}
+        onSent={() => { setSendTargets(null); setSelectedIds(new Set()) }}
+      />
     </div>
   )
+}
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 }
 
 const h3: CSSProperties = {
@@ -135,7 +200,11 @@ const emptyCard: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
+  minHeight: '60px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-3) var(--space-6)',
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-sm)',
@@ -147,6 +216,7 @@ const row: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-4)',
+  minHeight: '60px',
   padding: 'var(--space-3) var(--space-4)',
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',

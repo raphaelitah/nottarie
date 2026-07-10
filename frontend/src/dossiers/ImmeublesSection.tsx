@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button } from '../design-system'
+import { HoverIconButton, SectionAddButton, unlinkIcon } from '../design-system'
 import type { DossierImmeuble, Immeuble } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/immeubleForm'
 import { regimeBienLabel } from '../constants/regimeBien'
@@ -11,9 +11,10 @@ import { ImmeubleAttachDrawer, type ImmeubleAttachResult } from './ImmeubleAttac
 interface ImmeublesSectionProps {
   tenantId: string
   dossierId: string
+  onSelectImmeuble?: (id: string) => void
 }
 
-export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps) {
+export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: ImmeublesSectionProps) {
   const [links, setLinks] = useState<DossierImmeuble[]>([])
   const [immeubles, setImmeubles] = useState<Immeuble[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,7 +36,7 @@ export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps)
   }
 
   async function loadImmeubles() {
-    const { data } = await supabase.from('immeubles').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+    const { data } = await supabase.from('immeubles').select('*').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false })
     setImmeubles(data ?? [])
   }
 
@@ -83,7 +84,7 @@ export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps)
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Immeubles</h3>
-        <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Attacher un immeuble</Button>
+        <SectionAddButton label="Attacher un immeuble" onClick={() => setDrawerOpen(true)} />
       </div>
 
       {error && (
@@ -101,15 +102,19 @@ export function ImmeublesSection({ tenantId, dossierId }: ImmeublesSectionProps)
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {links.map((l) => (
-            <div key={l.id} style={row}>
+            <div
+              key={l.id}
+              style={{ ...row, cursor: l.immeuble && onSelectImmeuble ? 'pointer' : 'default' }}
+              onClick={() => { if (l.immeuble && onSelectImmeuble) onSelectImmeuble(l.immeuble.id) }}
+            >
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{l.immeuble ? immeubleDisplayName(l.immeuble) : 'Immeuble inconnu'}</span>
                 {l.immeuble?.type_bien && <span style={meta}>{typeBienLabel(l.immeuble.type_bien)}</span>}
                 {l.immeuble?.regime && <span style={meta}>{regimeBienLabel(l.immeuble.regime)}</span>}
               </div>
-              <Button variant="ghost" size="sm" disabled={removingId === l.id} onClick={() => handleDetach(l)}>
-                {removingId === l.id ? '…' : 'Détacher'}
-              </Button>
+              <div onClick={(e) => e.stopPropagation()}>
+                <HoverIconButton icon={unlinkIcon} label="Détacher" disabled={removingId === l.id} onClick={() => handleDetach(l)} />
+              </div>
             </div>
           ))}
         </div>
@@ -139,7 +144,11 @@ const emptyCard: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
+  minHeight: '60px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-3) var(--space-6)',
   textAlign: 'center',
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-sm)',
@@ -151,6 +160,7 @@ const row: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--space-4)',
+  minHeight: '60px',
   padding: 'var(--space-3) var(--space-4)',
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',

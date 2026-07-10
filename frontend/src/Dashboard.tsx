@@ -234,7 +234,14 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
 
           <main style={{ flex: 1, padding: isMobileNav ? 'var(--space-4)' : 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
             {section === 'dossiers' ? (
-              <DossiersPage key={dossiersResetKey} tenantId={membership.tenant_id} focusId={focusDossierId} onFocusHandled={() => setFocusDossierId(null)} />
+              <DossiersPage
+                key={dossiersResetKey}
+                tenantId={membership.tenant_id}
+                focusId={focusDossierId}
+                onFocusHandled={() => setFocusDossierId(null)}
+                onSelectPersonne={goToPersonne}
+                onSelectImmeuble={goToImmeuble}
+              />
             ) : section === 'personnes' ? (
               <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} />
             ) : section === 'immeubles' ? (

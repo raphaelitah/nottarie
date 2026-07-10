@@ -10,9 +10,11 @@ interface DossiersPageProps {
   tenantId: string
   focusId?: string | null
   onFocusHandled?: () => void
+  onSelectPersonne?: (id: string) => void
+  onSelectImmeuble?: (id: string) => void
 }
 
-export function DossiersPage({ tenantId, focusId, onFocusHandled }: DossiersPageProps) {
+export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPersonne, onSelectImmeuble }: DossiersPageProps) {
   const [selected, setSelected] = useState<Dossier | null>(null)
   const [composing, setComposing] = useState(false)
 
@@ -44,6 +46,8 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled }: DossiersPage
         onBack={() => setSelected(null)}
         onUpdated={setSelected}
         onOpenComposer={() => setComposing(true)}
+        onSelectPersonne={onSelectPersonne}
+        onSelectImmeuble={onSelectImmeuble}
       />
     )
     : <DossierListPage tenantId={tenantId} onSelect={setSelected} />
