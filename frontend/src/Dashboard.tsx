@@ -16,6 +16,9 @@ import { WeekStrip } from './agenda/WeekStrip'
 import { GlobalSearch } from './recherche/GlobalSearch'
 import { AdministrationPage } from './administration/AdministrationPage'
 import { MonComptePage } from './account/MonComptePage'
+import { NouveauDossierButton } from './dashboard/NouveauDossierButton'
+import { DossiersEnCoursCard } from './dashboard/DossiersEnCoursCard'
+import { FormalitesEnAttenteCard } from './dashboard/FormalitesEnAttenteCard'
 
 const AgendaPage = lazy(() => import('./agenda/AgendaPage').then((m) => ({ default: m.AgendaPage })))
 
@@ -42,6 +45,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
   function goToDossier(id: string) { setFocusDossierId(id); setSection('dossiers') }
   function goToPersonne(id: string) { setFocusPersonneId(id); setSection('personnes') }
   function goToImmeuble(id: string) { setFocusImmeubleId(id); setSection('immeubles') }
+  function goToDossiersList() { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }
 
   // A user belongs to a single étude in practice — the membership query is
   // scoped to auth_user_id, so this is just "my" row (if any).
@@ -256,21 +260,41 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
               <MonComptePage tenantId={membership.tenant_id} utilisateurId={membership.id} />
             ) : (
               <div>
-                <h1 style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'var(--text-xl)',
-                  fontWeight: 700,
-                  color: 'var(--n-900)',
-                  letterSpacing: 'var(--tracking-tight)',
-                  margin: '0 0 var(--space-1)',
-                }}>Tableau de bord</h1>
-                <p style={{
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-muted)',
-                  margin: 0,
-                }}>Bienvenue dans votre espace Nottarie.</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                  <div>
+                    <h1 style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 'var(--text-xl)',
+                      fontWeight: 700,
+                      color: 'var(--n-900)',
+                      letterSpacing: 'var(--tracking-tight)',
+                      margin: '0 0 var(--space-1)',
+                    }}>Tableau de bord</h1>
+                    <p style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--text-muted)',
+                      margin: 0,
+                    }}>Bienvenue dans votre espace Nottarie.</p>
+                  </div>
+                  <NouveauDossierButton
+                    tenantId={membership.tenant_id}
+                    defaultClercId={membership.roles.includes('redacteur') ? membership.id : undefined}
+                    onCreated={goToDossier}
+                  />
+                </div>
                 <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => setSection('agenda')} />
+                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)', flexWrap: 'wrap' }}>
+                  <DossiersEnCoursCard
+                    tenantId={membership.tenant_id}
+                    onSelectDossier={goToDossier}
+                    onViewAll={goToDossiersList}
+                  />
+                  <FormalitesEnAttenteCard
+                    tenantId={membership.tenant_id}
+                    onSelectDossier={goToDossier}
+                  />
+                </div>
               </div>
             )}
           </main>
