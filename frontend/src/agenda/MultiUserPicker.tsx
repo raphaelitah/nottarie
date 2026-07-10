@@ -1,6 +1,7 @@
 import { MultiSelectPicker } from './MultiSelectPicker'
 import type { Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
+import { ROLE_OPTIONS } from '../constants/roles'
 
 interface MultiUserPickerProps {
   label?: string
@@ -19,6 +20,7 @@ export function MultiUserPicker({ label = 'Participants', utilisateurs, selected
       onChange={onChange}
       getId={(u) => u.id}
       getLabel={(u) => utilisateurLabel(u)}
+      getBadges={(u) => u.roles.map((r) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r)}
       emptyHint="Aucun autre membre à inviter."
     />
   )

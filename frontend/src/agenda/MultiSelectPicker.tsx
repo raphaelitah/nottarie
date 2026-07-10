@@ -10,6 +10,7 @@ interface MultiSelectPickerProps<T> {
   onChange: (ids: string[]) => void
   getId: (item: T) => string
   getLabel: (item: T) => string
+  getBadges?: (item: T) => string[]
   emptyHint?: string
 }
 
@@ -21,6 +22,7 @@ export function MultiSelectPicker<T>({
   onChange,
   getId,
   getLabel,
+  getBadges,
   emptyHint = 'Aucun résultat.',
 }: MultiSelectPickerProps<T>) {
   const [search, setSearch] = useState('')
@@ -50,6 +52,9 @@ export function MultiSelectPicker<T>({
           {selectedItems.map((item) => (
             <span key={getId(item)} style={chip}>
               {getLabel(item)}
+              {getBadges?.(item).map((b) => (
+                <span key={b} style={badge}>{b}</span>
+              ))}
               <button type="button" onClick={() => removeItem(getId(item))} style={chipRemove} aria-label="Retirer">×</button>
             </span>
           ))}
@@ -62,7 +67,12 @@ export function MultiSelectPicker<T>({
         <div style={resultsList}>
           {results.map((item) => (
             <button key={getId(item)} type="button" style={resultRow} onClick={() => addItem(getId(item))}>
-              {getLabel(item)}
+              <span style={resultRowContent}>
+                {getLabel(item)}
+                {getBadges?.(item).map((b) => (
+                  <span key={b} style={badge}>{b}</span>
+                ))}
+              </span>
             </button>
           ))}
         </div>
@@ -130,6 +140,25 @@ const resultRow: CSSProperties = {
   border: 'none',
   borderBottom: '1px solid var(--border-default)',
   cursor: 'pointer',
+}
+
+const resultRowContent: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: '6px',
+}
+
+const badge: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: '11px',
+  fontWeight: 600,
+  color: 'var(--n-700)',
+  background: 'var(--surface-muted)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-sm, 4px)',
+  padding: '1px 6px',
+  letterSpacing: '0.01em',
 }
 
 const emptyHintStyle: CSSProperties = {
