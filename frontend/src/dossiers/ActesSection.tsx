@@ -23,6 +23,7 @@ interface ActesSectionProps {
 
 export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSectionProps) {
   const [actes, setActes] = useState<Acte[]>([])
+  const [draft, setDraft] = useState<{ updated_at: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -32,14 +33,18 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
 
   async function loadActes() {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('actes')
-      .select('*, documents(*), signature_requests(*)')
-      .eq('dossier_id', dossier.id)
-      .order('created_at', { ascending: false })
+    const [{ data, error }, { data: brouillon }] = await Promise.all([
+      supabase
+        .from('actes')
+        .select('*, documents(*), signature_requests(*)')
+        .eq('dossier_id', dossier.id)
+        .order('created_at', { ascending: false }),
+      supabase.from('acte_brouillons').select('updated_at').eq('dossier_id', dossier.id).maybeSingle<{ updated_at: string }>(),
+    ])
     if (error) setError('Impossible de charger les actes : ' + error.message)
     else setError(null)
     setActes(data ?? [])
+    setDraft(brouillon ?? null)
     setLoading(false)
   }
 
@@ -113,10 +118,22 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
 
       {loading ? (
         <div style={emptyCard}>Chargement…</div>
-      ) : actes.length === 0 ? (
+      ) : actes.length === 0 && !draft ? (
         <div style={emptyCard}>Aucun acte généré pour ce dossier.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {draft && (
+            <div style={{ ...row, cursor: 'pointer' }} onClick={onOpenComposer}>
+              <div style={{ minWidth: 0 }}>
+                <span style={name}>Brouillon non généré</span>
+                <span style={meta}>Modifié le {formatDateTime(draft.updated_at)}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>
+                <Badge status="draft" label="Brouillon" />
+                <HoverIconButton icon={pencilIcon} label="Reprendre" onClick={onOpenComposer} />
+              </div>
+            </div>
+          )}
           {actes.map((acte) => {
             const document = acte.documents?.[0]
             const signatureRequest = latestSignatureRequest(acte)
