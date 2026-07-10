@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { HoverIconButton, SectionAddButton, trashIcon } from '../design-system'
+import { Button, HoverIconButton, SectionAddButton, sendIcon, trashIcon } from '../design-system'
 import type { Comparant, Personne } from '../types/database'
 import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
+import { SendComparantsEmailModal, type EmailRecipient } from './SendComparantsEmailModal'
 
 interface ComparantsSectionProps {
   tenantId: string
@@ -20,6 +21,8 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[] | null>(null)
 
   async function loadComparants() {
     setLoading(true)
@@ -80,11 +83,41 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
     loadComparants()
   }
 
+  function isEmailable(c: Comparant): boolean {
+    return !!c.personne?.email && !c.personne.date_deces
+  }
+
+  function toEmailRecipient(c: Comparant): EmailRecipient {
+    return { email: c.personne!.email as string, label: personneDisplayName(c.personne!) }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  function handleSent() {
+    setEmailRecipients(null)
+    setSelectedIds([])
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Comparants</h3>
-        <SectionAddButton label="Ajouter un comparant" onClick={() => setDrawerOpen(true)} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          {selectedIds.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setEmailRecipients(
+                comparants.filter((c) => selectedIds.includes(c.id) && isEmailable(c)).map(toEmailRecipient)
+              )}
+            >
+              Envoyer un email ({selectedIds.length})
+            </Button>
+          )}
+          <SectionAddButton label="Ajouter un comparant" onClick={() => setDrawerOpen(true)} />
+        </div>
       </div>
 
       {error && (
@@ -107,11 +140,24 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
               style={{ ...row, cursor: c.personne && onSelectPersonne ? 'pointer' : 'default' }}
               onClick={() => { if (c.personne && onSelectPersonne) onSelectPersonne(c.personne.id) }}
             >
-              <div style={{ minWidth: 0 }}>
-                <span style={name}>{c.personne ? personneDisplayName(c.personne) : 'Personne inconnue'}</span>
-                <span style={qualite}>{c.qualite}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+                {isEmailable(c) && (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(c.id)}
+                    onChange={(e) => { e.stopPropagation(); toggleSelected(c.id) }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <span style={name}>{c.personne ? personneDisplayName(c.personne) : 'Personne inconnue'}</span>
+                  <span style={qualite}>{c.qualite}</span>
+                </div>
               </div>
-              <div onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                {isEmailable(c) && (
+                  <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => setEmailRecipients([toEmailRecipient(c)])} />
+                )}
                 <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => handleRemove(c)} />
               </div>
             </div>
@@ -126,6 +172,13 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
         saving={saving}
         onSave={handleAdd}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <SendComparantsEmailModal
+        dossierId={dossierId}
+        recipients={emailRecipients}
+        onClose={() => setEmailRecipients(null)}
+        onSent={handleSent}
       />
     </div>
   )
