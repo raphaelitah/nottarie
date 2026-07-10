@@ -28,11 +28,14 @@ interface CourrierFormDrawerProps {
   tenantId: string
   dossierId: string
   fromEmail: string | null
+  initialDestinataireIds?: string[]
+  initialDocumentIds?: string[]
+  initialObjet?: string
   onSave: (result: CourrierFormResult) => void
   onClose: () => void
 }
 
-export function CourrierFormDrawer({ open, saving, tenantId, dossierId, fromEmail, onSave, onClose }: CourrierFormDrawerProps) {
+export function CourrierFormDrawer({ open, saving, tenantId, dossierId, fromEmail, initialDestinataireIds, initialDocumentIds, initialObjet, onSave, onClose }: CourrierFormDrawerProps) {
   const [objet, setObjet] = useState('')
   const [contenu, setContenu] = useState('')
   const [destinataireIds, setDestinataireIds] = useState<string[]>([])
@@ -53,13 +56,13 @@ export function CourrierFormDrawer({ open, saving, tenantId, dossierId, fromEmai
 
   useEffect(() => {
     if (!open) return
-    setObjet('')
+    setObjet(initialObjet ?? '')
     setContenu('')
-    setDestinataireIds([])
+    setDestinataireIds(initialDestinataireIds ?? [])
     setCustomEmail('')
     setCustomEmails([])
     setError(null)
-    setSelectedExistingIds([])
+    setSelectedExistingIds(initialDocumentIds ?? [])
     setNewFiles([])
     setAddInvitation(false)
     setInviteLieu('')
@@ -84,7 +87,7 @@ export function CourrierFormDrawer({ open, saving, tenantId, dossierId, fromEmai
       .eq('actif', true)
       .order('nom', { ascending: true })
       .then(({ data }) => setEtudeUsers(data ?? []))
-  }, [open, dossierId, tenantId])
+  }, [open, dossierId, tenantId, initialDestinataireIds, initialDocumentIds, initialObjet])
 
   const destinataireOptions = useMemo(() => {
     const comparantOptions = comparants

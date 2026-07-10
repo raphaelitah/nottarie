@@ -3,7 +3,8 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { downloadIcon, eyeIcon, HoverIconButton, PdfViewerModal, SectionAddButton, sendIcon, trashIcon } from '../design-system'
 import type { DocumentRow } from '../types/database'
-import { SendDocumentsModal } from './SendDocumentsModal'
+import { CourrierFormDrawer } from './CourrierFormDrawer'
+import { useCourrierComposer } from './useCourrierComposer'
 
 function isPdf(name: string) {
   return name.toLowerCase().endsWith('.pdf')
@@ -24,8 +25,13 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
   const [viewingDocument, setViewingDocument] = useState<DocumentRow | null>(null)
   const [viewingUrl, setViewingUrl] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [sendTargets, setSendTargets] = useState<DocumentRow[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const composer = useCourrierComposer(tenantId, dossierId, () => setSelectedIds(new Set()))
+
+  function openSendFor(docs: DocumentRow[]) {
+    const objet = docs.length === 1 ? docs[0].nom : `${docs.length} documents`
+    composer.openComposer([], docs.map((d) => d.id), objet)
+  }
 
   async function loadDocuments() {
     setLoading(true)
@@ -113,7 +119,7 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
             <HoverIconButton
               icon={sendIcon}
               label={`Envoyer (${selectedIds.size})`}
-              onClick={() => setSendTargets(documents.filter((d) => selectedIds.has(d.id)))}
+              onClick={() => openSendFor(documents.filter((d) => selectedIds.has(d.id)))}
             />
           )}
           <SectionAddButton
@@ -126,12 +132,20 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
         </div>
       </div>
 
-      {error && (
+      {(error || composer.error) && (
         <div style={{
           background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)',
           padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
           fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#DC2626',
-        }}>{error}</div>
+        }}>{error || composer.error}</div>
+      )}
+
+      {composer.noMailboxConnected && (
+        <div style={{
+          background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
+          fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#713F12',
+        }}>Aucune messagerie Outlook n'est connectée. Rendez-vous dans « Mon compte » pour la connecter.</div>
       )}
 
       {loading ? (
@@ -156,7 +170,7 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                 <HoverIconButton icon={eyeIcon} label="Voir" onClick={() => handleView(d)} />
-                <HoverIconButton icon={sendIcon} label="Envoyer" onClick={() => setSendTargets([d])} />
+                <HoverIconButton icon={sendIcon} label="Envoyer" onClick={() => openSendFor([d])} />
                 <HoverIconButton icon={downloadIcon} label="Télécharger" disabled={downloadingId === d.id} onClick={() => handleDownload(d)} />
                 <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === d.id} onClick={() => handleRemove(d)} />
               </div>
@@ -172,12 +186,17 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
         url={viewingUrl}
       />
 
-      <SendDocumentsModal
+      <CourrierFormDrawer
+        open={composer.drawerOpen}
+        saving={composer.saving}
         tenantId={tenantId}
         dossierId={dossierId}
-        documents={sendTargets}
-        onClose={() => setSendTargets(null)}
-        onSent={() => { setSendTargets(null); setSelectedIds(new Set()) }}
+        fromEmail={composer.fromEmail}
+        initialDestinataireIds={composer.initialDestinataireIds}
+        initialDocumentIds={composer.initialDocumentIds}
+        initialObjet={composer.initialObjet}
+        onSave={composer.handleAdd}
+        onClose={composer.closeComposer}
       />
     </div>
   )

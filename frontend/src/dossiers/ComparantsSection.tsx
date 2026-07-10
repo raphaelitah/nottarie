@@ -5,7 +5,8 @@ import { Button, HoverIconButton, SectionAddButton, sendIcon, trashIcon } from '
 import type { Comparant, Personne } from '../types/database'
 import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
-import { SendComparantsEmailModal, type EmailRecipient } from './SendComparantsEmailModal'
+import { CourrierFormDrawer } from './CourrierFormDrawer'
+import { useCourrierComposer } from './useCourrierComposer'
 
 interface ComparantsSectionProps {
   tenantId: string
@@ -22,7 +23,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [emailRecipients, setEmailRecipients] = useState<EmailRecipient[] | null>(null)
+  const composer = useCourrierComposer(tenantId, dossierId, () => setSelectedIds([]))
 
   async function loadComparants() {
     setLoading(true)
@@ -87,17 +88,12 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
     return !!c.personne?.email && !c.personne.date_deces
   }
 
-  function toEmailRecipient(c: Comparant): EmailRecipient {
-    return { email: c.personne!.email as string, label: personneDisplayName(c.personne!) }
+  function toDestinataireId(c: Comparant): string {
+    return `personne:${c.personne!.id}`
   }
 
   function toggleSelected(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  }
-
-  function handleSent() {
-    setEmailRecipients(null)
-    setSelectedIds([])
   }
 
   return (
@@ -109,8 +105,8 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setEmailRecipients(
-                comparants.filter((c) => selectedIds.includes(c.id) && isEmailable(c)).map(toEmailRecipient)
+              onClick={() => composer.openComposer(
+                comparants.filter((c) => selectedIds.includes(c.id) && isEmailable(c)).map(toDestinataireId)
               )}
             >
               Envoyer un email ({selectedIds.length})
@@ -120,12 +116,12 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
         </div>
       </div>
 
-      {error && (
+      {(error || composer.error) && (
         <div style={{
           background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)',
           padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
           fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#DC2626',
-        }}>{error}</div>
+        }}>{error || composer.error}</div>
       )}
 
       {loading ? (
@@ -156,7 +152,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
                 {isEmailable(c) && (
-                  <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => setEmailRecipients([toEmailRecipient(c)])} />
+                  <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => composer.openComposer([toDestinataireId(c)])} />
                 )}
                 <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => handleRemove(c)} />
               </div>
@@ -174,11 +170,25 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
         onClose={() => setDrawerOpen(false)}
       />
 
-      <SendComparantsEmailModal
+      {composer.noMailboxConnected && (
+        <div style={{
+          background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-3) var(--space-4)', marginTop: 'var(--space-4)',
+          fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#713F12',
+        }}>Aucune messagerie Outlook n'est connectée. Rendez-vous dans « Mon compte » pour la connecter.</div>
+      )}
+
+      <CourrierFormDrawer
+        open={composer.drawerOpen}
+        saving={composer.saving}
+        tenantId={tenantId}
         dossierId={dossierId}
-        recipients={emailRecipients}
-        onClose={() => setEmailRecipients(null)}
-        onSent={handleSent}
+        fromEmail={composer.fromEmail}
+        initialDestinataireIds={composer.initialDestinataireIds}
+        initialDocumentIds={composer.initialDocumentIds}
+        initialObjet={composer.initialObjet}
+        onSave={composer.handleAdd}
+        onClose={composer.closeComposer}
       />
     </div>
   )

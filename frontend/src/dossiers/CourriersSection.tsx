@@ -5,8 +5,8 @@ import { supabase } from '../lib/supabase'
 import { Badge, Button, eyeIcon, HoverIconButton, retryIcon, SectionAddButton, trashIcon } from '../design-system'
 import { Modal } from '../design-system/Modal'
 import type { Courrier, CourrierDocument, Email } from '../types/database'
-import { CourrierFormDrawer, type CourrierFormResult } from './CourrierFormDrawer'
-import { useAuth } from '../auth/useAuth'
+import { CourrierFormDrawer } from './CourrierFormDrawer'
+import { useCourrierComposer } from './useCourrierComposer'
 
 interface CourriersSectionProps {
   tenantId: string
@@ -14,33 +14,19 @@ interface CourriersSectionProps {
 }
 
 export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps) {
-  const { memberships } = useAuth()
-  const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const [courriers, setCourriers] = useState<Courrier[]>([])
   const [sentAt, setSentAt] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [noMailboxConnected, setNoMailboxConnected] = useState(false)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Courrier | null>(null)
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null)
   const [viewingAttachments, setViewingAttachments] = useState<CourrierDocument[]>([])
-  const [fromEmail, setFromEmail] = useState<string | null>(null)
+  const [retryError, setRetryError] = useState<string | null>(null)
+  const [retryNoMailbox, setRetryNoMailbox] = useState(false)
 
-  useEffect(() => {
-    if (!membership) { setFromEmail(null); return }
-    supabase
-      .from('mailbox_connections')
-      .select('email_address, status')
-      .eq('utilisateur_id', membership.id)
-      .eq('provider', 'outlook')
-      .maybeSingle()
-      .then(({ data }) => setFromEmail(data && data.status === 'active' ? data.email_address : null))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [membership?.id])
+  const composer = useCourrierComposer(tenantId, dossierId, loadCourriers)
 
   async function loadCourriers() {
     setLoading(true)
@@ -86,92 +72,15 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
       .then(({ data }) => setViewingAttachments(data ?? []))
   }, [viewing])
 
-  async function handleAdd(result: CourrierFormResult) {
-    setSaving(true)
-    setError(null)
-    setNoMailboxConnected(false)
-    const { data: courrier, error } = await supabase.from('courriers').insert({
-      tenant_id: tenantId,
-      dossier_id: dossierId,
-      objet: result.objet,
-      contenu: result.contenu || null,
-      destinataire: result.destinataire,
-      destinataires: result.destinataires,
-    }).select().single()
-    if (error) {
-      setSaving(false)
-      setError("Erreur lors de l'enregistrement du courrier : " + error.message)
-      return
-    }
-
-    if (result.documentIds.length) {
-      await supabase.from('courrier_documents').insert(
-        result.documentIds.map((document_id) => ({ tenant_id: tenantId, courrier_id: courrier.id, document_id }))
-      )
-    }
-
-    if (result.invitationCalendaire && result.destinataires.length > 0) {
-      const { error: inviteError } = await supabase.functions.invoke('create-calendar-event', {
-        body: {
-          dossier_id: dossierId,
-          titre: result.invitationCalendaire.titre,
-          lieu: result.invitationCalendaire.lieu || null,
-          debut: result.invitationCalendaire.debut,
-          fin: result.invitationCalendaire.fin,
-          attendees: result.destinataires,
-        },
-      })
-      if (inviteError) {
-        if (inviteError instanceof FunctionsHttpError && (await inviteError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
-          setNoMailboxConnected(true)
-        } else {
-          setError("Le courrier a été enregistré, mais l'envoi de l'invitation calendaire a échoué : " + inviteError.message)
-        }
-      }
-    }
-
-    if (result.send) {
-      const { error: sendError } = await supabase.functions.invoke('send-email', {
-        body: {
-          dossier_id: dossierId,
-          courrier_id: courrier.id,
-          to: result.destinataires,
-          subject: result.objet,
-          body_html: (result.contenu || '').replace(/\n/g, '<br>'),
-          document_ids: result.documentIds,
-        },
-      })
-      if (sendError) {
-        setSaving(false)
-        if (sendError instanceof FunctionsHttpError && (await sendError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
-          setNoMailboxConnected(true)
-        } else {
-          setError("Le courrier a été enregistré, mais l'envoi par email a échoué : " + sendError.message)
-          await supabase.from('courriers').update({
-            dernier_envoi_echec_at: new Date().toISOString(),
-            dernier_envoi_erreur: sendError.message,
-          }).eq('id', courrier.id)
-        }
-        setDrawerOpen(false)
-        loadCourriers()
-        return
-      }
-    }
-
-    setSaving(false)
-    setDrawerOpen(false)
-    loadCourriers()
-  }
-
   async function handleRetry(courrier: Courrier) {
     const to = courrier.destinataires.length > 0 ? courrier.destinataires : courrier.destinataire ? [courrier.destinataire] : []
     if (to.length === 0) {
-      setError("Impossible de réessayer l'envoi : aucun destinataire enregistré pour ce courrier.")
+      setRetryError("Impossible de réessayer l'envoi : aucun destinataire enregistré pour ce courrier.")
       return
     }
     setRetryingId(courrier.id)
-    setError(null)
-    setNoMailboxConnected(false)
+    setRetryError(null)
+    setRetryNoMailbox(false)
     const { data: attachments } = await supabase.from('courrier_documents').select('document_id').eq('courrier_id', courrier.id)
     const { error: sendError } = await supabase.functions.invoke('send-email', {
       body: {
@@ -185,9 +94,9 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
     })
     if (sendError) {
       if (sendError instanceof FunctionsHttpError && (await sendError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
-        setNoMailboxConnected(true)
+        setRetryNoMailbox(true)
       } else {
-        setError("Le renvoi du courrier a échoué : " + sendError.message)
+        setRetryError("Le renvoi du courrier a échoué : " + sendError.message)
       }
       await supabase.from('courriers').update({
         dernier_envoi_echec_at: new Date().toISOString(),
@@ -215,18 +124,18 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Courriers</h3>
-        <SectionAddButton label="Nouveau courrier" onClick={() => setDrawerOpen(true)} />
+        <SectionAddButton label="Nouveau courrier" onClick={() => composer.openComposer()} />
       </div>
 
-      {error && (
+      {(error || retryError || composer.error) && (
         <div style={{
           background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)',
           padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
           fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#DC2626',
-        }}>{error}</div>
+        }}>{error || retryError || composer.error}</div>
       )}
 
-      {noMailboxConnected && (
+      {(retryNoMailbox || composer.noMailboxConnected) && (
         <div style={{
           background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 'var(--radius-md)',
           padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
@@ -269,13 +178,16 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
       )}
 
       <CourrierFormDrawer
-        open={drawerOpen}
-        saving={saving}
+        open={composer.drawerOpen}
+        saving={composer.saving}
         tenantId={tenantId}
         dossierId={dossierId}
-        fromEmail={fromEmail}
-        onSave={handleAdd}
-        onClose={() => setDrawerOpen(false)}
+        fromEmail={composer.fromEmail}
+        initialDestinataireIds={composer.initialDestinataireIds}
+        initialDocumentIds={composer.initialDocumentIds}
+        initialObjet={composer.initialObjet}
+        onSave={composer.handleAdd}
+        onClose={composer.closeComposer}
       />
 
       <Modal

@@ -2,7 +2,8 @@ import { MultiSelectPicker } from './MultiSelectPicker'
 import type { Dossier } from '../types/database'
 
 function dossierLabel(d: Dossier): string {
-  return d.numero ? `${d.numero} — ${d.type_acte}` : d.type_acte
+  const suffix = d.nom ? `${d.nom} (${d.type_acte})` : d.type_acte
+  return d.numero ? `${d.numero} — ${suffix}` : suffix
 }
 
 interface DossierLinkPickerProps {
