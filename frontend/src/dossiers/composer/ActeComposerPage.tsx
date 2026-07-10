@@ -31,12 +31,14 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
   const { session, memberships } = useAuth()
   const [standard, setStandard] = useState<TrameSection | null>(null)
   const [optionalSections, setOptionalSections] = useState<TrameSection[]>([])
+  const [nom, setNom] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const resolveRef = useRef<ChampResolver>(() => null)
+  const nomRef = useRef('')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readyForAutosave = useRef(false)
 
@@ -54,6 +56,12 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
     autosaveTimer.current = setTimeout(saveDraft, AUTOSAVE_DELAY_MS)
   }
 
+  function handleNomChange(value: string) {
+    setNom(value)
+    nomRef.current = value
+    scheduleAutosave()
+  }
+
   async function saveDraft() {
     if (!editor) return
     setSaveStatus('saving')
@@ -63,6 +71,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
         {
           tenant_id: dossier.tenant_id,
           dossier_id: dossier.id,
+          nom: nomRef.current.trim() || null,
           content: editor.getJSON(),
           updated_at: new Date().toISOString(),
         },
@@ -99,7 +108,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
         supabase.from('trame_sections').select('*').eq('type_acte', dossier.type_acte).eq('is_published', true)
           .order('category').order('title'),
         supabase.from('comparants').select('*, personne:personnes(*)').eq('dossier_id', dossier.id).returns<Comparant[]>(),
-        acte ? Promise.resolve({ data: null }) : supabase.from('acte_brouillons').select('*').eq('dossier_id', dossier.id).maybeSingle<{ content: unknown; updated_at: string }>(),
+        acte ? Promise.resolve({ data: null }) : supabase.from('acte_brouillons').select('*').eq('dossier_id', dossier.id).maybeSingle<{ nom: string | null; content: unknown; updated_at: string }>(),
       ])
 
       if (cancelled) return
@@ -116,6 +125,10 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
       const optional = (sections ?? []).filter((s) => !s.is_standard)
       setStandard(std)
       setOptionalSections(optional)
+
+      const initialNom = acte?.nom ?? brouillon?.nom ?? ''
+      setNom(initialNom)
+      nomRef.current = initialNom
 
       if (acte?.content) {
         editor.commands.setContent(acte.content as never)
@@ -145,6 +158,10 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
 
   async function handleGenerate() {
     if (!editor) return
+    if (!nom.trim()) {
+      setError("Le nom de l'acte est requis.")
+      return
+    }
     const json = editor.getJSON()
     const missing: string[] = []
     function walk(node: { type?: string; attrs?: Record<string, unknown>; content?: unknown[] }) {
@@ -167,7 +184,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ dossier_id: dossier.id, content: json, acte_id: acte?.id }),
+      body: JSON.stringify({ dossier_id: dossier.id, content: json, acte_id: acte?.id, nom: nom.trim() }),
     })
     const resJson = await response.json()
     setSaving(false)
@@ -188,9 +205,16 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
           <button onClick={onBack} style={backBtn}>‹ Annuler</button>
           <span style={title}>{dossier.numero || 'Dossier sans numéro'} — {acteTypeLabel(dossier.type_acte)}</span>
         </div>
+        <input
+          style={nomInput}
+          type="text"
+          placeholder="Nom de l'acte"
+          value={nom}
+          onChange={(e) => handleNomChange(e.target.value)}
+        />
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           {!acte && <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />}
-          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || (!standard && !acte?.content)}>
+          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !nom.trim() || (!standard && !acte?.content)}>
             {saving ? 'Enregistrement…' : acte ? 'Enregistrer les modifications' : 'Générer'}
           </Button>
         </div>
@@ -266,6 +290,18 @@ const title: CSSProperties = {
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
+}
+
+const nomInput: CSSProperties = {
+  flex: 1,
+  maxWidth: '360px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  color: 'var(--n-900)',
+  background: 'var(--surface-base)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-md)',
+  padding: '6px 10px',
 }
 
 const hint: CSSProperties = {

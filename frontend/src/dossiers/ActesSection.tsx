@@ -23,7 +23,7 @@ interface ActesSectionProps {
 
 export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSectionProps) {
   const [actes, setActes] = useState<Acte[]>([])
-  const [draft, setDraft] = useState<{ updated_at: string } | null>(null)
+  const [draft, setDraft] = useState<{ nom: string | null; updated_at: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
         .select('*, documents(*), signature_requests(*)')
         .eq('dossier_id', dossier.id)
         .order('created_at', { ascending: false }),
-      supabase.from('acte_brouillons').select('updated_at').eq('dossier_id', dossier.id).maybeSingle<{ updated_at: string }>(),
+      supabase.from('acte_brouillons').select('nom, updated_at').eq('dossier_id', dossier.id).maybeSingle<{ nom: string | null; updated_at: string }>(),
     ])
     if (error) setError('Impossible de charger les actes : ' + error.message)
     else setError(null)
@@ -125,7 +125,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
           {draft && (
             <div style={{ ...row, cursor: 'pointer' }} onClick={onOpenComposer}>
               <div style={{ minWidth: 0 }}>
-                <span style={name}>Brouillon non généré</span>
+                <span style={name}>{draft.nom || 'Brouillon sans nom'}</span>
                 <span style={meta}>Modifié le {formatDateTime(draft.updated_at)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }}>
@@ -145,7 +145,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
                 onClick={() => { if (document) handleView(document) }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <span style={name}>{document?.nom ?? 'Acte'}</span>
+                  <span style={name}>{acte.nom || document?.nom || 'Acte'}</span>
                   <span style={meta}>{formatDateTime(acte.created_at)}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>

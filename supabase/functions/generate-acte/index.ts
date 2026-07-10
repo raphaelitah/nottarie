@@ -79,9 +79,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Session invalide' }), { status: 401, headers: corsHeaders })
     }
 
-    const { dossier_id, content, acte_id } = await req.json()
+    const { dossier_id, content, acte_id, nom } = await req.json()
     if (!dossier_id || !content || typeof content !== 'object') {
       return new Response(JSON.stringify({ error: 'dossier_id et content sont requis' }), { status: 400, headers: corsHeaders })
+    }
+    const trimmedNom = typeof nom === 'string' ? nom.trim() : ''
+    if (!trimmedNom) {
+      return new Response(JSON.stringify({ error: "Le nom de l'acte est requis" }), { status: 400, headers: corsHeaders })
     }
 
     const { data: dossier, error: dossierError } = await supabaseAdmin
@@ -147,7 +151,7 @@ Deno.serve(async (req) => {
     if (existingActe) {
       const { data: updated, error: updateError } = await supabaseAdmin
         .from('actes')
-        .update({ donnees, content })
+        .update({ donnees, content, nom: trimmedNom })
         .eq('id', existingActe.id)
         .select()
         .single()
@@ -168,6 +172,7 @@ Deno.serve(async (req) => {
           dossier_id: dossier.id,
           trame_id: trame.id,
           statut: 'brouillon',
+          nom: trimmedNom,
           donnees,
           content,
         })

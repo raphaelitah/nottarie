@@ -253,6 +253,7 @@ export interface Acte {
   dossier_id: string
   trame_id: string
   numero: string | null
+  nom: string | null
   statut: string
   donnees: Record<string, string>
   content: Record<string, unknown> | null
@@ -265,6 +266,7 @@ export interface ActeBrouillon {
   id: string
   tenant_id: string
   dossier_id: string
+  nom: string | null
   content: Record<string, unknown>
   updated_at: string
 }
