@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useAgendaEvents } from './useAgendaEvents'
 import { expandOccurrences } from './eventRecurrence'
@@ -51,7 +51,8 @@ export function WeekStrip({ tenantId, onOpenAgenda }: WeekStripProps) {
   const { events, loading } = useAgendaEvents(tenantId)
   const days = useMemo(() => getWorkWeekDates(new Date()), [])
   const today = new Date()
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const labelRefs = useRef(new Map<string, HTMLSpanElement>())
 
   return (
     <div style={{ marginTop: 'var(--space-8)' }}>
@@ -91,12 +92,16 @@ export function WeekStrip({ tenantId, onOpenAgenda }: WeekStripProps) {
                       const time = e.all_day ? null : formatEventTime(e.debut)
                       const label = e.est_prive ? `🔒 ${e.titre}` : e.titre
                       const fullText = time ? `${time} ${label}` : label
+                      const occurrenceKey = `${day.toISOString()}-${e.id}`
                       return (
                         <div
-                          key={e.id}
+                          key={occurrenceKey}
                           aria-label={fullText}
-                          onMouseEnter={() => setHoveredEventId(e.id)}
-                          onMouseLeave={() => setHoveredEventId(null)}
+                          onMouseEnter={() => {
+                            const el = labelRefs.current.get(occurrenceKey)
+                            if (el && el.scrollWidth > el.clientWidth) setHoveredKey(occurrenceKey)
+                          }}
+                          onMouseLeave={() => setHoveredKey(null)}
                           style={{
                             position: 'relative',
                             display: 'flex', alignItems: 'center', gap: '4px',
@@ -109,10 +114,16 @@ export function WeekStrip({ tenantId, onOpenAgenda }: WeekStripProps) {
                               {time}
                             </span>
                           )}
-                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <span
+                            ref={(el) => {
+                              if (el) labelRefs.current.set(occurrenceKey, el)
+                              else labelRefs.current.delete(occurrenceKey)
+                            }}
+                            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                          >
                             {label}
                           </span>
-                          {hoveredEventId === e.id && (
+                          {hoveredKey === occurrenceKey && (
                             <span style={tooltip}>{fullText}</span>
                           )}
                         </div>
