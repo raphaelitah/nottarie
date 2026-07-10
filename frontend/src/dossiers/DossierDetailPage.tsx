@@ -3,10 +3,11 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button, EditPenButton, Input, MOBILE_QUERY, Select, STACK_QUERY, useMediaQuery } from '../design-system'
 import { Modal } from '../design-system/Modal'
-import type { Acte, Dossier, Utilisateur } from '../types/database'
+import type { Acte, Comparant, Dossier, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { useAuth } from '../auth/useAuth'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
+import { suggestDossierNom } from './dossierNom'
 import { DOSSIER_STATUT_OPTIONS, dossierStatutLabel } from '../constants/dossierStatuts'
 import { ComparantsSection } from './ComparantsSection'
 import { ImmeublesSection } from './ImmeublesSection'
@@ -40,6 +41,7 @@ function formatDateTimeFr(iso: string): string {
 
 interface GeneralInfoDraft {
   numero: string
+  nom: string
   statut: string
   type_acte: string
   notaire_id: string
@@ -72,7 +74,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
   const [editingGeneral, setEditingGeneral] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [draft, setDraft] = useState<GeneralInfoDraft>({ numero: dossier.numero ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
+  const [draft, setDraft] = useState<GeneralInfoDraft>({ numero: dossier.numero ?? '', nom: dossier.nom ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notaire, setNotaire] = useState<Utilisateur | null>(null)
@@ -82,6 +84,14 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [dossierParent, setDossierParent] = useState<Dossier | null>(null)
+  const [comparants, setComparants] = useState<Comparant[]>([])
+
+  useEffect(() => {
+    supabase.from('comparants').select('*, personne:personnes(*)').eq('dossier_id', dossier.id)
+      .then(({ data }) => setComparants(data ?? []))
+  }, [dossier.id])
+
+  const suggestedNom = suggestDossierNom(dossier.type_acte, comparants)
 
   useEffect(() => {
     if (dossier.dossier_parent_id) {
@@ -125,7 +135,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
   }, [dossier.tenant_id])
 
   function handleStartEditGeneral() {
-    setDraft({ numero: dossier.numero ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
+    setDraft({ numero: dossier.numero ?? '', nom: dossier.nom ?? '', statut: dossier.statut, type_acte: dossier.type_acte, notaire_id: dossier.notaire_id, clerc_attitre_id: dossier.clerc_attitre_id })
     setError(null)
     setEditingGeneral(true)
   }
@@ -136,7 +146,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
     const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === draft.type_acte)?.branche ?? dossier.branche
     const { data, error } = await supabase
       .from('dossiers')
-      .update({ numero: draft.numero.trim() || null, statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id, clerc_attitre_id: draft.clerc_attitre_id })
+      .update({ numero: draft.numero.trim() || null, nom: draft.nom.trim() || null, statut: draft.statut, type_acte: draft.type_acte, branche, notaire_id: draft.notaire_id, clerc_attitre_id: draft.clerc_attitre_id })
       .eq('id', dossier.id)
       .select()
       .single()
@@ -169,11 +179,11 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
-            <h1 style={h1}>{dossier.numero || 'Dossier sans numéro'}</h1>
+            <h1 style={h1}>{dossier.nom || suggestedNom || dossier.numero || 'Dossier sans numéro'}</h1>
             <Badge status={statutBadgeStatus(dossier.statut)} label={dossierStatutLabel(dossier.statut)} />
           </div>
           <p style={subtitle}>
-            {acteTypeLabel(dossier.type_acte)}
+            {dossier.numero || 'Sans numéro'}{' · '}{acteTypeLabel(dossier.type_acte)}
             {' · Mis à jour : '}{formatDateTimeFr(dossier.updated_at)}{' par '}{misAJourPar ? utilisateurLabel(misAJourPar) : '…'}
           </p>
         </div>
@@ -215,6 +225,18 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
             )}
           </div>
           <div style={grid3(stack, mobile)}>
+            <div>
+              <label style={labelStyle}>Nom du dossier</label>
+              {editingGeneral ? (
+                <Input
+                  value={draft.nom}
+                  placeholder={suggestedNom ?? undefined}
+                  onChange={(e) => setDraft((d) => ({ ...d, nom: e.target.value }))}
+                />
+              ) : (
+                <div style={valueStyle}>{dossier.nom || suggestedNom || '—'}</div>
+              )}
+            </div>
             <div>
               <label style={labelStyle}>Numéro de dossier</label>
               {editingGeneral ? (

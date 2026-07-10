@@ -4,12 +4,17 @@ import { supabase } from '../lib/supabase'
 import { Button, Table, type TableColumn } from '../design-system'
 import { Badge } from '../design-system/Badge'
 import { Modal } from '../design-system/Modal'
-import type { Dossier } from '../types/database'
+import type { Comparant, Dossier } from '../types/database'
 import { ACTE_TYPE_OPTIONS, acteTypeLabel } from '../constants/acteTypes'
 import { dossierStatutLabel } from '../constants/dossierStatuts'
 import type { Utilisateur } from '../types/database'
 import { useAuth } from '../auth/useAuth'
+import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
+import { personneDisplayName } from '../personnes/personneForm'
+import { suggestDossierNom } from './dossierNom'
 import { DossierFormDrawer, type DossierFormValues } from './DossierFormDrawer'
+
+type DossierRow = Dossier & { comparants?: Comparant[] }
 
 function TrashIcon() {
   return (
@@ -35,21 +40,22 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const isAdmin = membership?.roles.includes('administrateur') ?? false
-  const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [dossiers, setDossiers] = useState<DossierRow[]>([])
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
+  const [utilisateursById, setUtilisateursById] = useState<Record<string, Utilisateur>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Dossier | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DossierRow | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   async function loadDossiers() {
     setLoading(true)
     const { data, error } = await supabase
       .from('dossiers')
-      .select('*')
+      .select('*, comparants(qualite, personne:personnes(*))')
       .eq('tenant_id', tenantId)
       .is('archived_at', null)
       .order('created_at', { ascending: false })
@@ -79,8 +85,13 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     setClercs(data ?? [])
   }
 
+  async function loadUtilisateurs() {
+    const { data } = await supabase.from('utilisateurs').select('*').eq('tenant_id', tenantId)
+    setUtilisateursById(Object.fromEntries((data ?? []).map((u) => [u.id, u])))
+  }
+
   useEffect(() => {
-    loadDossiers(); loadNotaires(); loadClercs()
+    loadDossiers(); loadNotaires(); loadClercs(); loadUtilisateurs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
 
@@ -91,6 +102,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       tenant_id: tenantId,
       branche,
       type_acte: values.type_acte,
+      nom: values.nom.trim() || null,
       notaire_id: values.notaire_id,
       clerc_attitre_id: values.clerc_attitre_id,
       dossier_parent_id: values.dossier_parent_id,
@@ -117,24 +129,39 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     loadDossiers()
   }
 
-  const columns: TableColumn<Dossier>[] = [
-    { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '20%' },
-    { key: 'type_acte', label: 'Type', sortable: true, width: '28%', render: (v) => acteTypeLabel(v as string) },
+  const columns: TableColumn<DossierRow>[] = [
+    { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '11%' },
     {
-      key: 'statut', label: 'Statut', width: '14%',
+      key: 'nom', label: 'Nom', width: '22%',
+      render: (v, row) => {
+        const nom = (v as string | null) || suggestDossierNom(row.type_acte, row.comparants ?? []) || acteTypeLabel(row.type_acte)
+        return <span title={nom} style={truncateCell(220)}>{nom}</span>
+      },
+    },
+    { key: 'type_acte', label: 'Type', sortable: true, width: '11%', render: (v) => acteTypeLabel(v as string) },
+    {
+      key: 'comparants', label: 'Concerne', width: '18%',
+      render: (_v, row) => {
+        const noms = (row.comparants ?? []).filter((c) => c.personne).map((c) => personneDisplayName(c.personne!))
+        const label = noms.length ? noms.join(', ') : '—'
+        return <span title={label} style={truncateCellSmall(200)}>{label}</span>
+      },
+    },
+    {
+      key: 'clerc_attitre_id', label: 'Géré par', width: '14%',
+      render: (v) => <span style={truncateCellSmall(140)}>{utilisateurLabel(utilisateursById[v as string])}</span>,
+    },
+    {
+      key: 'statut', label: 'Statut', width: '10%',
       render: (v) => <Badge status={statutBadgeStatus(v as string)} label={dossierStatutLabel(v as string)} />,
     },
     {
-      key: 'created_at', label: 'Créé le', width: '18%', sortable: true,
-      render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
-    },
-    {
-      key: 'updated_at', label: 'Mis à jour', width: '20%', sortable: true,
+      key: 'created_at', label: 'Créé le', width: '10%', sortable: true,
       render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
     },
     ...(isAdmin ? [{
-      key: 'actions', label: '', width: '5%', align: 'right' as const,
-      render: (_: unknown, row: Dossier) => (
+      key: 'actions', label: '', width: '4%', align: 'right' as const,
+      render: (_: unknown, row: DossierRow) => (
         <button
           type="button"
           title="Supprimer le dossier"
@@ -205,6 +232,24 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       </Modal>
     </div>
   )
+}
+
+function truncateCell(widthPx: number): CSSProperties {
+  return {
+    display: 'block',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    width: `${widthPx}px`,
+  }
+}
+
+function truncateCellSmall(widthPx: number): CSSProperties {
+  return {
+    ...truncateCell(widthPx),
+    fontSize: 'var(--text-xs)',
+    color: 'var(--text-muted)',
+  }
 }
 
 const deleteBtn: CSSProperties = {

@@ -7,6 +7,7 @@ import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 
 export interface DossierFormValues {
   type_acte: string
+  nom: string
   notaire_id: string
   clerc_attitre_id: string
   dossier_parent_id: string | null
@@ -14,6 +15,7 @@ export interface DossierFormValues {
 
 const EMPTY: DossierFormValues = {
   type_acte: '',
+  nom: '',
   notaire_id: '',
   clerc_attitre_id: '',
   dossier_parent_id: null,
@@ -89,6 +91,14 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
           options={ACTE_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
           value={values.type_acte}
           onChange={(e) => setValues((v) => ({ ...v, type_acte: e.target.value }))}
+        />
+
+        <Input
+          label="Nom du dossier"
+          placeholder="Ex. Succession de M. Jean DUPONT"
+          helper="Facultatif. Si laissé vide, un nom sera suggéré automatiquement à partir des comparants (défunt, donataires…) une fois ajoutés."
+          value={values.nom}
+          onChange={(e) => setValues((v) => ({ ...v, nom: e.target.value }))}
         />
 
         <Select

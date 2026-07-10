@@ -53,6 +53,7 @@ export interface Dossier {
   id: string
   tenant_id: string
   numero: string | null
+  nom: string | null
   branche: BrancheDroit
   type_acte: string
   statut: string
