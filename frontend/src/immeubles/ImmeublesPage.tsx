@@ -166,6 +166,7 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
 
       <ImmeubleFormDrawer
         open={drawerOpen}
+        tenantId={tenantId}
         immeuble={editing}
         saving={saving}
         onSave={handleSave}
