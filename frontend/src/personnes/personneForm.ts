@@ -73,7 +73,7 @@ export function personneToForm(p: Personne): PersonneFormValues {
 
 export function personneDisplayName(p: Pick<Personne, 'type' | 'civilite' | 'nom' | 'prenom' | 'raison_sociale'>): string {
   if (p.type === 'physique') {
-    return [p.civilite, p.prenom, p.nom].filter(Boolean).join(' ') || 'Personne sans nom'
+    return [p.civilite, p.prenom, p.nom?.toUpperCase()].filter(Boolean).join(' ') || 'Personne sans nom'
   }
   return p.raison_sociale || 'Sans raison sociale'
 }

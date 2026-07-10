@@ -30,6 +30,7 @@ export function createChampResolver(etude: Etude | null, notaireNom: string, com
     if (parsed.attribute === 'date_naissance' || parsed.attribute === 'date_deces') {
       return new Date(String(raw)).toLocaleDateString('fr-FR')
     }
+    if (parsed.attribute === 'nom') return String(raw).toUpperCase()
     return String(raw)
   }
 }

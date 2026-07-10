@@ -45,7 +45,7 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
             onChange={(e) => set({ civilite: e.target.value })}
           />
           <Input label="Prénom" required value={values.prenom} onChange={(e) => set({ prenom: e.target.value })} />
-          <Input label="Nom" required value={values.nom} onChange={(e) => set({ nom: e.target.value })} />
+          <Input label="Nom" required value={values.nom} onChange={(e) => set({ nom: e.target.value.toUpperCase() })} />
         </div>
       ) : (
         <Input
