@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Drawer, Button, Input, Select } from '../design-system'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
-import type { Dossier, Utilisateur } from '../types/database'
+import { QUALITE_SUGGESTIONS } from '../constants/personneTypes'
+import type { Dossier, Immeuble, Personne, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
+import { personneDisplayName } from '../personnes/personneForm'
+import { immeubleDisplayName } from '../immeubles/immeubleForm'
 
 export interface DossierFormValues {
   type_acte: string
@@ -11,6 +14,7 @@ export interface DossierFormValues {
   notaire_id: string
   clerc_attitre_id: string
   dossier_parent_id: string | null
+  comparant_qualite?: string
 }
 
 const EMPTY: DossierFormValues = {
@@ -28,11 +32,13 @@ interface DossierFormDrawerProps {
   clercs: Utilisateur[]
   dossiers: Dossier[]
   defaultClercId?: string
+  prefillPersonne?: Personne | null
+  prefillImmeuble?: Immeuble | null
   onSave: (values: DossierFormValues) => void
   onClose: () => void
 }
 
-export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, defaultClercId, onSave, onClose }: DossierFormDrawerProps) {
+export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, defaultClercId, prefillPersonne, prefillImmeuble, onSave, onClose }: DossierFormDrawerProps) {
   const [values, setValues] = useState<DossierFormValues>(EMPTY)
   const [linking, setLinking] = useState(false)
   const [parentSearch, setParentSearch] = useState('')
@@ -40,12 +46,12 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
 
   useEffect(() => {
     if (open) {
-      setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '' })
+      setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '', comparant_qualite: prefillPersonne ? QUALITE_SUGGESTIONS[0] : '' })
       setLinking(false)
       setParentSearch('')
       setError(null)
     }
-  }, [open, defaultClercId])
+  }, [open, defaultClercId, prefillPersonne])
 
   const parentQuery = parentSearch.trim().toLowerCase()
   const parentResults = parentQuery
@@ -58,6 +64,7 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
     if (!values.notaire_id) { setError("Le notaire responsable est obligatoire."); return }
     if (!values.clerc_attitre_id) { setError("Le clerc attitré est obligatoire."); return }
     if (linking && !values.dossier_parent_id) { setError("Sélectionnez le dossier auquel lier ce nouveau dossier."); return }
+    if (prefillPersonne && !values.comparant_qualite?.trim()) { setError("La qualité de la personne dans ce dossier est obligatoire."); return }
     setError(null)
     onSave(linking ? values : { ...values, dossier_parent_id: null })
   }
@@ -83,6 +90,24 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
             background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px',
             padding: '10px 14px', fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#DC2626',
           }}>{error}</div>
+        )}
+
+        {(prefillPersonne || prefillImmeuble) && (
+          <div style={selectedCard}>
+            <span>
+              Lié à {prefillPersonne ? personneDisplayName(prefillPersonne) : immeubleDisplayName(prefillImmeuble!)}
+            </span>
+          </div>
+        )}
+
+        {prefillPersonne && (
+          <Select
+            label="Qualité de cette personne dans le dossier"
+            required
+            options={QUALITE_SUGGESTIONS.map((q) => ({ value: q, label: q }))}
+            value={values.comparant_qualite ?? ''}
+            onChange={(e) => setValues((v) => ({ ...v, comparant_qualite: e.target.value }))}
+          />
         )}
 
         <Select

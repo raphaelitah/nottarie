@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, Modal, type TableColumn } from '../design-system'
-import type { Immeuble } from '../types/database'
+import { Button, HoverIconButton, Input, Table, Modal, folderPlusIcon, type TableColumn } from '../design-system'
+import type { Dossier, Immeuble, Utilisateur } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
+import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
 import { useAuth } from '../auth/useAuth'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './immeubleForm'
+import { DossierFormDrawer, type DossierFormValues } from '../dossiers/DossierFormDrawer'
 
 function TrashIcon() {
   return (
@@ -24,9 +26,10 @@ interface ImmeublesPageProps {
   tenantId: string
   focusId?: string | null
   onFocusHandled?: () => void
+  onSelectDossier?: (id: string) => void
 }
 
-export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPageProps) {
+export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossier }: ImmeublesPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
@@ -39,6 +42,11 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
   const [saving, setSaving] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<Immeuble | null>(null)
   const [archiving, setArchiving] = useState(false)
+  const [dossierDrawerFor, setDossierDrawerFor] = useState<Immeuble | null>(null)
+  const [dossierSaving, setDossierSaving] = useState(false)
+  const [notaires, setNotaires] = useState<Utilisateur[]>([])
+  const [clercs, setClercs] = useState<Utilisateur[]>([])
+  const [dossiers, setDossiers] = useState<Dossier[]>([])
 
   useEffect(() => {
     if (!focusId) return
@@ -67,6 +75,51 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
     loadImmeubles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
+
+  async function loadDossierCreationData() {
+    const [{ data: n }, { data: c }, { data: d }] = await Promise.all([
+      supabase.from('utilisateurs').select('*').eq('tenant_id', tenantId).eq('actif', true).contains('roles', ['notaire']),
+      supabase.from('utilisateurs').select('*').eq('tenant_id', tenantId).eq('actif', true).contains('roles', ['redacteur']),
+      supabase.from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false }),
+    ])
+    setNotaires(n ?? [])
+    setClercs(c ?? [])
+    setDossiers(d ?? [])
+  }
+
+  function openNewDossier(i: Immeuble) {
+    loadDossierCreationData()
+    setDossierDrawerFor(i)
+  }
+
+  async function handleCreateDossier(values: DossierFormValues) {
+    if (!dossierDrawerFor) return
+    setDossierSaving(true)
+    const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === values.type_acte)?.branche ?? 'famille'
+    const { data, error } = await supabase.from('dossiers').insert({
+      tenant_id: tenantId,
+      branche,
+      type_acte: values.type_acte,
+      nom: values.nom.trim() || null,
+      notaire_id: values.notaire_id,
+      clerc_attitre_id: values.clerc_attitre_id,
+      dossier_parent_id: values.dossier_parent_id,
+    }).select().single()
+    if (error) {
+      setDossierSaving(false)
+      setError(error.code === '23505' ? 'Un dossier avec ce numéro existe déjà.' : 'Erreur lors de la création : ' + error.message)
+      return
+    }
+    const { error: linkError } = await supabase.from('dossier_immeubles').insert({
+      tenant_id: tenantId,
+      dossier_id: data.id,
+      immeuble_id: dossierDrawerFor.id,
+    })
+    setDossierSaving(false)
+    if (linkError) { setError("Erreur lors du rattachement de l'immeuble au dossier : " + linkError.message); return }
+    setDossierDrawerFor(null)
+    onSelectDossier?.(data.id)
+  }
 
   function openCreate() {
     setEditing(null)
@@ -118,20 +171,25 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
     { key: 'ville', label: 'Ville', width: '20%' },
     { key: 'references_cadastrales', label: 'Références cadastrales', width: '20%' },
     { key: 'regime', label: 'Régime', width: '10%', render: (v) => regimeBienLabel(v as string | null) },
-    ...(canArchive ? [{
-      key: 'actions', label: '', width: '5%', align: 'right' as const,
+    {
+      key: 'actions', label: '', width: canArchive ? '10%' : '5%', align: 'right' as const,
       render: (_: unknown, row: Immeuble) => (
-        <button
-          type="button"
-          title="Archiver l'immeuble"
-          aria-label="Archiver l'immeuble"
-          onClick={(e) => { e.stopPropagation(); setArchiveTarget(row) }}
-          style={archiveBtn}
-        >
-          <TrashIcon />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+          <HoverIconButton icon={folderPlusIcon} label="Nouveau dossier" onClick={() => openNewDossier(row)} />
+          {canArchive && (
+            <button
+              type="button"
+              title="Archiver l'immeuble"
+              aria-label="Archiver l'immeuble"
+              onClick={() => setArchiveTarget(row)}
+              style={archiveBtn}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
       ),
-    }] : []),
+    },
   ]
 
   return (
@@ -171,6 +229,18 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled }: ImmeublesPa
         saving={saving}
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <DossierFormDrawer
+        open={!!dossierDrawerFor}
+        saving={dossierSaving}
+        notaires={notaires}
+        clercs={clercs}
+        dossiers={dossiers}
+        defaultClercId={membership?.roles.includes('redacteur') ? membership.id : undefined}
+        prefillImmeuble={dossierDrawerFor}
+        onSave={handleCreateDossier}
+        onClose={() => setDossierDrawerFor(null)}
       />
 
       <Modal

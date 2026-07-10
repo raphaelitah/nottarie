@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, Modal, type TableColumn } from '../design-system'
-import type { Personne } from '../types/database'
+import { Button, HoverIconButton, Input, Table, Modal, folderPlusIcon, type TableColumn } from '../design-system'
+import type { Dossier, Personne, Utilisateur } from '../types/database'
 import { PERSONNE_TYPE_OPTIONS } from '../constants/personneTypes'
+import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
 import { useAuth } from '../auth/useAuth'
 import { PersonneFormDrawer } from './PersonneFormDrawer'
 import { personneDisplayName, personneFormToInsertPayload, type PersonneFormValues } from './personneForm'
+import { DossierFormDrawer, type DossierFormValues } from '../dossiers/DossierFormDrawer'
 
 function personneTypeLabel(type: string): string {
   return PERSONNE_TYPE_OPTIONS.find((o) => o.value === type)?.label ?? type
@@ -27,9 +29,10 @@ interface PersonnesPageProps {
   tenantId: string
   focusId?: string | null
   onFocusHandled?: () => void
+  onSelectDossier?: (id: string) => void
 }
 
-export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPageProps) {
+export function PersonnesPage({ tenantId, focusId, onFocusHandled, onSelectDossier }: PersonnesPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
@@ -42,6 +45,11 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
   const [saving, setSaving] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<Personne | null>(null)
   const [archiving, setArchiving] = useState(false)
+  const [dossierDrawerFor, setDossierDrawerFor] = useState<Personne | null>(null)
+  const [dossierSaving, setDossierSaving] = useState(false)
+  const [notaires, setNotaires] = useState<Utilisateur[]>([])
+  const [clercs, setClercs] = useState<Utilisateur[]>([])
+  const [dossiers, setDossiers] = useState<Dossier[]>([])
 
   useEffect(() => {
     if (!focusId) return
@@ -70,6 +78,52 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
     loadPersonnes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
+
+  async function loadDossierCreationData() {
+    const [{ data: n }, { data: c }, { data: d }] = await Promise.all([
+      supabase.from('utilisateurs').select('*').eq('tenant_id', tenantId).eq('actif', true).contains('roles', ['notaire']),
+      supabase.from('utilisateurs').select('*').eq('tenant_id', tenantId).eq('actif', true).contains('roles', ['redacteur']),
+      supabase.from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false }),
+    ])
+    setNotaires(n ?? [])
+    setClercs(c ?? [])
+    setDossiers(d ?? [])
+  }
+
+  function openNewDossier(p: Personne) {
+    loadDossierCreationData()
+    setDossierDrawerFor(p)
+  }
+
+  async function handleCreateDossier(values: DossierFormValues) {
+    if (!dossierDrawerFor) return
+    setDossierSaving(true)
+    const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === values.type_acte)?.branche ?? 'famille'
+    const { data, error } = await supabase.from('dossiers').insert({
+      tenant_id: tenantId,
+      branche,
+      type_acte: values.type_acte,
+      nom: values.nom.trim() || null,
+      notaire_id: values.notaire_id,
+      clerc_attitre_id: values.clerc_attitre_id,
+      dossier_parent_id: values.dossier_parent_id,
+    }).select().single()
+    if (error) {
+      setDossierSaving(false)
+      setError(error.code === '23505' ? 'Un dossier avec ce numéro existe déjà.' : 'Erreur lors de la création : ' + error.message)
+      return
+    }
+    const { error: comparantError } = await supabase.from('comparants').insert({
+      tenant_id: tenantId,
+      dossier_id: data.id,
+      personne_id: dossierDrawerFor.id,
+      qualite: values.comparant_qualite,
+    })
+    setDossierSaving(false)
+    if (comparantError) { setError("Erreur lors du rattachement de la personne au dossier : " + comparantError.message); return }
+    setDossierDrawerFor(null)
+    onSelectDossier?.(data.id)
+  }
 
   function openCreate() {
     setEditing(null)
@@ -119,20 +173,25 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
     { key: 'type', label: 'Type', width: '20%', render: (v) => personneTypeLabel(v as string) },
     { key: 'email', label: 'Email', width: '25%' },
     { key: 'telephone', label: 'Téléphone', width: '20%' },
-    ...(canArchive ? [{
-      key: 'actions', label: '', width: '5%', align: 'right' as const,
+    {
+      key: 'actions', label: '', width: canArchive ? '10%' : '5%', align: 'right' as const,
       render: (_: unknown, row: Personne) => (
-        <button
-          type="button"
-          title="Archiver la personne"
-          aria-label="Archiver la personne"
-          onClick={(e) => { e.stopPropagation(); setArchiveTarget(row) }}
-          style={archiveBtn}
-        >
-          <TrashIcon />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
+          <HoverIconButton icon={folderPlusIcon} label="Nouveau dossier" onClick={() => openNewDossier(row)} />
+          {canArchive && (
+            <button
+              type="button"
+              title="Archiver la personne"
+              aria-label="Archiver la personne"
+              onClick={() => setArchiveTarget(row)}
+              style={archiveBtn}
+            >
+              <TrashIcon />
+            </button>
+          )}
+        </div>
       ),
-    }] : []),
+    },
   ]
 
   return (
@@ -171,6 +230,18 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled }: PersonnesPa
         saving={saving}
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <DossierFormDrawer
+        open={!!dossierDrawerFor}
+        saving={dossierSaving}
+        notaires={notaires}
+        clercs={clercs}
+        dossiers={dossiers}
+        defaultClercId={membership?.roles.includes('redacteur') ? membership.id : undefined}
+        prefillPersonne={dossierDrawerFor}
+        onSave={handleCreateDossier}
+        onClose={() => setDossierDrawerFor(null)}
       />
 
       <Modal
