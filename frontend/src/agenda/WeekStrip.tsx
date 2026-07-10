@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useAgendaEvents } from './useAgendaEvents'
 import { expandOccurrences } from './eventRecurrence'
@@ -27,6 +27,10 @@ function getWorkWeekDates(reference: Date): Date[] {
   })
 }
 
+function formatEventTime(debut: string): string {
+  return new Date(debut).toLocaleTimeString('fr-FR', { timeStyle: 'short' })
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
@@ -47,6 +51,7 @@ export function WeekStrip({ tenantId, onOpenAgenda }: WeekStripProps) {
   const { events, loading } = useAgendaEvents(tenantId)
   const days = useMemo(() => getWorkWeekDates(new Date()), [])
   const today = new Date()
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null)
 
   return (
     <div style={{ marginTop: 'var(--space-8)' }}>
@@ -82,18 +87,37 @@ export function WeekStrip({ tenantId, onOpenAgenda }: WeekStripProps) {
                   </span>
                 ) : (
                   <>
-                    {dayEvents.slice(0, 3).map((e) => (
-                      <div key={e.id} style={{
-                        display: 'flex', alignItems: 'center', gap: '4px',
-                        fontSize: '11px', color: isToday ? 'rgba(255,255,255,0.9)' : 'var(--n-700)',
-                        overflow: 'hidden',
-                      }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: resolveEventColor(e), flexShrink: 0 }} />
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {e.est_prive ? `🔒 ${e.titre}` : e.titre}
-                        </span>
-                      </div>
-                    ))}
+                    {dayEvents.slice(0, 3).map((e) => {
+                      const time = e.all_day ? null : formatEventTime(e.debut)
+                      const label = e.est_prive ? `🔒 ${e.titre}` : e.titre
+                      const fullText = time ? `${time} ${label}` : label
+                      return (
+                        <div
+                          key={e.id}
+                          aria-label={fullText}
+                          onMouseEnter={() => setHoveredEventId(e.id)}
+                          onMouseLeave={() => setHoveredEventId(null)}
+                          style={{
+                            position: 'relative',
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            fontSize: '11px', color: isToday ? 'rgba(255,255,255,0.9)' : 'var(--n-700)',
+                          }}
+                        >
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: resolveEventColor(e), flexShrink: 0 }} />
+                          {time && (
+                            <span style={{ flexShrink: 0, color: isToday ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)' }}>
+                              {time}
+                            </span>
+                          )}
+                          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {label}
+                          </span>
+                          {hoveredEventId === e.id && (
+                            <span style={tooltip}>{fullText}</span>
+                          )}
+                        </div>
+                      )
+                    })}
                     {dayEvents.length > 3 && (
                       <span style={{ fontSize: '11px', color: isToday ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)' }}>
                         +{dayEvents.length - 3} autres
@@ -133,4 +157,12 @@ const dayLabel: CSSProperties = {
 
 const dayNumber: CSSProperties = {
   fontFamily: 'var(--font-sans)', fontSize: 'var(--text-lg)', fontWeight: 700, marginTop: '2px',
+}
+
+const tooltip: CSSProperties = {
+  position: 'absolute', bottom: '100%', left: 0, marginBottom: '4px',
+  background: 'var(--color-ink)', color: '#fff', fontFamily: 'var(--font-sans)',
+  fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap', padding: '4px 8px',
+  borderRadius: 'var(--radius-sm)', zIndex: 20, pointerEvents: 'none',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
 }
