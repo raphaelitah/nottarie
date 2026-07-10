@@ -191,7 +191,9 @@ export interface DossierImmeuble {
 export interface DocumentRow {
   id: string
   tenant_id: string
-  dossier_id: string
+  dossier_id: string | null
+  personne_id: string | null
+  immeuble_id: string | null
   acte_id: string | null
   nom: string
   storage_path: string
