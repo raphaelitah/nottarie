@@ -145,6 +145,7 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
       }
 
       resolveRef.current = createChampResolver(etude ?? null, notaireNom, comparants ?? [])
+      editor.storage.champ.comparants = comparants ?? []
 
       const std = (sections ?? []).find((s) => s.is_standard) ?? null
       const optional = (sections ?? []).filter((s) => !s.is_standard)

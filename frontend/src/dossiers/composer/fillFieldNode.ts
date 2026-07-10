@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { FieldFillNodeView } from './FieldFillNodeView'
+import type { Comparant } from '../../types/database'
 
 // Same node name ("champ") as the admin authoring extension, but a different
 // Tiptap editor instance — this one renders a resolved/fillable value instead
@@ -19,6 +20,10 @@ export const FillFieldNode = Node.create({
   inline: true,
   atom: true,
   selectable: true,
+
+  addStorage() {
+    return { comparants: [] as Comparant[] }
+  },
 
   addAttributes() {
     return {

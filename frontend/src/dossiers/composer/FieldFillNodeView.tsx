@@ -3,10 +3,11 @@ import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react'
 import { FieldFillModal } from './FieldFillModal'
 import type { FillChampAttrs } from './fillFieldNode'
 
-export function FieldFillNodeView({ node, updateAttributes }: NodeViewProps) {
+export function FieldFillNodeView({ node, updateAttributes, editor }: NodeViewProps) {
   const [open, setOpen] = useState(false)
   const attrs = node.attrs as FillChampAttrs
   const hasValue = !!attrs.value?.trim()
+  const comparants = editor.storage.champ?.comparants ?? []
 
   return (
     <NodeViewWrapper as="span" style={{ display: 'inline' }}>
@@ -23,6 +24,7 @@ export function FieldFillNodeView({ node, updateAttributes }: NodeViewProps) {
         open={open}
         label={attrs.label}
         value={attrs.value ?? ''}
+        comparants={comparants}
         onSave={(value) => { updateAttributes({ value }); setOpen(false) }}
         onClose={() => setOpen(false)}
       />
