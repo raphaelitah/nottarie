@@ -17,3 +17,8 @@ body {
 #root {
   min-height: 100svh;
 }
+
+.ProseMirror {
+  outline: none;
+  caret-color: var(--color-ink, #111);
+}
