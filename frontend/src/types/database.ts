@@ -136,6 +136,32 @@ export interface QualiteComparant {
   created_at: string
 }
 
+export interface PersonneMoraleContact {
+  id: string
+  tenant_id: string
+  personne_morale_id: string
+  personne_physique_id: string | null
+  nom_libre: string | null
+  fonction: string | null
+  email: string | null
+  telephone: string | null
+  is_principal: boolean
+  created_at: string
+  personne_physique?: Personne | null
+}
+
+export interface ImmeubleProprietaire {
+  id: string
+  tenant_id: string
+  immeuble_id: string
+  personne_id: string | null
+  nom_libre: string | null
+  quote_part: number | null
+  created_at: string
+  personne?: Personne | null
+  immeuble?: Immeuble
+}
+
 export type RegimeBien = 'propre' | 'communaute'
 
 export interface Immeuble {

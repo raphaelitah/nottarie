@@ -22,6 +22,13 @@ export const REGIME_MATRIMONIAL_OPTIONS = [
   'Non marié(e)',
 ]
 
+export const FONCTION_CONTACT_OPTIONS = [
+  { value: 'notaire', label: 'Notaire' },
+  { value: 'clerc', label: 'Clerc' },
+  { value: 'assistant', label: 'Assistant(e)' },
+  { value: 'autre', label: 'Autre' },
+]
+
 // Common comparant qualités across the MVP acte types (succession, donation) — offered
 // as suggestions, not an enum: qualite is freeform text (BRD doesn't constrain it).
 export const QUALITE_SUGGESTIONS = [

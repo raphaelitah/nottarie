@@ -2,14 +2,23 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, HoverIconButton, Input, Table, Modal, folderPlusIcon, type TableColumn } from '../design-system'
-import type { Dossier, Immeuble, Utilisateur } from '../types/database'
+import type { Dossier, Immeuble, ImmeubleProprietaire, Utilisateur } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
 import { useAuth } from '../auth/useAuth'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from './immeubleForm'
+import { personneDisplayName } from '../personnes/personneForm'
 import { DossierFormDrawer, type DossierFormValues } from '../dossiers/DossierFormDrawer'
+
+function proprietaireDisplayName(p: ImmeubleProprietaire): string {
+  return p.personne ? personneDisplayName(p.personne) : (p.nom_libre ?? 'Propriétaire sans nom')
+}
+
+function formatValeur(v: number | null): string {
+  return v != null ? `${v.toLocaleString('fr-FR')} €` : '—'
+}
 
 function TrashIcon() {
   return (
@@ -34,6 +43,7 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossi
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
   const [immeubles, setImmeubles] = useState<Immeuble[]>([])
+  const [proprietairesByImmeuble, setProprietairesByImmeuble] = useState<Record<string, ImmeubleProprietaire[]>>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -69,6 +79,16 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossi
     else setError(null)
     setImmeubles(data ?? [])
     setLoading(false)
+
+    const { data: proprietaires } = await supabase
+      .from('immeuble_proprietaires')
+      .select('*, personne:personnes(*)')
+      .eq('tenant_id', tenantId)
+    const grouped: Record<string, ImmeubleProprietaire[]> = {}
+    for (const p of proprietaires ?? []) {
+      (grouped[p.immeuble_id] ??= []).push(p)
+    }
+    setProprietairesByImmeuble(grouped)
   }
 
   useEffect(() => {
@@ -166,10 +186,20 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossi
     : immeubles
 
   const columns: TableColumn<Immeuble>[] = [
-    { key: 'designation', label: 'Désignation', width: '30%', render: (_v, row) => immeubleDisplayName(row) },
-    { key: 'type_bien', label: 'Type', width: '20%', render: (v) => typeBienLabel(v as string | null) },
-    { key: 'ville', label: 'Ville', width: '20%' },
-    { key: 'references_cadastrales', label: 'Références cadastrales', width: '20%' },
+    { key: 'designation', label: 'Désignation', width: '22%', render: (_v, row) => immeubleDisplayName(row) },
+    { key: 'type_bien', label: 'Type', width: '13%', render: (v) => typeBienLabel(v as string | null) },
+    { key: 'ville', label: 'Ville', width: '13%' },
+    {
+      key: 'proprietaires', label: 'Propriétaire(s)', width: '20%',
+      render: (_v, row) => {
+        const proprietaires = proprietairesByImmeuble[row.id] ?? []
+        return proprietaires.length > 0 ? proprietaires.map(proprietaireDisplayName).join(', ') : '—'
+      },
+    },
+    {
+      key: 'valeur_declaree', label: 'Valeur déclarée', width: '12%',
+      render: (v) => formatValeur(v as number | null),
+    },
     { key: 'regime', label: 'Régime', width: '10%', render: (v) => regimeBienLabel(v as string | null) },
     {
       key: 'actions', label: '', width: canArchive ? '10%' : '5%', align: 'right' as const,

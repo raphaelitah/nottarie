@@ -4,6 +4,7 @@ import { Drawer, Button } from '../design-system'
 import type { Immeuble } from '../types/database'
 import { ImmeubleFields } from './ImmeubleFields'
 import { ImmeubleDocumentsSection } from './ImmeubleDocumentsSection'
+import { ImmeubleProprietairesSection } from './ImmeubleProprietairesSection'
 import {
   EMPTY_IMMEUBLE_FORM,
   immeubleToForm,
@@ -22,6 +23,7 @@ interface ImmeubleFormDrawerProps {
 
 const TABS = [
   { key: 'informations', label: 'Informations' },
+  { key: 'proprietaires', label: 'Propriétaires' },
   { key: 'documents', label: 'Documents' },
 ] as const
 type TabKey = typeof TABS[number]['key']
@@ -86,6 +88,10 @@ export function ImmeubleFormDrawer({ open, tenantId, immeuble, saving, onSave, o
             )}
             <ImmeubleFields values={values} onChange={setValues} />
           </>
+        )}
+
+        {tab === 'proprietaires' && immeuble && (
+          <ImmeubleProprietairesSection tenantId={tenantId} immeubleId={immeuble.id} />
         )}
 
         {tab === 'documents' && immeuble && (

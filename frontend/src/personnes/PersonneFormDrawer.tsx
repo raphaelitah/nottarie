@@ -4,6 +4,8 @@ import { Drawer, Button } from '../design-system'
 import type { Personne } from '../types/database'
 import { PersonneFields } from './PersonneFields'
 import { PersonneDocumentsSection } from './PersonneDocumentsSection'
+import { PersonneImmeublesSection } from './PersonneImmeublesSection'
+import { PersonneMoraleContactsSection } from './PersonneMoraleContactsSection'
 import {
   EMPTY_PERSONNE_FORM,
   personneToForm,
@@ -13,6 +15,8 @@ import {
 
 const TABS = [
   { key: 'informations', label: 'Informations' },
+  { key: 'immeubles', label: 'Immeubles' },
+  { key: 'contacts', label: 'Contacts' },
   { key: 'documents', label: 'Documents' },
 ] as const
 
@@ -71,7 +75,7 @@ export function PersonneFormDrawer({ open, personne, saving, onSave, onClose }: 
 
         {personne && (
           <div style={{ display: 'flex', gap: 'var(--space-2)', borderBottom: '1px solid var(--border-default)' }}>
-            {TABS.map((t) => (
+            {TABS.filter((t) => t.key !== 'contacts' || personne.type === 'morale').map((t) => (
               <button key={t.key} type="button" onClick={() => setTab(t.key)} style={tabBtn(tab === t.key)}>
                 {t.label}
               </button>
@@ -81,6 +85,10 @@ export function PersonneFormDrawer({ open, personne, saving, onSave, onClose }: 
 
         {tab === 'informations' || !personne ? (
           <PersonneFields values={values} onChange={setValues} />
+        ) : tab === 'immeubles' ? (
+          <PersonneImmeublesSection tenantId={personne.tenant_id} personneId={personne.id} />
+        ) : tab === 'contacts' && personne.type === 'morale' ? (
+          <PersonneMoraleContactsSection tenantId={personne.tenant_id} personneMoraleId={personne.id} />
         ) : (
           <PersonneDocumentsSection tenantId={personne.tenant_id} personneId={personne.id} />
         )}
