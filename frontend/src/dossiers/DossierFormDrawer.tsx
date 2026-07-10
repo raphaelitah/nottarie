@@ -95,7 +95,7 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
 
         <Input
           label="Nom du dossier"
-          placeholder="Ex. Succession de M. Jean DUPONT"
+          placeholder="Ex. Succession M. Jean DUPONT"
           helper="Facultatif. Si laissé vide, un nom sera suggéré automatiquement à partir des comparants (défunt, donataires…) une fois ajoutés."
           value={values.nom}
           onChange={(e) => setValues((v) => ({ ...v, nom: e.target.value }))}

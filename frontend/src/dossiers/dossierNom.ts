@@ -13,7 +13,7 @@ export function suggestDossierNom(typeActe: string, comparants: Comparant[]): st
 
   if (typeActe === 'succession') {
     const defunt = withPersonne.find((c) => c.qualite.trim().toLowerCase().startsWith('défunt') || c.qualite.trim().toLowerCase().startsWith('defunt'))
-    return defunt ? `Succession de ${personneDisplayName(defunt.personne)}` : null
+    return defunt ? `Succession ${personneDisplayName(defunt.personne)}` : null
   }
 
   if (typeActe === 'donation') {
