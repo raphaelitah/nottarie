@@ -129,7 +129,7 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([])
   const [dossiers, setDossiers] = useState<Dossier[]>([])
   const [hiddenCategoryIds, setHiddenCategoryIds] = useState<Set<string>>(new Set())
-  const [showMyEventsOnly, setShowMyEventsOnly] = useState(false)
+  const [showMyEventsOnly, setShowMyEventsOnly] = useState(true)
   const [showHolidays, setShowHolidays] = useState(true)
 
   // @fullcalendar/react's dynamic stylesheet injection can end up empty after
@@ -183,14 +183,16 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
     return isAdminOrNotaire || (!!membership && e.organisateur_id === membership.id)
   }
 
+  // Shared étude-level events (est_prive false) are always visible to everyone
+  // in the tenant. Private events only ever come back from evenements_agenda
+  // for their organizer or an invited participant, so any est_prive row here
+  // already belongs to the current user — "Mes événements" just decides
+  // whether those personal events are layered on top of the shared calendar.
   const filteredEvents = useMemo(() => hydratedEvents.filter((e) => {
     if (e.categorie_id && hiddenCategoryIds.has(e.categorie_id)) return false
-    if (showMyEventsOnly && membership) {
-      const mine = e.organisateur_id === membership.id || (e.participants ?? []).some((p) => p.utilisateur_id === membership.id)
-      if (!mine) return false
-    }
+    if (e.est_prive && !showMyEventsOnly) return false
     return true
-  }), [hydratedEvents, hiddenCategoryIds, showMyEventsOnly, membership])
+  }), [hydratedEvents, hiddenCategoryIds, showMyEventsOnly])
 
   const calendarEvents = useMemo(() => {
     const base = filteredEvents.map(toEventInput)
