@@ -7,7 +7,7 @@ import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import rrulePlugin from '@fullcalendar/rrule'
 import frLocale from '@fullcalendar/core/locales/fr'
-import type { EventClickArg, EventInput, DateSelectArg } from '@fullcalendar/core'
+import type { EventClickArg, EventInput, DateSelectArg, EventMountArg } from '@fullcalendar/core'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../design-system'
@@ -60,6 +60,50 @@ function toEventInput(e: Evenement): RRuleEventInput {
     }
   }
   return { ...base, start: e.debut, end: e.fin ?? undefined }
+}
+
+let eventTooltipEl: HTMLDivElement | null = null
+
+function getEventTooltipEl(): HTMLDivElement {
+  if (!eventTooltipEl) {
+    eventTooltipEl = document.createElement('div')
+    Object.assign(eventTooltipEl.style, {
+      position: 'fixed',
+      background: 'var(--color-ink)',
+      color: '#fff',
+      fontFamily: 'var(--font-sans)',
+      fontSize: '11px',
+      fontWeight: '500',
+      whiteSpace: 'nowrap',
+      padding: '4px 8px',
+      borderRadius: 'var(--radius-sm)',
+      zIndex: '1000',
+      pointerEvents: 'none',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+      display: 'none',
+    } satisfies Partial<CSSStyleDeclaration>)
+    document.body.appendChild(eventTooltipEl)
+  }
+  return eventTooltipEl
+}
+
+function hideEventTooltip() {
+  if (eventTooltipEl) eventTooltipEl.style.display = 'none'
+}
+
+/** Show the shared custom tooltip only for events whose title is visually truncated. */
+function handleEventDidMount(info: EventMountArg) {
+  const titleEl = info.el.querySelector<HTMLElement>('.fc-event-title, .fc-list-event-title') ?? info.el
+  info.el.addEventListener('mouseenter', () => {
+    if (titleEl.scrollWidth <= titleEl.clientWidth) return
+    const tooltip = getEventTooltipEl()
+    tooltip.textContent = info.event.title
+    tooltip.style.display = 'block'
+    const rect = info.el.getBoundingClientRect()
+    tooltip.style.left = `${rect.left}px`
+    tooltip.style.bottom = `${window.innerHeight - rect.top + 4}px`
+  })
+  info.el.addEventListener('mouseleave', hideEventTooltip)
 }
 
 function holidayEventInputs(): EventInput[] {
@@ -437,6 +481,8 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
             selectable
             select={handleSelectRange}
             eventClick={handleEventClick}
+            eventDidMount={handleEventDidMount}
+            eventWillUnmount={hideEventTooltip}
             events={calendarEvents}
           />
         )}
