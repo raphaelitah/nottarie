@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Dossier, Immeuble, Personne } from '../types/database'
+import type { Comparant, Dossier, Immeuble, Personne } from '../types/database'
+
+export type DossierSearchResult = Dossier & { comparants?: Comparant[] }
 
 export interface CrossEntitySearchResults {
-  dossiers: Dossier[]
+  dossiers: DossierSearchResult[]
   personnes: Personne[]
   immeubles: Immeuble[]
 }
@@ -37,7 +39,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
           .or(`nom.ilike.${pattern},prenom.ilike.${pattern},raison_sociale.ilike.${pattern},email.ilike.${pattern}`),
         supabase.from('immeubles').select('*').eq('tenant_id', tenantId).is('archived_at', null)
           .or(`designation.ilike.${pattern},references_cadastrales.ilike.${pattern}`),
-        supabase.from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).ilike('numero', pattern),
+        supabase.from('dossiers').select('*, comparants(qualite, personne:personnes(*))').eq('tenant_id', tenantId).is('archived_at', null).ilike('numero', pattern),
       ])
 
       const firstError = personnesRes.error ?? immeublesRes.error ?? dossiersByNumeroRes.error
@@ -47,7 +49,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
       }
 
       const personnes = personnesRes.data ?? []
-      const dossierMap = new Map<string, Dossier>()
+      const dossierMap = new Map<string, DossierSearchResult>()
       for (const d of dossiersByNumeroRes.data ?? []) dossierMap.set(d.id, d)
 
       if (personnes.length > 0) {
@@ -63,7 +65,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
         const dossierIds = [...new Set((comparants ?? []).map((c) => c.dossier_id))]
         if (dossierIds.length > 0) {
           const { data: linkedDossiers, error: linkedError } = await supabase
-            .from('dossiers').select('*').eq('tenant_id', tenantId).is('archived_at', null).in('id', dossierIds)
+            .from('dossiers').select('*, comparants(qualite, personne:personnes(*))').eq('tenant_id', tenantId).is('archived_at', null).in('id', dossierIds)
           if (linkedError) {
             if (!cancelled) { setError('Erreur lors de la recherche : ' + linkedError.message); setLoading(false) }
             return

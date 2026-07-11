@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { acteTypeLabel } from '../constants/acteTypes'
 import { personneDisplayName } from '../personnes/personneForm'
 import { immeubleDisplayName } from '../immeubles/immeubleForm'
+import { suggestDossierNom } from '../dossiers/dossierNom'
 import { useCrossEntitySearch } from './useCrossEntitySearch'
 
 interface GlobalSearchProps {
@@ -68,8 +69,8 @@ export function GlobalSearch({ tenantId, onSelectDossier, onSelectPersonne, onSe
                   {results.dossiers.map((d) => (
                     <ResultRow
                       key={d.id}
-                      title={d.numero || 'Dossier sans numéro'}
-                      subtitle={acteTypeLabel(d.type_acte)}
+                      title={d.nom || suggestDossierNom(d.type_acte, d.comparants ?? []) || acteTypeLabel(d.type_acte)}
+                      subtitle={d.numero ? `${d.numero} — ${acteTypeLabel(d.type_acte)}` : acteTypeLabel(d.type_acte)}
                       onClick={() => handleSelect(() => onSelectDossier(d.id))}
                     />
                   ))}
