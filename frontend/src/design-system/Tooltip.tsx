@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 
 interface TooltipProps {
   label: string
@@ -8,9 +8,31 @@ interface TooltipProps {
   side?: 'top' | 'bottom'
 }
 
+const VIEWPORT_MARGIN = 8
+
 export function Tooltip({ label, children, disabled, align = 'center', side = 'top' }: TooltipProps) {
   const [hover, setHover] = useState(false)
+  const [shift, setShift] = useState(0)
+  const bubbleRef = useRef<HTMLSpanElement>(null)
   const show = hover && !disabled
+
+  useLayoutEffect(() => {
+    if (!show) return
+    const el = bubbleRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const overflowRight = rect.right - (window.innerWidth - VIEWPORT_MARGIN)
+    const overflowLeft = VIEWPORT_MARGIN - rect.left
+    if (overflowRight > 0) {
+      setShift((prev) => prev - overflowRight)
+    } else if (overflowLeft > 0) {
+      setShift((prev) => prev + overflowLeft)
+    }
+  }, [show])
+
+  useLayoutEffect(() => {
+    if (!show) setShift(0)
+  }, [show])
 
   return (
     <span
@@ -19,7 +41,19 @@ export function Tooltip({ label, children, disabled, align = 'center', side = 't
       onMouseLeave={() => setHover(false)}
     >
       {children}
-      {show && <span style={{ ...tooltipStyle, ...sideStyle[side], ...alignStyle[align] }}>{label}</span>}
+      {show && (
+        <span
+          ref={bubbleRef}
+          style={{
+            ...tooltipStyle,
+            ...sideStyle[side],
+            ...alignStyle[align],
+            transform: `${alignStyle[align].transform ?? ''} translateX(${shift}px)`.trim(),
+          }}
+        >
+          {label}
+        </span>
+      )}
     </span>
   )
 }
