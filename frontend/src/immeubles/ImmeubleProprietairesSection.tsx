@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, trashIcon } from '../design-system'
+import { Button, ConfirmModal, EditPenButton, EmptyState, HoverIconButton, NumberInput, SectionAddButton, trashIcon } from '../design-system'
 import type { ImmeubleProprietaire, Personne } from '../types/database'
 import { personneDisplayName } from '../personnes/personneForm'
 import { ImmeubleProprietaireFormDrawer, type ImmeubleProprietaireFormResult } from './ImmeubleProprietaireFormDrawer'
@@ -10,6 +10,7 @@ interface ImmeubleProprietairesSectionProps {
   tenantId: string
   immeubleId: string
   nombrePartsTotal: number | null
+  onNombrePartsTotalChange: (value: number | null) => void
   onSelectPersonne?: (id: string) => void
 }
 
@@ -19,7 +20,7 @@ function proprietaireDisplayName(p: ImmeubleProprietaire): string {
   return p.personne ? personneDisplayName(p.personne) : (p.nom_libre ?? 'Propriétaire sans nom')
 }
 
-export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombrePartsTotal, onSelectPersonne }: ImmeubleProprietairesSectionProps) {
+export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombrePartsTotal, onNombrePartsTotalChange, onSelectPersonne }: ImmeubleProprietairesSectionProps) {
   const [proprietaires, setProprietaires] = useState<ImmeubleProprietaire[]>([])
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,6 +29,24 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombreParts
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [removeTarget, setRemoveTarget] = useState<ImmeubleProprietaire | null>(null)
+  const [editingPartsTotal, setEditingPartsTotal] = useState(false)
+  const [partsTotalValue, setPartsTotalValue] = useState('')
+  const [savingPartsTotal, setSavingPartsTotal] = useState(false)
+
+  function handleStartEditPartsTotal() {
+    setPartsTotalValue(nombrePartsTotal != null ? String(nombrePartsTotal) : '')
+    setEditingPartsTotal(true)
+  }
+
+  async function handleSavePartsTotal() {
+    const value = partsTotalValue.trim() ? Number(partsTotalValue) : null
+    setSavingPartsTotal(true)
+    const { error } = await supabase.from('immeubles').update({ nombre_parts_total: value }).eq('id', immeubleId)
+    setSavingPartsTotal(false)
+    if (error) { setError('Erreur lors de la mise à jour du nombre de parts total : ' + error.message); return }
+    setEditingPartsTotal(false)
+    onNombrePartsTotalChange(value)
+  }
 
   async function loadProprietaires() {
     setLoading(true)
@@ -96,6 +115,32 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombreParts
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Propriétaires</h3>
         <SectionAddButton label="Ajouter un propriétaire" onClick={() => setDrawerOpen(true)} />
+      </div>
+
+      <div style={partsTotalBar}>
+        {editingPartsTotal ? (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-3)' }}>
+            <div style={{ width: '160px' }}>
+              <NumberInput
+                label="Nombre de parts total"
+                placeholder="ex. 100"
+                value={partsTotalValue}
+                onChange={(e) => setPartsTotalValue(e.target.value)}
+              />
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => setEditingPartsTotal(false)}>Annuler</Button>
+            <Button variant="primary" size="sm" disabled={savingPartsTotal} onClick={handleSavePartsTotal}>
+              {savingPartsTotal ? '…' : 'Enregistrer'}
+            </Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <span style={partsTotalLabel}>
+              Nombre de parts total : {nombrePartsTotal ?? '—'}
+            </span>
+            <EditPenButton label="Modifier le nombre de parts total" onClick={handleStartEditPartsTotal} />
+          </div>
+        )}
       </div>
 
       {error && (
@@ -189,6 +234,17 @@ const name: CSSProperties = {
   fontSize: 'var(--text-sm)',
   fontWeight: 600,
   color: 'var(--n-900)',
+}
+
+const partsTotalBar: CSSProperties = {
+  marginBottom: 'var(--space-4)',
+}
+
+const partsTotalLabel: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  fontWeight: 500,
+  color: 'var(--n-700)',
 }
 
 const totalBar: CSSProperties = {

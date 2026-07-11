@@ -75,14 +75,6 @@ export function ImmeubleFields({ values, onChange }: ImmeubleFieldsProps) {
         value={values.valeur_declaree}
         onChange={(e) => set({ valeur_declaree: e.target.value })}
       />
-
-      <NumberInput
-        label="Nombre de parts total"
-        placeholder="ex. 100"
-        helper="Utilisé pour répartir la propriété entre les propriétaires en nombre de parts."
-        value={values.nombre_parts_total}
-        onChange={(e) => set({ nombre_parts_total: e.target.value })}
-      />
     </div>
   )
 }
