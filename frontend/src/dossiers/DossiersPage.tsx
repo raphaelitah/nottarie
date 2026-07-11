@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Acte, Dossier } from '../types/database'
 import { DossierListPage } from './DossierListPage'
@@ -8,25 +9,24 @@ const ActeComposerPage = lazy(() => import('./composer/ActeComposerPage').then((
 
 interface DossiersPageProps {
   tenantId: string
-  focusId?: string | null
-  onFocusHandled?: () => void
   onSelectPersonne?: (id: string) => void
   onSelectImmeuble?: (id: string) => void
   onOpenAgenda?: () => void
 }
 
-export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossiersPageProps) {
+export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossiersPageProps) {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [selected, setSelected] = useState<Dossier | null>(null)
   const [composerActe, setComposerActe] = useState<Acte | 'new' | null>(null)
 
   useEffect(() => {
-    if (!focusId) return
-    supabase.from('dossiers').select('*').eq('id', focusId).single().then(({ data }) => {
+    setComposerActe(null)
+    if (!id) { setSelected(null); return }
+    supabase.from('dossiers').select('*').eq('id', id).single().then(({ data }) => {
       if (data) setSelected(data)
-      onFocusHandled?.()
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId])
+  }, [id])
 
   if (selected && composerActe) {
     return (
@@ -45,7 +45,7 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPerson
     ? (
       <DossierDetailPage
         dossier={selected}
-        onBack={() => setSelected(null)}
+        onBack={() => navigate('/dossiers')}
         onUpdated={setSelected}
         onOpenComposer={() => setComposerActe('new')}
         onEditActe={(acte) => setComposerActe(acte)}
@@ -54,5 +54,5 @@ export function DossiersPage({ tenantId, focusId, onFocusHandled, onSelectPerson
         onOpenAgenda={onOpenAgenda}
       />
     )
-    : <DossierListPage tenantId={tenantId} onSelect={setSelected} />
+    : <DossierListPage tenantId={tenantId} onSelect={(d) => navigate(`/dossiers/${d.id}`)} />
 }

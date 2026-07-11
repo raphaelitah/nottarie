@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth/useAuth'
 import { Button } from './design-system/Button'
 import { UserMenu } from './design-system/UserMenu'
@@ -25,28 +26,49 @@ const AgendaPage = lazy(() => import('./agenda/AgendaPage').then((m) => ({ defau
 
 type Section = 'accueil' | 'dossiers' | 'personnes' | 'immeubles' | 'agenda' | 'administration' | 'mon-compte'
 
+const SECTION_PATHS: Record<Section, string> = {
+  'accueil': '/',
+  'agenda': '/agenda',
+  'dossiers': '/dossiers',
+  'personnes': '/personnes',
+  'immeubles': '/immeubles',
+  'administration': '/administration',
+  'mon-compte': '/mon-compte',
+}
+
+function sectionFromPath(pathname: string): Section {
+  if (pathname.startsWith('/agenda')) return 'agenda'
+  if (pathname.startsWith('/dossiers')) return 'dossiers'
+  if (pathname.startsWith('/personnes')) return 'personnes'
+  if (pathname.startsWith('/immeubles')) return 'immeubles'
+  if (pathname.startsWith('/administration')) return 'administration'
+  if (pathname.startsWith('/mon-compte')) return 'mon-compte'
+  return 'accueil'
+}
+
 export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void }) {
   const isMobileNav = useMediaQuery(NAV_QUERY)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { user, memberships, signOut, activeRoles, setActiveRole } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const section = sectionFromPath(location.pathname)
+
   // Returning from the Outlook OAuth redirect lands here with ?mailbox_oauth=1
   // in the URL — jump straight to Mon compte so MailboxConnectionSection
   // mounts and finishes the exchange, instead of stranding the callback on
-  // whatever section happened to be default.
-  const [section, setSection] = useState<Section>(() =>
-    new URLSearchParams(window.location.search).get('mailbox_oauth') === '1' ? 'mon-compte' : 'accueil'
-  )
-  const [focusDossierId, setFocusDossierId] = useState<string | null>(null)
-  const [focusPersonneId, setFocusPersonneId] = useState<string | null>(null)
-  const [focusImmeubleId, setFocusImmeubleId] = useState<string | null>(null)
-  const [dossiersResetKey, setDossiersResetKey] = useState(0)
-  const [personnesResetKey, setPersonnesResetKey] = useState(0)
-  const [immeublesResetKey, setImmeublesResetKey] = useState(0)
+  // whatever route happened to be current.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('mailbox_oauth') === '1' && location.pathname !== '/mon-compte') {
+      navigate({ pathname: '/mon-compte', search: location.search }, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  function goToDossier(id: string) { setFocusDossierId(id); setSection('dossiers') }
-  function goToPersonne(id: string) { setFocusPersonneId(id); setSection('personnes') }
-  function goToImmeuble(id: string) { setFocusImmeubleId(id); setSection('immeubles') }
-  function goToDossiersList() { setSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }
+  function goToDossier(id: string) { navigate(`/dossiers/${id}`) }
+  function goToPersonne(id: string) { navigate(`/personnes/${id}`) }
+  function goToImmeuble(id: string) { navigate(`/immeubles/${id}`) }
+  function goToDossiersList() { navigate('/dossiers') }
 
   // A user belongs to a single étude in practice — the membership query is
   // scoped to auth_user_id, so this is just "my" row (if any).
@@ -57,7 +79,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
     : null
 
   function selectSection(next: Section) {
-    setSection(next)
+    navigate(SECTION_PATHS[next])
     setMobileNavOpen(false)
   }
 
@@ -65,9 +87,9 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
     <>
       <SidebarLink active={section === 'accueil'} onClick={() => selectSection('accueil')}>Accueil</SidebarLink>
       <SidebarLink active={section === 'agenda'} onClick={() => selectSection('agenda')}>Agenda</SidebarLink>
-      <SidebarLink active={section === 'dossiers'} onClick={() => { selectSection('dossiers'); setFocusDossierId(null); setDossiersResetKey(k => k + 1) }}>Dossiers</SidebarLink>
-      <SidebarLink active={section === 'personnes'} onClick={() => { selectSection('personnes'); setFocusPersonneId(null); setPersonnesResetKey(k => k + 1) }}>Personnes</SidebarLink>
-      <SidebarLink active={section === 'immeubles'} onClick={() => { selectSection('immeubles'); setFocusImmeubleId(null); setImmeublesResetKey(k => k + 1) }}>Immeubles</SidebarLink>
+      <SidebarLink active={section === 'dossiers'} onClick={() => selectSection('dossiers')}>Dossiers</SidebarLink>
+      <SidebarLink active={section === 'personnes'} onClick={() => selectSection('personnes')}>Personnes</SidebarLink>
+      <SidebarLink active={section === 'immeubles'} onClick={() => selectSection('immeubles')}>Immeubles</SidebarLink>
       {isAdmin && (
         <>
           <div style={{ height: '1px', background: 'var(--border-default)', margin: 'var(--space-3) var(--space-2)' }} />
@@ -161,7 +183,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <UserMenu email={user?.email} onSignOut={signOut} onOpenAccount={membership ? () => setSection('mon-compte') : undefined}>
+          <UserMenu email={user?.email} onSignOut={signOut} onOpenAccount={membership ? () => selectSection('mon-compte') : undefined}>
             {membership && (
               activeRole
                 ? <Badge status="ongoing" label={ROLE_OPTIONS.find(o => o.value === activeRole)?.label ?? activeRole} />
@@ -239,67 +261,87 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
           </Drawer>
 
           <main style={{ flex: 1, padding: isMobileNav ? 'var(--space-4)' : 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
-            {section === 'dossiers' ? (
-              <DossiersPage
-                key={dossiersResetKey}
-                tenantId={membership.tenant_id}
-                focusId={focusDossierId}
-                onFocusHandled={() => setFocusDossierId(null)}
-                onSelectPersonne={goToPersonne}
-                onSelectImmeuble={goToImmeuble}
-                onOpenAgenda={() => setSection('agenda')}
-              />
-            ) : section === 'personnes' ? (
-              <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} onSelectDossier={goToDossier} onSelectImmeuble={goToImmeuble} />
-            ) : section === 'immeubles' ? (
-              <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} onSelectDossier={goToDossier} onSelectPersonne={goToPersonne} />
-            ) : section === 'agenda' ? (
-              <Suspense fallback={<p>Chargement…</p>}>
-                <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
-              </Suspense>
-            ) : section === 'administration' && isAdmin ? (
-              <AdministrationPage tenantId={membership.tenant_id} />
-            ) : section === 'mon-compte' ? (
-              <MonComptePage tenantId={membership.tenant_id} utilisateurId={membership.id} />
-            ) : (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
-                  <div>
-                    <h1 style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: 'var(--text-xl)',
-                      fontWeight: 700,
-                      color: 'var(--n-900)',
-                      letterSpacing: 'var(--tracking-tight)',
-                      margin: '0 0 var(--space-1)',
-                    }}>Tableau de bord</h1>
-                    <p style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: 'var(--text-sm)',
-                      color: 'var(--text-muted)',
-                      margin: 0,
-                    }}>Bienvenue dans votre espace Nottarie.</p>
+            <Routes>
+              <Route path="dossiers" element={
+                <DossiersPage
+                  tenantId={membership.tenant_id}
+                  onSelectPersonne={goToPersonne}
+                  onSelectImmeuble={goToImmeuble}
+                  onOpenAgenda={() => selectSection('agenda')}
+                />
+              } />
+              <Route path="dossiers/:id" element={
+                <DossiersPage
+                  tenantId={membership.tenant_id}
+                  onSelectPersonne={goToPersonne}
+                  onSelectImmeuble={goToImmeuble}
+                  onOpenAgenda={() => selectSection('agenda')}
+                />
+              } />
+              <Route path="personnes" element={
+                <PersonnesPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} onSelectImmeuble={goToImmeuble} />
+              } />
+              <Route path="personnes/:id" element={
+                <PersonnesPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} onSelectImmeuble={goToImmeuble} />
+              } />
+              <Route path="immeubles" element={
+                <ImmeublesPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} onSelectPersonne={goToPersonne} />
+              } />
+              <Route path="immeubles/:id" element={
+                <ImmeublesPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} onSelectPersonne={goToPersonne} />
+              } />
+              <Route path="agenda" element={
+                <Suspense fallback={<p>Chargement…</p>}>
+                  <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />
+                </Suspense>
+              } />
+              <Route path="administration" element={
+                isAdmin ? <AdministrationPage tenantId={membership.tenant_id} /> : <Navigate to="/" replace />
+              } />
+              <Route path="mon-compte" element={
+                <MonComptePage tenantId={membership.tenant_id} utilisateurId={membership.id} />
+              } />
+              <Route path="/" element={
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
+                    <div>
+                      <h1 style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: 'var(--text-xl)',
+                        fontWeight: 700,
+                        color: 'var(--n-900)',
+                        letterSpacing: 'var(--tracking-tight)',
+                        margin: '0 0 var(--space-1)',
+                      }}>Tableau de bord</h1>
+                      <p style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--text-muted)',
+                        margin: 0,
+                      }}>Bienvenue dans votre espace Nottarie.</p>
+                    </div>
+                    <NouveauDossierButton
+                      tenantId={membership.tenant_id}
+                      defaultClercId={membership.roles.includes('redacteur') ? membership.id : undefined}
+                      onCreated={goToDossier}
+                    />
                   </div>
-                  <NouveauDossierButton
-                    tenantId={membership.tenant_id}
-                    defaultClercId={membership.roles.includes('redacteur') ? membership.id : undefined}
-                    onCreated={goToDossier}
-                  />
+                  <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => selectSection('agenda')} />
+                  <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)', flexWrap: 'wrap' }}>
+                    <DossiersEnCoursCard
+                      tenantId={membership.tenant_id}
+                      onSelectDossier={goToDossier}
+                      onViewAll={goToDossiersList}
+                    />
+                    <FormalitesEnAttenteCard
+                      tenantId={membership.tenant_id}
+                      onSelectDossier={goToDossier}
+                    />
+                  </div>
                 </div>
-                <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => setSection('agenda')} />
-                <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)', flexWrap: 'wrap' }}>
-                  <DossiersEnCoursCard
-                    tenantId={membership.tenant_id}
-                    onSelectDossier={goToDossier}
-                    onViewAll={goToDossiersList}
-                  />
-                  <FormalitesEnAttenteCard
-                    tenantId={membership.tenant_id}
-                    onSelectDossier={goToDossier}
-                  />
-                </div>
-              </div>
-            )}
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </main>
         </div>
       )}
