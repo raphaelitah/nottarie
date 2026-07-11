@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
+import { EmptyState } from '../design-system'
 import type { Historique } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { historiqueActionLabel } from '../constants/historiqueActions'
@@ -51,9 +52,9 @@ export function HistoriqueSection({ dossierId }: HistoriqueSectionProps) {
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : entries.length === 0 ? (
-        <div style={emptyCard}>Aucune action enregistrée pour l'instant.</div>
+        <EmptyState>Aucune action enregistrée pour l'instant.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
           {entries.map((entry) => {
@@ -95,18 +96,6 @@ const subtitle: CSSProperties = {
   fontSize: 'var(--text-sm)',
   color: 'var(--text-muted)',
   margin: 'var(--space-1) 0 0',
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
-  marginTop: 'var(--space-4)',
 }
 
 const row: CSSProperties = {

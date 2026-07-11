@@ -249,7 +249,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             ) : section === 'personnes' ? (
               <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} onSelectDossier={goToDossier} />
             ) : section === 'immeubles' ? (
-              <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} onSelectDossier={goToDossier} />
+              <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} onSelectDossier={goToDossier} onSelectPersonne={goToPersonne} />
             ) : section === 'agenda' ? (
               <Suspense fallback={<p>Chargement…</p>}>
                 <AgendaPage tenantId={membership.tenant_id} onSelectDossier={goToDossier} />

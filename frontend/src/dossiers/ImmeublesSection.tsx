@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { HoverIconButton, SectionAddButton, unlinkIcon } from '../design-system'
+import { ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, unlinkIcon } from '../design-system'
 import type { DossierImmeuble, Immeuble } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/immeubleForm'
 import { regimeBienLabel } from '../constants/regimeBien'
@@ -22,6 +22,7 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [detachTarget, setDetachTarget] = useState<DossierImmeuble | null>(null)
 
   async function loadLinks() {
     setLoading(true)
@@ -76,6 +77,7 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
     setRemovingId(link.id)
     const { error } = await supabase.from('dossier_immeubles').delete().eq('id', link.id)
     setRemovingId(null)
+    setDetachTarget(null)
     if (error) { setError('Erreur lors du détachement : ' + error.message); return }
     loadLinks()
   }
@@ -96,9 +98,9 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : links.length === 0 ? (
-        <div style={emptyCard}>Aucun immeuble rattaché à ce dossier.</div>
+        <EmptyState>Aucun immeuble rattaché à ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {links.map((l) => (
@@ -113,7 +115,7 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
                 {l.immeuble?.regime && <span style={meta}>{regimeBienLabel(l.immeuble.regime)}</span>}
               </div>
               <div onClick={(e) => e.stopPropagation()}>
-                <HoverIconButton icon={unlinkIcon} label="Détacher" disabled={removingId === l.id} onClick={() => handleDetach(l)} />
+                <HoverIconButton icon={unlinkIcon} label="Détacher" disabled={removingId === l.id} onClick={() => setDetachTarget(l)} />
               </div>
             </div>
           ))}
@@ -128,6 +130,19 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
         onSave={handleAttach}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <ConfirmModal
+        open={!!detachTarget}
+        onClose={() => setDetachTarget(null)}
+        title="Détacher l'immeuble"
+        subtitle={detachTarget?.immeuble ? immeubleDisplayName(detachTarget.immeuble) : undefined}
+        confirmLabel="Détacher"
+        confirmingLabel="Détachement…"
+        confirming={removingId === detachTarget?.id}
+        onConfirm={() => detachTarget && handleDetach(detachTarget)}
+      >
+        Cet immeuble ne sera plus rattaché à ce dossier.
+      </ConfirmModal>
     </div>
   )
 }
@@ -138,21 +153,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

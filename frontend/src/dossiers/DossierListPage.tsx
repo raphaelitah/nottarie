@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Table, type TableColumn } from '../design-system'
+import { Button, Input, Table, type TableColumn } from '../design-system'
 import { Badge } from '../design-system/Badge'
 import { Modal } from '../design-system/Modal'
 import type { Comparant, Dossier } from '../types/database'
@@ -41,6 +41,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const isAdmin = membership?.roles.includes('administrateur') ?? false
   const [dossiers, setDossiers] = useState<DossierRow[]>([])
+  const [search, setSearch] = useState('')
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [utilisateursById, setUtilisateursById] = useState<Record<string, Utilisateur>>({})
@@ -129,6 +130,19 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     loadDossiers()
   }
 
+  const query = search.trim().toLowerCase()
+  const filtered = query
+    ? dossiers.filter((d) => {
+        const nom = (d.nom || suggestDossierNom(d.type_acte, d.comparants ?? []) || acteTypeLabel(d.type_acte)).toLowerCase()
+        const noms = (d.comparants ?? []).filter((c) => c.personne).map((c) => personneDisplayName(c.personne!).toLowerCase())
+        return (
+          (d.numero ?? '').toLowerCase().includes(query) ||
+          nom.includes(query) ||
+          noms.some((n) => n.includes(query))
+        )
+      })
+    : dossiers
+
   const columns: TableColumn<DossierRow>[] = [
     { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '11%' },
     {
@@ -185,6 +199,10 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
         <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Nouveau dossier</Button>
       </div>
 
+      <div style={{ marginBottom: 'var(--space-4)', maxWidth: '320px' }}>
+        <Input placeholder="Rechercher par numéro, nom ou personne…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      </div>
+
       {error && (
         <div style={{
           background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)',
@@ -195,10 +213,10 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
 
       <Table
         columns={columns}
-        rows={dossiers}
+        rows={filtered}
         loading={loading}
         onRowClick={onSelect}
-        emptyLabel="Aucun dossier pour le moment."
+        emptyLabel={query ? 'Aucun dossier ne correspond à cette recherche.' : 'Aucun dossier pour le moment.'}
         defaultSort={{ key: 'created_at', dir: 'desc' }}
       />
 

@@ -4,6 +4,7 @@ import { Drawer, Button } from '../design-system'
 import type { Immeuble } from '../types/database'
 import { ImmeubleFields } from './ImmeubleFields'
 import { ImmeubleDocumentsSection } from './ImmeubleDocumentsSection'
+import { ImmeubleDossiersSection } from './ImmeubleDossiersSection'
 import { ImmeubleProprietairesSection } from './ImmeubleProprietairesSection'
 import {
   EMPTY_IMMEUBLE_FORM,
@@ -19,16 +20,19 @@ interface ImmeubleFormDrawerProps {
   saving: boolean
   onSave: (values: ImmeubleFormValues) => void
   onClose: () => void
+  onSelectPersonne?: (id: string) => void
+  onSelectDossier?: (id: string) => void
 }
 
 const TABS = [
   { key: 'informations', label: 'Informations' },
+  { key: 'dossiers', label: 'Dossiers' },
   { key: 'proprietaires', label: 'Propriétaires' },
   { key: 'documents', label: 'Documents' },
 ] as const
 type TabKey = typeof TABS[number]['key']
 
-export function ImmeubleFormDrawer({ open, tenantId, immeuble, saving, onSave, onClose }: ImmeubleFormDrawerProps) {
+export function ImmeubleFormDrawer({ open, tenantId, immeuble, saving, onSave, onClose, onSelectPersonne, onSelectDossier }: ImmeubleFormDrawerProps) {
   const [values, setValues] = useState<ImmeubleFormValues>(EMPTY_IMMEUBLE_FORM)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>('informations')
@@ -90,8 +94,12 @@ export function ImmeubleFormDrawer({ open, tenantId, immeuble, saving, onSave, o
           </>
         )}
 
+        {tab === 'dossiers' && immeuble && (
+          <ImmeubleDossiersSection immeubleId={immeuble.id} onSelectDossier={onSelectDossier} />
+        )}
+
         {tab === 'proprietaires' && immeuble && (
-          <ImmeubleProprietairesSection tenantId={tenantId} immeubleId={immeuble.id} />
+          <ImmeubleProprietairesSection tenantId={tenantId} immeubleId={immeuble.id} onSelectPersonne={onSelectPersonne} />
         )}
 
         {tab === 'documents' && immeuble && (

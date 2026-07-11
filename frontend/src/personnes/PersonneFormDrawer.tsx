@@ -4,6 +4,7 @@ import { Drawer, Button } from '../design-system'
 import type { Personne } from '../types/database'
 import { PersonneFields } from './PersonneFields'
 import { PersonneDocumentsSection } from './PersonneDocumentsSection'
+import { PersonneDossiersSection } from './PersonneDossiersSection'
 import { PersonneImmeublesSection } from './PersonneImmeublesSection'
 import { PersonneMoraleContactsSection } from './PersonneMoraleContactsSection'
 import {
@@ -15,6 +16,7 @@ import {
 
 const TABS = [
   { key: 'informations', label: 'Informations' },
+  { key: 'dossiers', label: 'Dossiers' },
   { key: 'immeubles', label: 'Immeubles' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'documents', label: 'Documents' },
@@ -28,9 +30,10 @@ interface PersonneFormDrawerProps {
   saving: boolean
   onSave: (values: PersonneFormValues) => void
   onClose: () => void
+  onSelectDossier?: (id: string) => void
 }
 
-export function PersonneFormDrawer({ open, personne, saving, onSave, onClose }: PersonneFormDrawerProps) {
+export function PersonneFormDrawer({ open, personne, saving, onSave, onClose, onSelectDossier }: PersonneFormDrawerProps) {
   const [values, setValues] = useState<PersonneFormValues>(EMPTY_PERSONNE_FORM)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>('informations')
@@ -85,6 +88,8 @@ export function PersonneFormDrawer({ open, personne, saving, onSave, onClose }: 
 
         {tab === 'informations' || !personne ? (
           <PersonneFields values={values} onChange={setValues} />
+        ) : tab === 'dossiers' ? (
+          <PersonneDossiersSection personneId={personne.id} onSelectDossier={onSelectDossier} />
         ) : tab === 'immeubles' ? (
           <PersonneImmeublesSection tenantId={personne.tenant_id} personneId={personne.id} />
         ) : tab === 'contacts' && personne.type === 'morale' ? (

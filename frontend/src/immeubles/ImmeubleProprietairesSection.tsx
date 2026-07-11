@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { HoverIconButton, SectionAddButton, trashIcon } from '../design-system'
+import { ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, trashIcon } from '../design-system'
 import type { ImmeubleProprietaire, Personne } from '../types/database'
 import { personneDisplayName } from '../personnes/personneForm'
 import { ImmeubleProprietaireFormDrawer, type ImmeubleProprietaireFormResult } from './ImmeubleProprietaireFormDrawer'
@@ -24,6 +24,7 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<ImmeubleProprietaire | null>(null)
 
   async function loadProprietaires() {
     setLoading(true)
@@ -73,6 +74,7 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
     setRemovingId(proprietaire.id)
     const { error } = await supabase.from('immeuble_proprietaires').delete().eq('id', proprietaire.id)
     setRemovingId(null)
+    setRemoveTarget(null)
     if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
     loadProprietaires()
   }
@@ -93,9 +95,9 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : proprietaires.length === 0 ? (
-        <div style={emptyCard}>Aucun propriétaire rattaché à ce bien.</div>
+        <EmptyState>Aucun propriétaire rattaché à ce bien.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {proprietaires.map((p) => (
@@ -109,7 +111,7 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
                 {p.quote_part != null && <span style={quotePart}>{p.quote_part}%</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === p.id} onClick={() => handleRemove(p)} />
+                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === p.id} onClick={() => setRemoveTarget(p)} />
               </div>
             </div>
           ))}
@@ -123,6 +125,19 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
         onSave={handleAdd}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Retirer le propriétaire"
+        subtitle={removeTarget ? proprietaireDisplayName(removeTarget) : undefined}
+        confirmLabel="Retirer"
+        confirmingLabel="Retrait…"
+        confirming={removingId === removeTarget?.id}
+        onConfirm={() => removeTarget && handleRemove(removeTarget)}
+      >
+        Cette personne ne sera plus propriétaire de ce bien.
+      </ConfirmModal>
     </div>
   )
 }
@@ -133,21 +148,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

@@ -230,6 +230,7 @@ export function PersonnesPage({ tenantId, focusId, onFocusHandled, onSelectDossi
         saving={saving}
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
+        onSelectDossier={onSelectDossier}
       />
 
       <DossierFormDrawer

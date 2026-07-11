@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, NumberInput, Select } from '../design-system'
+import { Button, EmptyState, NumberInput, Select } from '../design-system'
 import type { Bareme, BaremeSousType, Dossier } from '../types/database'
 import { computeCout } from '../lib/bareme/computeCout'
 
@@ -118,9 +118,9 @@ export function CoutEstimationSection({ dossier, onUpdated }: CoutEstimationSect
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : !bareme ? (
-        <div style={emptyCard}>Aucun barème disponible pour ce type d'acte.</div>
+        <EmptyState>Aucun barème disponible pour ce type d'acte.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           {dossier.type_acte === 'donation' && (
@@ -197,17 +197,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const breakdownCard: CSSProperties = {

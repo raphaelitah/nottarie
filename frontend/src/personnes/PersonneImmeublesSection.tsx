@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { SectionAddButton } from '../design-system'
+import { EmptyState, SectionAddButton } from '../design-system'
 import type { Immeuble, ImmeubleProprietaire } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from '../immeubles/immeubleForm'
 import { ImmeubleFormDrawer } from '../immeubles/ImmeubleFormDrawer'
@@ -91,9 +91,9 @@ export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeu
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : proprietaires.length === 0 ? (
-        <div style={emptyCard}>Aucun immeuble rattaché à cette personne.</div>
+        <EmptyState>Aucun immeuble rattaché à cette personne.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {proprietaires.map((p) => (
@@ -129,21 +129,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

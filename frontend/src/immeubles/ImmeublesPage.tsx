@@ -36,9 +36,10 @@ interface ImmeublesPageProps {
   focusId?: string | null
   onFocusHandled?: () => void
   onSelectDossier?: (id: string) => void
+  onSelectPersonne?: (id: string) => void
 }
 
-export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossier }: ImmeublesPageProps) {
+export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossier, onSelectPersonne }: ImmeublesPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const canArchive = membership?.roles.some((r) => r === 'administrateur' || r === 'notaire') ?? false
@@ -259,6 +260,8 @@ export function ImmeublesPage({ tenantId, focusId, onFocusHandled, onSelectDossi
         saving={saving}
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
+        onSelectPersonne={onSelectPersonne}
+        onSelectDossier={onSelectDossier}
       />
 
       <DossierFormDrawer

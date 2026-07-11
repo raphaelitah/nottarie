@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button } from '../design-system'
+import { Button, ConfirmModal, EmptyState } from '../design-system'
 import type { Dossier, DossierAcces, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { AccesGrantDrawer } from './AccesGrantDrawer'
@@ -21,6 +21,7 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [togglingRestriction, setTogglingRestriction] = useState(false)
+  const [revokeTarget, setRevokeTarget] = useState<DossierAcces | null>(null)
 
   async function loadGrants() {
     setLoading(true)
@@ -81,6 +82,7 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
     setError(null)
     const { error } = await supabase.from('dossier_acces').delete().eq('id', grant.id)
     setRemovingId(null)
+    setRevokeTarget(null)
     if (error) { setError('Erreur lors du retrait : ' + error.message); return }
     loadGrants()
   }
@@ -126,7 +128,7 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
       )}
 
       {!dossier.acces_restreint ? (
-        <div style={emptyCard}>Ce dossier est visible par tous les membres de l'étude.</div>
+        <EmptyState>Ce dossier est visible par tous les membres de l'étude.</EmptyState>
       ) : (
         <>
           <div style={subheading}>Accès de droit</div>
@@ -149,16 +151,16 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
           </div>
 
           {loading ? (
-            <div style={emptyCard}>Chargement…</div>
+            <EmptyState>Chargement…</EmptyState>
           ) : additionalGrants.length === 0 ? (
-            <div style={emptyCard}>Aucun accès supplémentaire pour l'instant.</div>
+            <EmptyState>Aucun accès supplémentaire pour l'instant.</EmptyState>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               {additionalGrants.map((g) => (
                 <div key={g.id} style={row}>
                   <span style={name}>{utilisateurLabel(g.utilisateur)}</span>
                   {canManage && (
-                    <Button variant="ghost" size="sm" disabled={removingId === g.id} onClick={() => handleRevoke(g)}>
+                    <Button variant="ghost" size="sm" disabled={removingId === g.id} onClick={() => setRevokeTarget(g)}>
                       {removingId === g.id ? '…' : 'Retirer'}
                     </Button>
                   )}
@@ -179,6 +181,19 @@ export function AccesSection({ dossier, canManage, onUpdated }: AccesSectionProp
           onClose={() => setDrawerOpen(false)}
         />
       )}
+
+      <ConfirmModal
+        open={!!revokeTarget}
+        onClose={() => setRevokeTarget(null)}
+        title="Retirer l'accès"
+        subtitle={revokeTarget ? utilisateurLabel(revokeTarget.utilisateur) : undefined}
+        confirmLabel="Retirer"
+        confirmingLabel="Retrait…"
+        confirming={removingId === revokeTarget?.id}
+        onConfirm={() => revokeTarget && handleRevoke(revokeTarget)}
+      >
+        Cette personne perdra l'accès à ce dossier restreint.
+      </ConfirmModal>
     </div>
   )
 }
@@ -206,17 +221,6 @@ const subheading: CSSProperties = {
   letterSpacing: 'var(--tracking-caps)',
   textTransform: 'uppercase',
   marginBottom: 'var(--space-2)',
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  padding: 'var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

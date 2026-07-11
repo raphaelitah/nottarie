@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, downloadIcon, eyeIcon, HoverIconButton, pencilIcon, PdfViewerModal, SectionAddButton } from '../design-system'
+import { Badge, Button, downloadIcon, EmptyState, eyeIcon, HoverIconButton, pencilIcon, PdfViewerModal, SectionAddButton } from '../design-system'
 import type { Acte, DocumentRow, Dossier, SignatureRequestRow } from '../types/database'
 import { acteStatutBadgeStatus, acteStatutLabel } from '../constants/acteStatuts'
 
@@ -117,9 +117,9 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : actes.length === 0 && !draft ? (
-        <div style={emptyCard}>Aucun acte généré pour ce dossier.</div>
+        <EmptyState>Aucun acte généré pour ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {draft && (
@@ -195,21 +195,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

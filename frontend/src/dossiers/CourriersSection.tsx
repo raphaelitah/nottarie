@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { Badge, Button, eyeIcon, HoverIconButton, retryIcon, SectionAddButton, trashIcon } from '../design-system'
+import { Badge, Button, ConfirmModal, EmptyState, eyeIcon, HoverIconButton, retryIcon, SectionAddButton, trashIcon } from '../design-system'
 import { Modal } from '../design-system/Modal'
 import type { Courrier, CourrierDocument, Email } from '../types/database'
 import { CourrierFormDrawer } from './CourrierFormDrawer'
@@ -19,6 +19,7 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<Courrier | null>(null)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [viewing, setViewing] = useState<Courrier | null>(null)
   const [viewingEmail, setViewingEmail] = useState<Email | null>(null)
@@ -116,6 +117,7 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
     setRemovingId(courrier.id)
     const { error } = await supabase.from('courriers').delete().eq('id', courrier.id)
     setRemovingId(null)
+    setRemoveTarget(null)
     if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
     loadCourriers()
   }
@@ -147,9 +149,9 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : courriers.length === 0 ? (
-        <div style={emptyCard}>Aucun courrier pour ce dossier.</div>
+        <EmptyState>Aucun courrier pour ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {courriers.map((c) => (
@@ -170,7 +172,7 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
                   <HoverIconButton icon={retryIcon} label="Réessayer l'envoi" disabled={retryingId === c.id} onClick={() => handleRetry(c)} />
                 )}
                 <HoverIconButton icon={eyeIcon} label="Voir" onClick={() => setViewing(c)} />
-                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === c.id} onClick={() => handleRemove(c)} />
+                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === c.id} onClick={() => setRemoveTarget(c)} />
               </div>
             </div>
           ))}
@@ -189,6 +191,17 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
         onSave={composer.handleAdd}
         onClose={composer.closeComposer}
       />
+
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Supprimer le courrier"
+        subtitle={removeTarget?.objet || undefined}
+        confirming={removingId === removeTarget?.id}
+        onConfirm={() => removeTarget && handleRemove(removeTarget)}
+      >
+        Ce courrier sera définitivement supprimé.
+      </ConfirmModal>
 
       <Modal
         open={!!viewing}
@@ -242,21 +255,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

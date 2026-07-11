@@ -1,21 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { ConfirmModal, downloadIcon, eyeIcon, HoverIconButton, PdfViewerModal, SectionAddButton, sendIcon, trashIcon } from '../design-system'
+import { ConfirmModal, downloadIcon, eyeIcon, EmptyState, HoverIconButton, PdfViewerModal, SectionAddButton, trashIcon } from '../design-system'
 import type { DocumentRow } from '../types/database'
-import { CourrierFormDrawer } from './CourrierFormDrawer'
-import { useCourrierComposer } from './useCourrierComposer'
 
 function isPdf(name: string) {
   return name.toLowerCase().endsWith('.pdf')
 }
 
-interface DocumentsSectionProps {
-  tenantId: string
-  dossierId: string
+function formatDateTime(iso: string) {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
 }
 
-export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps) {
+interface EntityDocumentsSectionProps {
+  tenantId: string
+  entityColumn: 'personne_id' | 'immeuble_id'
+  entityId: string
+  storageSegment: string
+  emptyLabel: string
+}
+
+// Shared by entities (personne, immeuble) whose document list is a plain
+// upload/view/download/delete list with no extra affordances. The dossier
+// documents section stays separate — it additionally supports bulk-select
+// and sending documents by email (see dossiers/DocumentsSection.tsx).
+export function EntityDocumentsSection({ tenantId, entityColumn, entityId, storageSegment, emptyLabel }: EntityDocumentsSectionProps) {
   const [documents, setDocuments] = useState<DocumentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -24,35 +34,26 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [viewingDocument, setViewingDocument] = useState<DocumentRow | null>(null)
   const [viewingUrl, setViewingUrl] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [removeTarget, setRemoveTarget] = useState<DocumentRow | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const composer = useCourrierComposer(tenantId, dossierId, () => setSelectedIds(new Set()))
-
-  function openSendFor(docs: DocumentRow[]) {
-    const objet = docs.length === 1 ? docs[0].nom : `${docs.length} documents`
-    composer.openComposer([], docs.map((d) => d.id), objet)
-  }
 
   async function loadDocuments() {
     setLoading(true)
     const { data, error } = await supabase
       .from('documents')
       .select('*')
-      .eq('dossier_id', dossierId)
-      .is('acte_id', null)
+      .eq(entityColumn, entityId)
       .order('created_at', { ascending: false })
     if (error) setError('Impossible de charger les documents : ' + error.message)
     else setError(null)
     setDocuments(data ?? [])
-    setSelectedIds(new Set())
     setLoading(false)
   }
 
   useEffect(() => {
     loadDocuments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dossierId])
+  }, [entityId])
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -61,13 +62,13 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
 
     setUploading(true)
     setError(null)
-    const storagePath = `${tenantId}/dossiers/${dossierId}/documents/${crypto.randomUUID()}-${file.name}`
+    const storagePath = `${tenantId}/${storageSegment}/${entityId}/documents/${crypto.randomUUID()}-${file.name}`
     const { error: uploadError } = await supabase.storage.from('documents').upload(storagePath, file)
     if (uploadError) { setUploading(false); setError("Erreur lors de l'envoi du fichier : " + uploadError.message); return }
 
     const { error: insertError } = await supabase.from('documents').insert({
       tenant_id: tenantId,
-      dossier_id: dossierId,
+      [entityColumn]: entityId,
       nom: file.name,
       storage_path: storagePath,
     })
@@ -103,27 +104,11 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
     loadDocuments()
   }
 
-  function toggleSelected(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', gap: 'var(--space-2)' }}>
         <h3 style={h3}>Documents</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          {selectedIds.size > 0 && (
-            <HoverIconButton
-              icon={sendIcon}
-              label={`Envoyer (${selectedIds.size})`}
-              onClick={() => openSendFor(documents.filter((d) => selectedIds.has(d.id)))}
-            />
-          )}
           <SectionAddButton
             label="Ajouter un document"
             busyLabel={uploading ? 'Envoi…' : undefined}
@@ -134,45 +119,28 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
         </div>
       </div>
 
-      {(error || composer.error) && (
+      {error && (
         <div style={{
           background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius-md)',
           padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
           fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#DC2626',
-        }}>{error || composer.error}</div>
-      )}
-
-      {composer.noMailboxConnected && (
-        <div style={{
-          background: '#FEF9C3', border: '1px solid #FDE68A', borderRadius: 'var(--radius-md)',
-          padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-4)',
-          fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#713F12',
-        }}>Aucune messagerie Outlook n'est connectée. Rendez-vous dans « Mon compte » pour la connecter.</div>
+        }}>{error}</div>
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : documents.length === 0 ? (
-        <div style={emptyCard}>Aucun document déposé pour ce dossier.</div>
+        <EmptyState>{emptyLabel}</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {documents.map((d) => (
             <div key={d.id} style={{ ...row, cursor: 'pointer' }} onClick={() => handleView(d)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }} onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(d.id)}
-                  onChange={() => toggleSelected(d.id)}
-                  style={{ width: '16px', height: '16px', flexShrink: 0, cursor: 'pointer' }}
-                />
-                <div style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => handleView(d)}>
-                  <span style={name}>{d.nom}</span>
-                  <span style={meta}>{formatDateTime(d.created_at)}</span>
-                </div>
+              <div style={{ minWidth: 0 }}>
+                <span style={name}>{d.nom}</span>
+                <span style={meta}>{formatDateTime(d.created_at)}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                 <HoverIconButton icon={eyeIcon} label="Voir" onClick={() => handleView(d)} />
-                <HoverIconButton icon={sendIcon} label="Envoyer" onClick={() => openSendFor([d])} />
                 <HoverIconButton icon={downloadIcon} label="Télécharger" disabled={downloadingId === d.id} onClick={() => handleDownload(d)} />
                 <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === d.id} onClick={() => setRemoveTarget(d)} />
               </div>
@@ -186,19 +154,6 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
         onClose={() => { setViewingDocument(null); setViewingUrl(null) }}
         title={viewingDocument?.nom ?? 'Document'}
         url={viewingUrl}
-      />
-
-      <CourrierFormDrawer
-        open={composer.drawerOpen}
-        saving={composer.saving}
-        tenantId={tenantId}
-        dossierId={dossierId}
-        fromEmail={composer.fromEmail}
-        initialDestinataireIds={composer.initialDestinataireIds}
-        initialDocumentIds={composer.initialDocumentIds}
-        initialObjet={composer.initialObjet}
-        onSave={composer.handleAdd}
-        onClose={composer.closeComposer}
       />
 
       <ConfirmModal
@@ -215,32 +170,12 @@ export function DocumentsSection({ tenantId, dossierId }: DocumentsSectionProps)
   )
 }
 
-function formatDateTime(iso: string) {
-  const d = new Date(iso)
-  return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
-}
-
 const h3: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-base)',
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

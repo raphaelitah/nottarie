@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Badge, HoverIconButton, SectionAddButton, Select, trashIcon } from '../design-system'
+import { Badge, ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, Select, trashIcon } from '../design-system'
 import type { Formalite } from '../types/database'
 import { formaliteTypeLabel } from '../constants/formaliteTypes'
 import { FORMALITE_STATUT_OPTIONS, formaliteBadgeStatus, formaliteStatutLabel } from '../constants/formaliteStatuts'
@@ -20,6 +20,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
   const [saving, setSaving] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<Formalite | null>(null)
 
   async function loadFormalites() {
     setLoading(true)
@@ -65,6 +66,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
     setRemovingId(formalite.id)
     const { error } = await supabase.from('formalites').delete().eq('id', formalite.id)
     setRemovingId(null)
+    setRemoveTarget(null)
     if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
     loadFormalites()
   }
@@ -85,9 +87,9 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : formalites.length === 0 ? (
-        <div style={emptyCard}>Aucune formalité pour ce dossier.</div>
+        <EmptyState>Aucune formalité pour ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {formalites.map((f) => (
@@ -106,7 +108,7 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
                     onChange={(e) => handleStatutChange(f, e.target.value)}
                   />
                 </div>
-                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === f.id} onClick={() => handleRemove(f)} />
+                <HoverIconButton icon={trashIcon} label="Supprimer" danger disabled={removingId === f.id} onClick={() => setRemoveTarget(f)} />
               </div>
             </div>
           ))}
@@ -119,6 +121,17 @@ export function FormalitesSection({ tenantId, dossierId }: FormalitesSectionProp
         onSave={handleAdd}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Supprimer la formalité"
+        subtitle={removeTarget ? formaliteTypeLabel(removeTarget.type) : undefined}
+        confirming={removingId === removeTarget?.id}
+        onConfirm={() => removeTarget && handleRemove(removeTarget)}
+      >
+        Cette formalité sera définitivement supprimée.
+      </ConfirmModal>
     </div>
   )
 }
@@ -129,21 +142,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { HoverIconButton, SectionAddButton, Badge, trashIcon } from '../design-system'
+import { ConfirmModal, HoverIconButton, SectionAddButton, Badge, EmptyState, trashIcon } from '../design-system'
 import type { Personne, PersonneMoraleContact } from '../types/database'
 import { personneDisplayName } from './personneForm'
 import { FONCTION_CONTACT_OPTIONS } from '../constants/personneTypes'
@@ -28,6 +28,7 @@ export function PersonneMoraleContactsSection({ tenantId, personneMoraleId }: Pe
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<PersonneMoraleContact | null>(null)
 
   async function loadContacts() {
     setLoading(true)
@@ -86,6 +87,7 @@ export function PersonneMoraleContactsSection({ tenantId, personneMoraleId }: Pe
     setRemovingId(contact.id)
     const { error } = await supabase.from('personne_morale_contacts').delete().eq('id', contact.id)
     setRemovingId(null)
+    setRemoveTarget(null)
     if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
     loadContacts()
   }
@@ -106,9 +108,9 @@ export function PersonneMoraleContactsSection({ tenantId, personneMoraleId }: Pe
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : contacts.length === 0 ? (
-        <div style={emptyCard}>Aucun contact rattaché à cette personne morale.</div>
+        <EmptyState>Aucun contact rattaché à cette personne morale.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {contacts.map((c) => (
@@ -121,7 +123,7 @@ export function PersonneMoraleContactsSection({ tenantId, personneMoraleId }: Pe
                 {c.telephone && <span style={meta}>{c.telephone}</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => handleRemove(c)} />
+                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => setRemoveTarget(c)} />
               </div>
             </div>
           ))}
@@ -135,6 +137,19 @@ export function PersonneMoraleContactsSection({ tenantId, personneMoraleId }: Pe
         onSave={handleAdd}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Retirer le contact"
+        subtitle={removeTarget ? contactDisplayName(removeTarget) : undefined}
+        confirmLabel="Retirer"
+        confirmingLabel="Retrait…"
+        confirming={removingId === removeTarget?.id}
+        onConfirm={() => removeTarget && handleRemove(removeTarget)}
+      >
+        Ce contact sera retiré de cette personne morale.
+      </ConfirmModal>
     </div>
   )
 }
@@ -145,21 +160,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {

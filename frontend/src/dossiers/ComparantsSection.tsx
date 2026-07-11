@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, HoverIconButton, SectionAddButton, sendIcon, trashIcon } from '../design-system'
+import { Button, ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, sendIcon, trashIcon } from '../design-system'
 import type { Comparant, Personne } from '../types/database'
 import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
@@ -23,6 +23,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [removeTarget, setRemoveTarget] = useState<Comparant | null>(null)
   const composer = useCourrierComposer(tenantId, dossierId, () => setSelectedIds([]))
 
   async function loadComparants() {
@@ -80,6 +81,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
     setRemovingId(comparant.id)
     const { error } = await supabase.from('comparants').delete().eq('id', comparant.id)
     setRemovingId(null)
+    setRemoveTarget(null)
     if (error) { setError('Erreur lors de la suppression : ' + error.message); return }
     loadComparants()
   }
@@ -125,9 +127,9 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
       )}
 
       {loading ? (
-        <div style={emptyCard}>Chargement…</div>
+        <EmptyState>Chargement…</EmptyState>
       ) : comparants.length === 0 ? (
-        <div style={emptyCard}>Aucun comparant rattaché à ce dossier.</div>
+        <EmptyState>Aucun comparant rattaché à ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {comparants.map((c) => (
@@ -154,7 +156,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
                 {isEmailable(c) && (
                   <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => composer.openComposer([toDestinataireId(c)])} />
                 )}
-                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => handleRemove(c)} />
+                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => setRemoveTarget(c)} />
               </div>
             </div>
           ))}
@@ -190,6 +192,19 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
         onSave={composer.handleAdd}
         onClose={composer.closeComposer}
       />
+
+      <ConfirmModal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        title="Retirer le comparant"
+        subtitle={removeTarget?.personne ? personneDisplayName(removeTarget.personne) : undefined}
+        confirmLabel="Retirer"
+        confirmingLabel="Retrait…"
+        confirming={removingId === removeTarget?.id}
+        onConfirm={() => removeTarget && handleRemove(removeTarget)}
+      >
+        Cette personne ne sera plus comparante sur ce dossier.
+      </ConfirmModal>
     </div>
   )
 }
@@ -200,21 +215,6 @@ const h3: CSSProperties = {
   fontWeight: 600,
   color: 'var(--n-900)',
   margin: 0,
-}
-
-const emptyCard: CSSProperties = {
-  background: 'var(--surface-base)',
-  border: '1px solid var(--border-default)',
-  borderRadius: 'var(--radius-lg)',
-  minHeight: '60px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 'var(--space-3) var(--space-6)',
-  textAlign: 'center',
-  fontFamily: 'var(--font-sans)',
-  fontSize: 'var(--text-sm)',
-  color: 'var(--text-muted)',
 }
 
 const row: CSSProperties = {
