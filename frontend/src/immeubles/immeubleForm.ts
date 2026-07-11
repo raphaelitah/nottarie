@@ -10,6 +10,7 @@ export interface ImmeubleFormValues {
   code_postal: string
   pays: string
   valeur_declaree: string
+  nombre_parts_total: string
 }
 
 export const EMPTY_IMMEUBLE_FORM: ImmeubleFormValues = {
@@ -22,6 +23,7 @@ export const EMPTY_IMMEUBLE_FORM: ImmeubleFormValues = {
   code_postal: '',
   pays: 'France',
   valeur_declaree: '',
+  nombre_parts_total: '',
 }
 
 export function immeubleToForm(i: Immeuble): ImmeubleFormValues {
@@ -35,6 +37,7 @@ export function immeubleToForm(i: Immeuble): ImmeubleFormValues {
     code_postal: i.code_postal ?? '',
     pays: i.pays ?? 'France',
     valeur_declaree: i.valeur_declaree != null ? String(i.valeur_declaree) : '',
+    nombre_parts_total: i.nombre_parts_total != null ? String(i.nombre_parts_total) : '',
   }
 }
 
@@ -61,5 +64,6 @@ export function immeubleFormToInsertPayload(values: ImmeubleFormValues, tenantId
     code_postal: values.code_postal.trim() || null,
     pays: values.pays.trim() || 'France',
     valeur_declaree: values.valeur_declaree.trim() ? Number(values.valeur_declaree) : null,
+    nombre_parts_total: values.nombre_parts_total.trim() ? Number(values.nombre_parts_total) : null,
   }
 }

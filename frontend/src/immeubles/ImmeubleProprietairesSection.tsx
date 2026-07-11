@@ -9,14 +9,17 @@ import { ImmeubleProprietaireFormDrawer, type ImmeubleProprietaireFormResult } f
 interface ImmeubleProprietairesSectionProps {
   tenantId: string
   immeubleId: string
+  nombrePartsTotal: number | null
   onSelectPersonne?: (id: string) => void
 }
+
+const EPSILON = 0.01
 
 function proprietaireDisplayName(p: ImmeubleProprietaire): string {
   return p.personne ? personneDisplayName(p.personne) : (p.nom_libre ?? 'Propriétaire sans nom')
 }
 
-export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPersonne }: ImmeubleProprietairesSectionProps) {
+export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombrePartsTotal, onSelectPersonne }: ImmeubleProprietairesSectionProps) {
   const [proprietaires, setProprietaires] = useState<ImmeubleProprietaire[]>([])
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +53,11 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
   }, [tenantId, immeubleId])
 
   async function handleAdd(result: ImmeubleProprietaireFormResult) {
+    const newQuotePart = result.quotePart.trim() ? Number(result.quotePart) : null
+    if (newQuotePart != null && totalQuotePart + newQuotePart > 100 + EPSILON) {
+      setError(`Cette quote-part porterait le total à ${(totalQuotePart + newQuotePart).toFixed(2)}%, au-delà de 100%. Ajustez la répartition.`)
+      return
+    }
     setSaving(true)
     setError(null)
     const { error } = await supabase.from('immeuble_proprietaires').insert({
@@ -57,7 +65,8 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
       immeuble_id: immeubleId,
       personne_id: result.personneId,
       nom_libre: result.nomLibre,
-      quote_part: result.quotePart.trim() ? Number(result.quotePart) : null,
+      quote_part: newQuotePart,
+      nombre_parts: result.nombreParts.trim() ? Number(result.nombreParts) : null,
     })
     setSaving(false)
     if (error) {
@@ -69,6 +78,9 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
     setDrawerOpen(false)
     loadProprietaires()
   }
+
+  const totalQuotePart = proprietaires.reduce((sum, p) => sum + (p.quote_part ?? 0), 0)
+  const totalExceeded = totalQuotePart > 100 + EPSILON
 
   async function handleRemove(proprietaire: ImmeubleProprietaire) {
     setRemovingId(proprietaire.id)
@@ -100,6 +112,11 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
         <EmptyState>Aucun propriétaire rattaché à ce bien.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {totalQuotePart > 0 && (
+            <div style={{ ...totalBar, color: totalExceeded ? '#DC2626' : 'var(--text-muted)' }}>
+              Total attribué : {totalQuotePart.toFixed(2).replace(/\.00$/, '')}%{totalExceeded && ' — dépasse 100%'}
+            </div>
+          )}
           {proprietaires.map((p) => (
             <div
               key={p.id}
@@ -108,7 +125,11 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
             >
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{proprietaireDisplayName(p)}</span>
-                {p.quote_part != null && <span style={quotePart}>{p.quote_part}%</span>}
+                {p.quote_part != null && (
+                  <span style={quotePart}>
+                    {p.quote_part}%{p.nombre_parts != null && ` (${p.nombre_parts} parts)`}
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
                 <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === p.id} onClick={() => setRemoveTarget(p)} />
@@ -122,6 +143,7 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, onSelectPer
         open={drawerOpen}
         personnes={personnes}
         saving={saving}
+        nombrePartsTotal={nombrePartsTotal}
         onSave={handleAdd}
         onClose={() => setDrawerOpen(false)}
       />
@@ -167,6 +189,14 @@ const name: CSSProperties = {
   fontSize: 'var(--text-sm)',
   fontWeight: 600,
   color: 'var(--n-900)',
+}
+
+const totalBar: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 500,
+  padding: '0 var(--space-1)',
+  marginBottom: 'var(--space-1)',
 }
 
 const quotePart: CSSProperties = {

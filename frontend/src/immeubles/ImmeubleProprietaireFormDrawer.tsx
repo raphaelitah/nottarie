@@ -8,22 +8,25 @@ export interface ImmeubleProprietaireFormResult {
   personneId: string | null
   nomLibre: string | null
   quotePart: string
+  nombreParts: string
 }
 
 interface ImmeubleProprietaireFormDrawerProps {
   open: boolean
   personnes: Personne[]
   saving: boolean
+  nombrePartsTotal: number | null
   onSave: (result: ImmeubleProprietaireFormResult) => void
   onClose: () => void
 }
 
-export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, onSave, onClose }: ImmeubleProprietaireFormDrawerProps) {
+export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombrePartsTotal, onSave, onClose }: ImmeubleProprietaireFormDrawerProps) {
   const [mode, setMode] = useState<'existante' | 'libre'>('existante')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nomLibre, setNomLibre] = useState('')
   const [quotePart, setQuotePart] = useState('')
+  const [nombreParts, setNombreParts] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, onSave
     setSelectedId(null)
     setNomLibre('')
     setQuotePart('')
+    setNombreParts('')
     setError(null)
   }, [open])
 
@@ -42,15 +46,33 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, onSave
     : []
   const selected = personnes.find((p) => p.id === selectedId) ?? null
 
+  function handleQuotePartChange(value: string) {
+    setQuotePart(value)
+    if (nombrePartsTotal && value.trim()) {
+      setNombreParts(String(Math.round((Number(value) / 100) * nombrePartsTotal)))
+    } else if (!value.trim()) {
+      setNombreParts('')
+    }
+  }
+
+  function handleNombrePartsChange(value: string) {
+    setNombreParts(value)
+    if (nombrePartsTotal && value.trim()) {
+      setQuotePart((Number(value) / nombrePartsTotal * 100).toFixed(2).replace(/\.?0+$/, ''))
+    } else if (!value.trim()) {
+      setQuotePart('')
+    }
+  }
+
   function handleSubmit() {
     if (mode === 'existante') {
       if (!selectedId) { setError('Sélectionnez une personne.'); return }
       setError(null)
-      onSave({ personneId: selectedId, nomLibre: null, quotePart })
+      onSave({ personneId: selectedId, nomLibre: null, quotePart, nombreParts })
     } else {
       if (!nomLibre.trim()) { setError('Le nom du propriétaire est obligatoire.'); return }
       setError(null)
-      onSave({ personneId: null, nomLibre: nomLibre.trim(), quotePart })
+      onSave({ personneId: null, nomLibre: nomLibre.trim(), quotePart, nombreParts })
     }
   }
 
@@ -120,12 +142,26 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, onSave
           />
         )}
 
-        <NumberInput
-          label="Quote-part (%)"
-          placeholder="ex. 50"
-          value={quotePart}
-          onChange={(e) => setQuotePart(e.target.value)}
-        />
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <div style={{ flex: 1 }}>
+            <NumberInput
+              label="Quote-part (%)"
+              placeholder="ex. 50"
+              value={quotePart}
+              onChange={(e) => handleQuotePartChange(e.target.value)}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <NumberInput
+              label="Nombre de parts"
+              placeholder={nombrePartsTotal ? `sur ${nombrePartsTotal}` : 'ex. 50'}
+              disabled={!nombrePartsTotal}
+              helper={!nombrePartsTotal ? "Renseignez d'abord le nombre de parts total de l'immeuble." : undefined}
+              value={nombreParts}
+              onChange={(e) => handleNombrePartsChange(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
     </Drawer>
   )

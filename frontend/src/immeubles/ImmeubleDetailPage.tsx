@@ -149,7 +149,7 @@ export function ImmeubleDetailPage({ immeuble, onBack, onUpdated, onSelectDossie
 
       {tab === 'proprietaires' && (
         <div style={{ marginTop: 'var(--space-6)' }}>
-          <ImmeubleProprietairesSection tenantId={immeuble.tenant_id} immeubleId={immeuble.id} onSelectPersonne={onSelectPersonne} />
+          <ImmeubleProprietairesSection tenantId={immeuble.tenant_id} immeubleId={immeuble.id} nombrePartsTotal={immeuble.nombre_parts_total} onSelectPersonne={onSelectPersonne} />
         </div>
       )}
 
@@ -187,6 +187,7 @@ function ReadonlyInformations({ immeuble }: { immeuble: Immeuble }) {
       <Field label="Pays" value={immeuble.pays} />
       <Field label="Références cadastrales" value={immeuble.references_cadastrales} />
       <Field label="Valeur déclarée" value={immeuble.valeur_declaree != null ? `${immeuble.valeur_declaree.toLocaleString('fr-FR')} €` : null} />
+      <Field label="Nombre de parts total" value={immeuble.nombre_parts_total != null ? String(immeuble.nombre_parts_total) : null} />
     </div>
   )
 }

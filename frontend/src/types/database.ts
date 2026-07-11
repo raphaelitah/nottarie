@@ -157,6 +157,7 @@ export interface ImmeubleProprietaire {
   personne_id: string | null
   nom_libre: string | null
   quote_part: number | null
+  nombre_parts: number | null
   created_at: string
   personne?: Personne | null
   immeuble?: Immeuble
@@ -176,6 +177,7 @@ export interface Immeuble {
   code_postal: string | null
   pays: string
   valeur_declaree: number | null
+  nombre_parts_total: number | null
   created_at: string
   archived_at: string | null
 }
