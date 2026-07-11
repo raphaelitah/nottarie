@@ -6,6 +6,7 @@ import { AppFooter } from './design-system/AppFooter'
 import { Badge } from './design-system/Badge'
 import { Select } from './design-system/Select'
 import { Drawer } from './design-system/Drawer'
+import { Tooltip } from './design-system/Tooltip'
 import { NAV_QUERY, useMediaQuery } from './design-system/useMediaQuery'
 import { ROLE_OPTIONS } from './constants/roles'
 import type { RoleNotarial } from './types/database'
@@ -91,31 +92,32 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0, flexShrink: 1 }}>
           {membership && isMobileNav && (
-            <button
-              type="button"
-              title="Navigation"
-              aria-label="Ouvrir la navigation"
-              onClick={() => setMobileNavOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '30px',
-                height: '30px',
-                flexShrink: 0,
-                borderRadius: 'var(--radius-md, 6px)',
-                border: '1px solid transparent',
-                background: 'transparent',
-                color: 'var(--n-400)',
-                cursor: 'pointer',
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" y1="7" x2="20" y2="7" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="17" x2="20" y2="17" />
-              </svg>
-            </button>
+            <Tooltip label="Navigation" side="bottom">
+              <button
+                type="button"
+                aria-label="Ouvrir la navigation"
+                onClick={() => setMobileNavOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '30px',
+                  height: '30px',
+                  flexShrink: 0,
+                  borderRadius: 'var(--radius-md, 6px)',
+                  border: '1px solid transparent',
+                  background: 'transparent',
+                  color: 'var(--n-400)',
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" y1="7" x2="20" y2="7" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="17" x2="20" y2="17" />
+                </svg>
+              </button>
+            </Tooltip>
           )}
           <img src="/favicon.png" alt="" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
           <span style={{

@@ -156,7 +156,7 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
           <HoverIconButton icon={folderPlusIcon} label="Nouveau dossier" onClick={() => openNewDossier(row)} />
           {canArchive && (
-            <Tooltip label="Archiver la personne">
+            <Tooltip label="Archiver la personne" align="right">
               <button
                 type="button"
                 aria-label="Archiver la personne"

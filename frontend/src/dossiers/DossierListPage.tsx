@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, type TableColumn } from '../design-system'
+import { Button, Input, Table, Tooltip, type TableColumn } from '../design-system'
 import { Badge } from '../design-system/Badge'
 import { Modal } from '../design-system/Modal'
 import type { Comparant, Dossier } from '../types/database'
@@ -176,15 +176,16 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     ...(isAdmin ? [{
       key: 'actions', label: '', width: '4%', align: 'right' as const,
       render: (_: unknown, row: DossierRow) => (
-        <button
-          type="button"
-          title="Supprimer le dossier"
-          aria-label="Supprimer le dossier"
-          onClick={(e) => { e.stopPropagation(); setDeleteTarget(row) }}
-          style={deleteBtn}
-        >
-          <TrashIcon />
-        </button>
+        <Tooltip label="Supprimer le dossier" align="right">
+          <button
+            type="button"
+            aria-label="Supprimer le dossier"
+            onClick={(e) => { e.stopPropagation(); setDeleteTarget(row) }}
+            style={deleteBtn}
+          >
+            <TrashIcon />
+          </button>
+        </Tooltip>
       ),
     }] : []),
   ]

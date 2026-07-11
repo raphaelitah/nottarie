@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, MOBILE_QUERY, Select, useMediaQuery } from '../design-system'
+import { Button, Input, MOBILE_QUERY, Select, useMediaQuery, HoverIconButton } from '../design-system'
 import type { RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
 
@@ -284,40 +284,9 @@ const ICON_SVGS: Record<string, (color: string) => React.JSX.Element> = {
 }
 
 function IconButton({ icon, label, onClick, disabled }: { icon: keyof typeof ICON_SVGS; label: string; onClick: () => void; disabled?: boolean }) {
-  const [hovered, setHovered] = useState(false)
   const isDanger = icon === 'ban'
-  const activeColor = isDanger ? '#991B1B' : '#1E2D45'
   return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => !disabled && setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title={label}
-      disabled={disabled}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '5px',
-        height: '32px',
-        padding: hovered ? '0 10px' : '0 8px',
-        background: hovered ? (isDanger ? '#FEF2F2' : 'var(--n-100)') : 'transparent',
-        border: '1px solid',
-        borderColor: hovered ? (isDanger ? '#FECACA' : 'var(--border-default)') : 'transparent',
-        borderRadius: 'var(--radius-md)',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
-        transition: 'all 120ms ease',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-      }}
-    >
-      {ICON_SVGS[icon](hovered ? activeColor : '#716E84')}
-      {hovered && (
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', fontWeight: 600, color: activeColor }}>
-          {label}
-        </span>
-      )}
-    </button>
+    <HoverIconButton icon={(c) => ICON_SVGS[icon](c)} label={label} onClick={onClick} disabled={disabled} danger={isDanger} />
   )
 }
 

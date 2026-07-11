@@ -184,7 +184,7 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }} onClick={(e) => e.stopPropagation()}>
           <HoverIconButton icon={folderPlusIcon} label="Nouveau dossier" onClick={() => openNewDossier(row)} />
           {canArchive && (
-            <Tooltip label="Archiver l'immeuble">
+            <Tooltip label="Archiver l'immeuble" align="right">
               <button
                 type="button"
                 aria-label="Archiver l'immeuble"

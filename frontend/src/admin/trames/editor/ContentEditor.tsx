@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { FieldNode } from './fieldNode'
 import { FieldFormModal } from './FieldFormModal'
 import { extractVariablesFromDoc } from './extractVariables'
+import { Tooltip } from '../../../design-system/Tooltip'
 import type { SectionVariable } from '../../../types/database'
 
 interface ContentEditorProps {
@@ -58,9 +59,11 @@ export function ContentEditor({ content, onChange }: ContentEditorProps) {
 
 function ToolbarButton({ label, active, onClick, children }: { label: string; active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" title={label} onClick={onClick} style={{ ...toolbarBtnStyle, ...(active ? toolbarBtnActiveStyle : {}) }}>
-      {children}
-    </button>
+    <Tooltip label={label}>
+      <button type="button" onClick={onClick} style={{ ...toolbarBtnStyle, ...(active ? toolbarBtnActiveStyle : {}) }}>
+        {children}
+      </button>
+    </Tooltip>
   )
 }
 

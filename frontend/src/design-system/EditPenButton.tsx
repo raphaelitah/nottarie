@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import { Tooltip } from './Tooltip'
 
 export function EditPenButton({ label, onClick }: { label: string; onClick: () => void }) {
   const [hover, setHover] = useState(false)
   return (
+    <Tooltip label={label}>
     <button
       type="button"
-      title={label}
       aria-label={label}
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
@@ -29,5 +30,6 @@ export function EditPenButton({ label, onClick }: { label: string; onClick: () =
         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
       </svg>
     </button>
+    </Tooltip>
   )
 }

@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from 'react'
+import { Tooltip } from './Tooltip'
 
 interface IconButtonProps {
   icon: ReactNode
@@ -24,16 +25,17 @@ export function IconButton({ icon, title, onClick }: IconButtonProps) {
   }
 
   return (
-    <button
-      type="button"
-      title={title}
-      aria-label={title}
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={style}
-    >
-      {icon}
-    </button>
+    <Tooltip label={title}>
+      <button
+        type="button"
+        aria-label={title}
+        onClick={onClick}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={style}
+      >
+        {icon}
+      </button>
+    </Tooltip>
   )
 }
