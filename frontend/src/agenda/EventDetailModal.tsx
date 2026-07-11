@@ -95,12 +95,6 @@ export function EventDetailModal({
             <span style={metaText}>· {DISPONIBILITE_LABELS[event.disponibilite]}</span>
             {event.rrule && <span style={metaText}>· {recurrenceSummary(parseRRuleString(event.rrule))}</span>}
           </div>
-          {!event.peut_voir_details && (
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>
-              Cet événement est privé — seuls l'organisateur, les participants invités et les administrateurs/notaires peuvent en voir le détail.
-            </p>
-          )}
-
           {event.lieu && (
             <div style={fieldRow}>
               <span style={fieldLabel}>Lieu</span>
