@@ -18,6 +18,7 @@ import { FormalitesSection } from './FormalitesSection'
 import { CoutEstimationSection } from './CoutEstimationSection'
 import { AccesSection } from './AccesSection'
 import { HistoriqueSection } from './HistoriqueSection'
+import { EvenementsSection } from './EvenementsSection'
 
 const TABS = [
   { key: 'general', label: 'Général' },
@@ -56,9 +57,10 @@ interface DossierDetailPageProps {
   onEditActe: (acte: Acte) => void
   onSelectPersonne?: (id: string) => void
   onSelectImmeuble?: (id: string) => void
+  onOpenAgenda?: () => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onSelectPersonne, onSelectImmeuble }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossierDetailPageProps) {
   const stack = useMediaQuery(STACK_QUERY)
   const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
@@ -323,6 +325,10 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
         <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
           <CourriersSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
           <FormalitesSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
+        </div>
+
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <EvenementsSection dossierId={dossier.id} onOpenAgenda={onOpenAgenda} />
         </div>
         </>
       )}

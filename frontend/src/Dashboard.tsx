@@ -245,9 +245,10 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                 onFocusHandled={() => setFocusDossierId(null)}
                 onSelectPersonne={goToPersonne}
                 onSelectImmeuble={goToImmeuble}
+                onOpenAgenda={() => setSection('agenda')}
               />
             ) : section === 'personnes' ? (
-              <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} onSelectDossier={goToDossier} />
+              <PersonnesPage key={personnesResetKey} tenantId={membership.tenant_id} focusId={focusPersonneId} onFocusHandled={() => setFocusPersonneId(null)} onSelectDossier={goToDossier} onSelectImmeuble={goToImmeuble} />
             ) : section === 'immeubles' ? (
               <ImmeublesPage key={immeublesResetKey} tenantId={membership.tenant_id} focusId={focusImmeubleId} onFocusHandled={() => setFocusImmeubleId(null)} onSelectDossier={goToDossier} onSelectPersonne={goToPersonne} />
             ) : section === 'agenda' ? (

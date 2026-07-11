@@ -2,25 +2,25 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { EmptyState, SectionAddButton } from '../design-system'
-import type { Immeuble, ImmeubleProprietaire } from '../types/database'
+import type { ImmeubleProprietaire } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload, type ImmeubleFormValues } from '../immeubles/immeubleForm'
 import { ImmeubleFormDrawer } from '../immeubles/ImmeubleFormDrawer'
 
 interface PersonneImmeublesSectionProps {
   tenantId: string
   personneId: string
+  onSelectImmeuble?: (id: string) => void
 }
 
 function formatValeur(v: number | null): string | null {
   return v != null ? `${v.toLocaleString('fr-FR')} €` : null
 }
 
-export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeublesSectionProps) {
+export function PersonneImmeublesSection({ tenantId, personneId, onSelectImmeuble }: PersonneImmeublesSectionProps) {
   const [proprietaires, setProprietaires] = useState<ImmeubleProprietaire[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editing, setEditing] = useState<Immeuble | null>(null)
   const [saving, setSaving] = useState(false)
 
   async function loadImmeubles() {
@@ -41,27 +41,9 @@ export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [personneId])
 
-  function openCreate() {
-    setEditing(null)
-    setDrawerOpen(true)
-  }
-
-  function openEdit(immeuble: Immeuble) {
-    setEditing(immeuble)
-    setDrawerOpen(true)
-  }
-
   async function handleSave(values: ImmeubleFormValues) {
     setSaving(true)
     const payload = immeubleFormToInsertPayload(values, tenantId)
-    if (editing) {
-      const { error } = await supabase.from('immeubles').update(payload).eq('id', editing.id)
-      setSaving(false)
-      if (error) { setError("Erreur lors de l'enregistrement : " + error.message); return }
-      setDrawerOpen(false)
-      loadImmeubles()
-      return
-    }
     const { data, error } = await supabase.from('immeubles').insert(payload).select().single()
     if (error) { setSaving(false); setError("Erreur lors de la création de l'immeuble : " + error.message); return }
     const { error: linkError } = await supabase.from('immeuble_proprietaires').insert({
@@ -79,7 +61,7 @@ export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeu
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
         <h3 style={h3}>Immeubles</h3>
-        <SectionAddButton label="Ajouter un immeuble" onClick={openCreate} />
+        <SectionAddButton label="Ajouter un immeuble" onClick={() => setDrawerOpen(true)} />
       </div>
 
       {error && (
@@ -97,7 +79,11 @@ export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeu
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           {proprietaires.map((p) => (
-            <div key={p.id} style={row} onClick={() => openEdit(p.immeuble!)}>
+            <div
+              key={p.id}
+              style={{ ...row, cursor: onSelectImmeuble ? 'pointer' : 'default' }}
+              onClick={() => onSelectImmeuble?.(p.immeuble!.id)}
+            >
               <div style={{ minWidth: 0 }}>
                 <span style={name}>{immeubleDisplayName(p.immeuble!)}</span>
                 {p.immeuble?.ville && <span style={meta}>{p.immeuble.ville}</span>}
@@ -113,8 +99,6 @@ export function PersonneImmeublesSection({ tenantId, personneId }: PersonneImmeu
 
       <ImmeubleFormDrawer
         open={drawerOpen}
-        tenantId={tenantId}
-        immeuble={editing}
         saving={saving}
         onSave={handleSave}
         onClose={() => setDrawerOpen(false)}
@@ -141,7 +125,6 @@ const row: CSSProperties = {
   background: 'var(--surface-base)',
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-md)',
-  cursor: 'pointer',
 }
 
 const name: CSSProperties = {
