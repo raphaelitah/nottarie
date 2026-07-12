@@ -37,20 +37,32 @@ function toIcsUtc(iso: string): string {
 }
 
 function computeDuration(debutIso: string, finIso: string | null, allDay: boolean) {
-  if (allDay) return { days: 1 }
+  if (allDay) {
+    if (!finIso) return { days: 1 }
+    const days = Math.round((new Date(finIso).getTime() - new Date(debutIso).getTime()) / 86400000) + 1
+    return { days: days > 0 ? days : 1 }
+  }
   if (!finIso) return undefined
   const ms = new Date(finIso).getTime() - new Date(debutIso).getTime()
   return ms > 0 ? { milliseconds: ms } : undefined
+}
+
+function toExclusiveEnd(finIso: string, allDay: boolean): string {
+  if (!allDay) return finIso
+  const d = new Date(finIso)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString()
 }
 
 function toEventInput(e: Evenement): RRuleEventInput {
   const color = resolveEventColor(e)
   const base: RRuleEventInput = {
     id: e.id,
-    title: e.est_prive ? `🔒 ${e.titre}` : e.titre,
+    title: e.est_prive ? `🔒 ${e.titre}` : `🏢 ${e.titre}`,
     backgroundColor: color,
     borderColor: color,
     allDay: e.all_day,
+    classNames: [e.est_prive ? 'agenda-event--private' : 'agenda-event--shared'],
   }
   if (e.rrule) {
     return {
@@ -60,7 +72,7 @@ function toEventInput(e: Evenement): RRuleEventInput {
       exdate: e.rrule_exdates,
     }
   }
-  return { ...base, start: e.debut, end: e.fin ?? undefined }
+  return { ...base, start: e.debut, end: e.fin ? toExclusiveEnd(e.fin, e.all_day) : undefined }
 }
 
 let eventTooltipEl: HTMLDivElement | null = null
@@ -237,7 +249,17 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
   }
 
   function handleSelectRange(selectInfo: DateSelectArg) {
-    openCreateDrawer({ start: selectInfo.startStr, end: selectInfo.allDay ? null : selectInfo.endStr, allDay: selectInfo.allDay })
+    if (selectInfo.allDay) {
+      // FullCalendar's endStr for all-day selections is exclusive (the day after
+      // the last selected day) — subtract one day (via the date-only string, to
+      // avoid UTC/local timezone shifts) to get the inclusive last selected day.
+      const [y, m, d] = selectInfo.endStr.split('-').map(Number)
+      const inclusiveEnd = new Date(Date.UTC(y, m - 1, d - 1))
+      const inclusiveEndStr = inclusiveEnd.toISOString().slice(0, 10)
+      openCreateDrawer({ start: selectInfo.startStr, end: inclusiveEndStr, allDay: true })
+    } else {
+      openCreateDrawer({ start: selectInfo.startStr, end: selectInfo.endStr, allDay: false })
+    }
   }
 
   async function syncDossierLinks(eventId: string, previousIds: string[], nextIds: string[]) {
