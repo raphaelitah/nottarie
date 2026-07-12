@@ -9,10 +9,11 @@ import type { SignatureRequest, SignedDocument } from './types.ts'
  */
 export interface SignatureProvider {
   /**
-   * EF-SIG-01: designate who must sign the given acte — every living
-   * comparant on its dossier (a deceased party can't sign) plus the
-   * dossier's notaire. Not a manual picker: the signer set is a fixed
-   * business rule, derived from the dossier itself.
+   * EF-SIG-01: designate who must sign the given acte — every living,
+   * physical-person comparant on its dossier, plus the dossier's notaire
+   * (always last). This is the default signer set; addSignataire/
+   * removeSignataire let the notaire or a clerc adjust it before signing,
+   * typically during relecture at the signing event.
    */
   designateSigners(tenantId: string, acteId: string): Promise<SignatureRequest>
 
@@ -24,4 +25,20 @@ export interface SignatureProvider {
 
   /** EF-SIG-05/06: once statut is 'signee', retrieve the signed acte and its archival receipt (AAE). */
   retrieveSignedDocument(tenantId: string, signatureRequestId: string): Promise<SignedDocument>
+
+  /**
+   * Add a signataire beyond the auto-designated set, e.g. during relecture
+   * at the signing event. Must be one of the dossier's comparants; the
+   * notaire's row always stays last.
+   */
+  addSignataire(tenantId: string, signatureRequestId: string, comparantId: string): Promise<SignatureRequest>
+
+  /** Remove a not-yet-signed 'partie' signataire (the notaire can't be removed). */
+  removeSignataire(tenantId: string, signatureRequestId: string, signataireId: string): Promise<SignatureRequest>
+
+  /**
+   * Reorder the not-yet-signed 'partie' signataires. The notaire's row is
+   * excluded from the ordering submitted here and is always re-pinned last.
+   */
+  reorderSignataires(tenantId: string, signatureRequestId: string, ordre: { signataireId: string; ordre: number }[]): Promise<SignatureRequest>
 }

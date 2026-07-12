@@ -6,6 +6,7 @@ import { DossierListPage } from './DossierListPage'
 import { DossierDetailPage } from './DossierDetailPage'
 
 const ActeComposerPage = lazy(() => import('./composer/ActeComposerPage').then((m) => ({ default: m.ActeComposerPage })))
+const ActeRelecturePage = lazy(() => import('./composer/ActeRelecturePage').then((m) => ({ default: m.ActeRelecturePage })))
 
 interface DossiersPageProps {
   tenantId: string
@@ -19,9 +20,11 @@ export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onO
   const navigate = useNavigate()
   const [selected, setSelected] = useState<Dossier | null>(null)
   const [composerActe, setComposerActe] = useState<Acte | 'new' | null>(null)
+  const [relectureActe, setRelectureActe] = useState<Acte | null>(null)
 
   useEffect(() => {
     setComposerActe(null)
+    setRelectureActe(null)
     if (!id) { setSelected(null); return }
     supabase.from('dossiers').select('*').eq('id', id).single().then(({ data }) => {
       if (data) setSelected(data)
@@ -41,6 +44,18 @@ export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onO
     )
   }
 
+  if (selected && relectureActe) {
+    return (
+      <Suspense fallback={<p>Chargement…</p>}>
+        <ActeRelecturePage
+          dossier={selected}
+          acte={relectureActe}
+          onBack={() => setRelectureActe(null)}
+        />
+      </Suspense>
+    )
+  }
+
   return selected
     ? (
       <DossierDetailPage
@@ -49,6 +64,7 @@ export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onO
         onUpdated={setSelected}
         onOpenComposer={() => setComposerActe('new')}
         onEditActe={(acte) => setComposerActe(acte)}
+        onOpenRelecture={(acte) => setRelectureActe(acte)}
         onSelectPersonne={onSelectPersonne}
         onSelectImmeuble={onSelectImmeuble}
         onOpenAgenda={onOpenAgenda}

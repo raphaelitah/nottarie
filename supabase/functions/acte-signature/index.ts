@@ -1,5 +1,5 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { isTenantMember, isNotaireOrAdmin } from '../_shared/authorize.ts'
+import { isTenantMember, isNotaireOrAdmin, isNotaireClercOrAdmin } from '../_shared/authorize.ts'
 import { getSignatureProvider, MockSignatureProvider } from '../_shared/signature/index.ts'
 
 const corsHeaders = {
@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-type Action = 'designate' | 'request' | 'status' | 'retrieve' | 'simulate'
+type Action = 'designate' | 'request' | 'status' | 'retrieve' | 'simulate' | 'add_signataire' | 'remove_signataire' | 'reorder'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -81,6 +81,42 @@ Deno.serve(async (req) => {
     if (action === 'retrieve') {
       const result = await provider.retrieveSignedDocument(existing.tenant_id, signature_request_id)
       return new Response(JSON.stringify({ signedDocument: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'add_signataire') {
+      const { comparant_id } = body
+      if (!comparant_id) {
+        return new Response(JSON.stringify({ error: 'comparant_id est requis' }), { status: 400, headers: corsHeaders })
+      }
+      if (!(await isNotaireClercOrAdmin(supabaseAdmin, caller.id, existing.tenant_id))) {
+        return new Response(JSON.stringify({ error: 'Accès refusé.' }), { status: 403, headers: corsHeaders })
+      }
+      const result = await provider.addSignataire(existing.tenant_id, signature_request_id, comparant_id)
+      return new Response(JSON.stringify({ signatureRequest: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'remove_signataire') {
+      const { signataire_id } = body
+      if (!signataire_id) {
+        return new Response(JSON.stringify({ error: 'signataire_id est requis' }), { status: 400, headers: corsHeaders })
+      }
+      if (!(await isNotaireClercOrAdmin(supabaseAdmin, caller.id, existing.tenant_id))) {
+        return new Response(JSON.stringify({ error: 'Accès refusé.' }), { status: 403, headers: corsHeaders })
+      }
+      const result = await provider.removeSignataire(existing.tenant_id, signature_request_id, signataire_id)
+      return new Response(JSON.stringify({ signatureRequest: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    if (action === 'reorder') {
+      const { ordre } = body
+      if (!Array.isArray(ordre)) {
+        return new Response(JSON.stringify({ error: 'ordre est requis' }), { status: 400, headers: corsHeaders })
+      }
+      if (!(await isNotaireClercOrAdmin(supabaseAdmin, caller.id, existing.tenant_id))) {
+        return new Response(JSON.stringify({ error: 'Accès refusé.' }), { status: 403, headers: corsHeaders })
+      }
+      const result = await provider.reorderSignataires(existing.tenant_id, signature_request_id, ordre)
+      return new Response(JSON.stringify({ signatureRequest: result }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'simulate') {

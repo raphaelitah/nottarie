@@ -19,9 +19,10 @@ interface ActesSectionProps {
   dossier: Dossier
   onOpenComposer: () => void
   onEditActe: (acte: Acte) => void
+  onOpenRelecture: (acte: Acte) => void
 }
 
-export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSectionProps) {
+export function ActesSection({ dossier, onOpenComposer, onEditActe, onOpenRelecture }: ActesSectionProps) {
   const [actes, setActes] = useState<Acte[]>([])
   const [draft, setDraft] = useState<{ nom: string | null; updated_at: string } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,7 +37,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
     const [{ data, error }, { data: brouillon }] = await Promise.all([
       supabase
         .from('actes')
-        .select('*, documents(*), signature_requests(*)')
+        .select('*, documents(*), signature_requests(*, signature_signataires(*))')
         .eq('dossier_id', dossier.id)
         .order('created_at', { ascending: false }),
       supabase.from('acte_brouillons').select('nom, updated_at').eq('dossier_id', dossier.id).maybeSingle<{ nom: string | null; updated_at: string }>(),
@@ -85,19 +86,6 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
     })
     setSignatureActionId(null)
     if (requestResult.error) { setError("Erreur lors de la demande de signature : " + requestResult.error.message); return }
-    loadActes()
-  }
-
-  // Mock-only: stands in for the callback a real signature provider would
-  // deliver once every signataire has actually signed.
-  async function handleSimulateSignature(signatureRequest: SignatureRequestRow) {
-    setSignatureActionId(signatureRequest.acte_id)
-    setError(null)
-    const { error } = await supabase.functions.invoke('acte-signature', {
-      body: { action: 'simulate', signature_request_id: signatureRequest.id },
-    })
-    setSignatureActionId(null)
-    if (error) { setError('Erreur lors de la simulation de la signature : ' + error.message); return }
     loadActes()
   }
 
@@ -159,9 +147,14 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe }: ActesSecti
                     </>
                   )}
                   {acte.statut === 'a_signer' && signatureRequest?.provider === 'mock' && signatureRequest.statut === 'en_cours' && (
-                    <Button variant="secondary" size="sm" disabled={busy} onClick={() => handleSimulateSignature(signatureRequest)}>
-                      {busy ? '…' : 'Simuler la signature (mock)'}
-                    </Button>
+                    <>
+                      <span style={meta}>
+                        {(signatureRequest.signature_signataires ?? []).filter((s) => s.statut === 'signe').length}/{(signatureRequest.signature_signataires ?? []).length} signés
+                      </span>
+                      <Button variant="secondary" size="sm" onClick={() => onOpenRelecture(acte)}>
+                        Relecture
+                      </Button>
+                    </>
                   )}
                   {signatureRequest?.accuse_reception_storage_path && (
                     <HoverIconButton icon={downloadIcon} label="Accusé de réception" onClick={() => handleDownloadPath(signatureRequest.accuse_reception_storage_path!)} />

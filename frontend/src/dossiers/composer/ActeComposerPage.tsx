@@ -44,12 +44,19 @@ interface ActeComposerPageProps {
   acte?: Acte
   onBack: () => void
   onGenerated: (acte: Acte, document: DocumentRow) => void
+  /** Whether the document can be edited. Defaults to true (the plain "Générer un acte" flow). */
+  editable?: boolean
+  /** 'drawer' collapses the optional-sections list instead of showing it as an always-visible sidebar — used by the relecture screen's edit mode. */
+  sectionsLayout?: 'sidebar' | 'drawer'
+  /** When set, the document is rendered in a scrollable container and this fires whenever the scrolled-to-bottom state changes — used to gate relecture actions on having read the whole document. */
+  onScrolledToBottomChange?: (scrolledToBottom: boolean) => void
 }
 
-export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeComposerPageProps) {
+export function ActeComposerPage({ dossier, acte, onBack, onGenerated, editable = true, sectionsLayout = 'sidebar', onScrolledToBottomChange }: ActeComposerPageProps) {
   const { session, memberships } = useAuth()
   const [standard, setStandard] = useState<TrameSection | null>(null)
   const [optionalSections, setOptionalSections] = useState<TrameSection[]>([])
+  const [sectionsDrawerOpen, setSectionsDrawerOpen] = useState(false)
   const [nom, setNom] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -60,10 +67,12 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
   const nomRef = useRef('')
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readyForAutosave = useRef(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
     extensions: [StarterKit, FillFieldNode],
     content: { type: 'doc', content: [{ type: 'paragraph' }] },
+    editable,
     onUpdate: ({ editor }) => {
       scheduleAutosave()
       const heading = extractHeadingText(editor.getJSON() as TiptapNode)
@@ -71,6 +80,24 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
       nomRef.current = heading
     },
   })
+
+  useEffect(() => {
+    editor?.setEditable(editable)
+  }, [editor, editable])
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container || !onScrolledToBottomChange) return
+    function handleScroll() {
+      if (!container) return
+      const scrolledToBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 24
+      onScrolledToBottomChange!(scrolledToBottom)
+    }
+    handleScroll()
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onScrolledToBottomChange, loading])
 
   function scheduleAutosave() {
     if (acte) return
@@ -238,19 +265,25 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
           <button onClick={onBack} style={backBtn}>‹ Annuler</button>
           <span style={title}>{dossier.numero || 'Dossier sans numéro'} — {acteTypeLabel(dossier.type_acte)}</span>
         </div>
-        <input
-          style={nomInput}
-          type="text"
-          placeholder="Titre de l'acte"
-          value={nom}
-          onChange={(e) => handleNomChange(e.target.value)}
-        />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
-          {!acte && <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />}
-          <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !nom.trim() || (!standard && !acte?.content)}>
-            {saving ? 'Enregistrement…' : acte ? 'Enregistrer les modifications' : 'Générer'}
-          </Button>
-        </div>
+        {editable ? (
+          <input
+            style={nomInput}
+            type="text"
+            placeholder="Titre de l'acte"
+            value={nom}
+            onChange={(e) => handleNomChange(e.target.value)}
+          />
+        ) : (
+          <span style={nomReadOnly}>{nom}</span>
+        )}
+        {editable && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+            {!acte && <SaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />}
+            <Button variant="primary" size="sm" onClick={handleGenerate} disabled={saving || loading || !nom.trim() || (!standard && !acte?.content)}>
+              {saving ? 'Enregistrement…' : acte ? 'Enregistrer les modifications' : 'Générer'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {error && <div style={alertStyle}>{error}</div>}
@@ -260,37 +293,57 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated }: ActeCom
       ) : !standard && !acte?.content ? (
         <p style={hint}>Aucun modèle standard publié pour ce type d'acte.</p>
       ) : (
-        <div style={{ display: 'flex', gap: 'var(--space-6)', flex: 1, alignItems: 'flex-start' }}>
-          <div style={sidebar}>
-            <div style={sidebarTitle}>Sections à insérer</div>
-            <p style={sidebarHint}>Cliquez pour insérer à l'endroit du curseur dans le document.</p>
-            {optionalSections.length === 0 ? (
-              <p style={sidebarHint}>Aucune section optionnelle publiée.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                {categories.map((category) => (
-                  <div key={category}>
-                    <div style={categoryLabel}>{category}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {optionalSections.filter((s) => (s.category ?? '') === category).map((s) => (
-                        <button key={s.id} style={sectionBtn} onClick={() => insertSection(s)}>
-                          + {s.title}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div style={{ display: 'flex', gap: 'var(--space-6)', flex: 1, alignItems: 'flex-start', minHeight: 0 }}>
+          {editable && sectionsLayout === 'sidebar' && (
+            <div style={sidebar}>
+              <div style={sidebarTitle}>Sections à insérer</div>
+              <p style={sidebarHint}>Cliquez pour insérer à l'endroit du curseur dans le document.</p>
+              <OptionalSectionsList categories={categories} optionalSections={optionalSections} onInsert={insertSection} />
+            </div>
+          )}
 
-          <div style={documentColumn}>
+          {editable && sectionsLayout === 'drawer' && (
+            <div style={drawer}>
+              <button style={drawerToggle} onClick={() => setSectionsDrawerOpen((v) => !v)}>
+                {sectionsDrawerOpen ? '▾' : '▸'} Sections optionnelles
+              </button>
+              {sectionsDrawerOpen && (
+                <div style={drawerContent}>
+                  <OptionalSectionsList categories={categories} optionalSections={optionalSections} onInsert={insertSection} />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div ref={onScrolledToBottomChange ? scrollContainerRef : undefined} style={onScrolledToBottomChange ? scrollableDocumentColumn : documentColumn}>
             <div style={documentPage}>
               <EditorContent editor={editor} />
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function OptionalSectionsList({ categories, optionalSections, onInsert }: { categories: string[]; optionalSections: TrameSection[]; onInsert: (section: TrameSection) => void }) {
+  if (optionalSections.length === 0) {
+    return <p style={sidebarHint}>Aucune section optionnelle publiée.</p>
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      {categories.map((category) => (
+        <div key={category}>
+          <div style={categoryLabel}>{category}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {optionalSections.filter((s) => (s.category ?? '') === category).map((s) => (
+              <button key={s.id} style={sectionBtn} onClick={() => onInsert(s)}>
+                + {s.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -335,6 +388,18 @@ const nomInput: CSSProperties = {
   border: '1px solid var(--border-default)',
   borderRadius: 'var(--radius-md)',
   padding: '6px 10px',
+}
+
+const nomReadOnly: CSSProperties = {
+  flex: 1,
+  maxWidth: '360px',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-sm)',
+  fontWeight: 600,
+  color: 'var(--n-900)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 }
 
 const hint: CSSProperties = {
@@ -395,6 +460,38 @@ const documentColumn: CSSProperties = {
   minWidth: 0,
   display: 'flex',
   justifyContent: 'center',
+}
+
+const scrollableDocumentColumn: CSSProperties = {
+  ...documentColumn,
+  overflowY: 'auto',
+  maxHeight: 'calc(100vh - 220px)',
+}
+
+const drawer: CSSProperties = {
+  width: '260px',
+  flexShrink: 0,
+}
+
+const drawerToggle: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  textAlign: 'left',
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 600,
+  color: 'var(--n-700)',
+  letterSpacing: 'var(--tracking-caps)',
+  textTransform: 'uppercase',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: 0,
+  marginBottom: 'var(--space-2)',
+}
+
+const drawerContent: CSSProperties = {
+  marginTop: 'var(--space-2)',
 }
 
 const documentPage: CSSProperties = {

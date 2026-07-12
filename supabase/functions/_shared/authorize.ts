@@ -48,3 +48,17 @@ export async function isNotaireOrAdmin(admin: SupabaseClient, authUserId: string
   const roles: string[] = data?.roles ?? []
   return roles.includes('administrateur') || roles.includes('notaire')
 }
+
+/** Notaire, clerc rédacteur (role_notarial 'redacteur'), or administrateur —
+ * used for preparatory signature actions (adjusting/ordering signataires)
+ * that staff other than the notaire may also perform. */
+export async function isNotaireClercOrAdmin(admin: SupabaseClient, authUserId: string, tenantId: string): Promise<boolean> {
+  const { data } = await admin
+    .from('utilisateurs')
+    .select('roles')
+    .eq('auth_user_id', authUserId)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  const roles: string[] = data?.roles ?? []
+  return roles.includes('administrateur') || roles.includes('notaire') || roles.includes('redacteur')
+}

@@ -314,6 +314,21 @@ export interface SignatureRequestRow {
   accuse_reception_storage_path: string | null
   created_at: string
   updated_at: string
+  signature_signataires?: SignatureSignataireRow[]
+}
+
+export interface SignatureSignataireRow {
+  id: string
+  tenant_id: string
+  dossier_id: string
+  signature_request_id: string
+  role: 'partie' | 'notaire'
+  comparant_id: string | null
+  utilisateur_id: string | null
+  statut: 'en_attente' | 'signe' | 'refuse'
+  signed_at: string | null
+  ordre: number
+  created_at: string
 }
 
 export interface Utilisateur {

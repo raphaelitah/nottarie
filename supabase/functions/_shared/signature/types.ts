@@ -11,6 +11,8 @@ export interface Signataire {
   utilisateurId: string | null
   statut: SignataireStatut
   signedAt: string | null
+  /** Signing order within the request. The notaire is always pinned last. */
+  ordre: number
 }
 
 export interface SignatureRequest {

@@ -55,12 +55,13 @@ interface DossierDetailPageProps {
   onUpdated: (dossier: Dossier) => void
   onOpenComposer: () => void
   onEditActe: (acte: Acte) => void
+  onOpenRelecture: (acte: Acte) => void
   onSelectPersonne?: (id: string) => void
   onSelectImmeuble?: (id: string) => void
   onOpenAgenda?: () => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onOpenRelecture, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossierDetailPageProps) {
   const stack = useMediaQuery(STACK_QUERY)
   const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
@@ -318,7 +319,7 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
         </div>
 
         <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
-          <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} onEditActe={onEditActe} />
+          <ActesSection dossier={dossier} onOpenComposer={onOpenComposer} onEditActe={onEditActe} onOpenRelecture={onOpenRelecture} />
           <DocumentsSection tenantId={dossier.tenant_id} dossierId={dossier.id} />
         </div>
 
