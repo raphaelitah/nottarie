@@ -58,7 +58,7 @@ function toEventInput(e: Evenement): RRuleEventInput {
   const color = resolveEventColor(e)
   const base: RRuleEventInput = {
     id: e.id,
-    title: e.est_prive ? `🔒 ${e.titre}` : `🏢 ${e.titre}`,
+    title: e.est_prive ? `🔒 ${e.titre}` : e.titre,
     backgroundColor: color,
     borderColor: color,
     allDay: e.all_day,

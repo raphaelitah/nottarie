@@ -58,3 +58,9 @@
 .agenda-calendar--mobile .fc-list-event-title {
   white-space: normal;
 }
+
+/* Etude-wide (shared) events: a bright inset accent so they're identifiable at a glance. */
+.fc-event.agenda-event--shared {
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.9);
+}
+
