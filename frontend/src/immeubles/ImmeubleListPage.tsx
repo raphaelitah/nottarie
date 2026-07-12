@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, HoverIconButton, Input, Table, Modal, Tooltip, Pagination, folderPlusIcon, type TableColumn } from '../design-system'
+import { Button, HoverIconButton, Input, Table, Modal, Tooltip, Pagination, FilterTabs, folderPlusIcon, type TableColumn } from '../design-system'
 import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
 import type { Dossier, Immeuble, ImmeubleProprietaire, Utilisateur } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
-import { typeBienLabel } from '../constants/typeBien'
+import { typeBienLabel, typeBienGroup } from '../constants/typeBien'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
 import { useAuth } from '../auth/useAuth'
 import { ImmeubleFormDrawer } from './ImmeubleFormDrawer'
@@ -56,6 +56,7 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [typeFilter, setTypeFilter] = useState<'all' | 'residentiel' | 'commercial' | 'terrain' | 'autre'>('all')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 25
 
@@ -90,7 +91,7 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
 
   useEffect(() => {
     setPage(1)
-  }, [search])
+  }, [search, typeFilter])
 
   async function loadDossierCreationData() {
     const [{ data: n }, { data: c }, { data: d }] = await Promise.all([
@@ -161,13 +162,15 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
   }
 
   const query = search.trim().toLowerCase()
-  const filtered = query
+  const searched = query
     ? immeubles.filter((i) =>
         immeubleDisplayName(i).toLowerCase().includes(query) ||
         (i.references_cadastrales ?? '').toLowerCase().includes(query) ||
         (i.ville ?? '').toLowerCase().includes(query)
       )
     : immeubles
+
+  const filtered = typeFilter === 'all' ? searched : searched.filter((i) => typeBienGroup(i.type_bien) === typeFilter)
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
@@ -219,6 +222,20 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
           <p style={subtitle}>Retrouvez et créez les biens de l'étude.</p>
         </div>
         <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Nouvel immeuble</Button>
+      </div>
+
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <FilterTabs
+          options={[
+            { value: 'all', label: 'Tous' },
+            { value: 'residentiel', label: 'Résidentiel' },
+            { value: 'commercial', label: 'Commercial / professionnel' },
+            { value: 'terrain', label: 'Terrains' },
+            { value: 'autre', label: 'Autres' },
+          ]}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
       </div>
 
       <div style={{ marginBottom: 'var(--space-4)', maxWidth: '320px' }}>
