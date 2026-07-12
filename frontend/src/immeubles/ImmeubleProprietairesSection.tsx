@@ -32,6 +32,10 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombreParts
   const [editingPartsTotal, setEditingPartsTotal] = useState(false)
   const [partsTotalValue, setPartsTotalValue] = useState('')
   const [savingPartsTotal, setSavingPartsTotal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editQuotePart, setEditQuotePart] = useState('')
+  const [editNombreParts, setEditNombreParts] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   function handleStartEditPartsTotal() {
     setPartsTotalValue(nombrePartsTotal != null ? String(nombrePartsTotal) : '')
@@ -101,6 +105,55 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombreParts
   const totalQuotePart = proprietaires.reduce((sum, p) => sum + (p.quote_part ?? 0), 0)
   const totalExceeded = totalQuotePart > 100 + EPSILON
 
+  function displayNombreParts(p: ImmeubleProprietaire): number | null {
+    if (p.nombre_parts != null) return p.nombre_parts
+    if (p.quote_part != null && nombrePartsTotal) return Math.round((p.quote_part / 100) * nombrePartsTotal)
+    return null
+  }
+
+  function handleStartEdit(p: ImmeubleProprietaire) {
+    setEditingId(p.id)
+    setEditQuotePart(p.quote_part != null ? String(p.quote_part) : '')
+    setEditNombreParts(p.nombre_parts != null ? String(p.nombre_parts) : (displayNombreParts(p) != null ? String(displayNombreParts(p)) : ''))
+  }
+
+  function handleEditQuotePartChange(value: string) {
+    setEditQuotePart(value)
+    if (nombrePartsTotal && value.trim()) {
+      setEditNombreParts(String(Math.round((Number(value) / 100) * nombrePartsTotal)))
+    } else if (!value.trim()) {
+      setEditNombreParts('')
+    }
+  }
+
+  function handleEditNombrePartsChange(value: string) {
+    setEditNombreParts(value)
+    if (nombrePartsTotal && value.trim()) {
+      setEditQuotePart((Number(value) / nombrePartsTotal * 100).toFixed(2).replace(/\.?0+$/, ''))
+    } else if (!value.trim()) {
+      setEditQuotePart('')
+    }
+  }
+
+  async function handleSaveEdit(proprietaire: ImmeubleProprietaire) {
+    const newQuotePart = editQuotePart.trim() ? Number(editQuotePart) : null
+    const otherTotal = totalQuotePart - (proprietaire.quote_part ?? 0)
+    if (newQuotePart != null && otherTotal + newQuotePart > 100 + EPSILON) {
+      setError(`Cette quote-part porterait le total à ${(otherTotal + newQuotePart).toFixed(2)}%, au-delà de 100%. Ajustez la répartition.`)
+      return
+    }
+    setSavingEdit(true)
+    setError(null)
+    const { error } = await supabase.from('immeuble_proprietaires').update({
+      quote_part: newQuotePart,
+      nombre_parts: editNombreParts.trim() ? Number(editNombreParts) : null,
+    }).eq('id', proprietaire.id)
+    setSavingEdit(false)
+    if (error) { setError('Erreur lors de la mise à jour du propriétaire : ' + error.message); return }
+    setEditingId(null)
+    loadProprietaires()
+  }
+
   async function handleRemove(proprietaire: ImmeubleProprietaire) {
     setRemovingId(proprietaire.id)
     const { error } = await supabase.from('immeuble_proprietaires').delete().eq('id', proprietaire.id)
@@ -165,20 +218,49 @@ export function ImmeubleProprietairesSection({ tenantId, immeubleId, nombreParts
           {proprietaires.map((p) => (
             <div
               key={p.id}
-              style={{ ...row, cursor: p.personne && onSelectPersonne ? 'pointer' : 'default' }}
-              onClick={() => { if (p.personne && onSelectPersonne) onSelectPersonne(p.personne.id) }}
+              style={{ ...row, cursor: !editingId && p.personne && onSelectPersonne ? 'pointer' : 'default' }}
+              onClick={() => { if (!editingId && p.personne && onSelectPersonne) onSelectPersonne(p.personne.id) }}
             >
-              <div style={{ minWidth: 0 }}>
-                <span style={name}>{proprietaireDisplayName(p)}</span>
-                {p.quote_part != null && (
-                  <span style={quotePart}>
-                    {p.quote_part}%{p.nombre_parts != null && ` (${p.nombre_parts} parts)`}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === p.id} onClick={() => setRemoveTarget(p)} />
-              </div>
+              {editingId === p.id ? (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-3)', width: '100%' }} onClick={(e) => e.stopPropagation()}>
+                  <span style={{ ...name, flex: 1, minWidth: 0 }}>{proprietaireDisplayName(p)}</span>
+                  <div style={{ width: '120px' }}>
+                    <NumberInput
+                      label="Quote-part (%)"
+                      value={editQuotePart}
+                      onChange={(e) => handleEditQuotePartChange(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ width: '120px' }}>
+                    <NumberInput
+                      label="Nombre de parts"
+                      placeholder={nombrePartsTotal ? `sur ${nombrePartsTotal}` : 'ex. 50'}
+                      disabled={!nombrePartsTotal}
+                      value={editNombreParts}
+                      onChange={(e) => handleEditNombrePartsChange(e.target.value)}
+                    />
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>Annuler</Button>
+                  <Button variant="primary" size="sm" disabled={savingEdit} onClick={() => handleSaveEdit(p)}>
+                    {savingEdit ? '…' : 'Enregistrer'}
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ minWidth: 0 }}>
+                    <span style={name}>{proprietaireDisplayName(p)}</span>
+                    {p.quote_part != null && (
+                      <span style={quotePart}>
+                        {p.quote_part}%{displayNombreParts(p) != null && ` (${displayNombreParts(p)} parts)`}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <EditPenButton label="Modifier" onClick={() => handleStartEdit(p)} />
+                    <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === p.id} onClick={() => setRemoveTarget(p)} />
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
