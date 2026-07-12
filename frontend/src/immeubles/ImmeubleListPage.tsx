@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, HoverIconButton, Input, Table, Modal, Tooltip, folderPlusIcon, type TableColumn } from '../design-system'
+import { Button, HoverIconButton, Input, Table, Modal, Tooltip, Pagination, folderPlusIcon, type TableColumn } from '../design-system'
+import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
 import type { Dossier, Immeuble, ImmeubleProprietaire, Utilisateur } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
@@ -55,6 +56,8 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 25
 
   async function loadImmeubles() {
     setLoading(true)
@@ -84,6 +87,10 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
     loadImmeubles()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search])
 
   async function loadDossierCreationData() {
     const [{ data: n }, { data: c }, { data: d }] = await Promise.all([
@@ -162,6 +169,10 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
       )
     : immeubles
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   const columns: TableColumn<Immeuble>[] = [
     { key: 'designation', label: 'Désignation', width: '22%', render: (_v, row) => immeubleDisplayName(row) },
     { key: 'type_bien', label: 'Type', width: '13%', render: (v) => typeBienLabel(v as string | null) },
@@ -224,10 +235,19 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
 
       <Table
         columns={columns}
-        rows={filtered}
+        rows={paged}
         loading={loading}
         onRowClick={onSelect}
         emptyLabel={query ? 'Aucun immeuble ne correspond à cette recherche.' : 'Aucun immeuble pour le moment.'}
+        cardBreakpoint={WIDE_TABLE_CARD_QUERY}
+      />
+
+      <Pagination
+        page={currentPage}
+        pageCount={pageCount}
+        totalItems={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
       />
 
       <ImmeubleFormDrawer

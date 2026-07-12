@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, Input, Table, Tooltip, type TableColumn } from '../design-system'
+import { Button, Input, Table, Tooltip, FilterTabs, Pagination, type TableColumn } from '../design-system'
+import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
 import { Badge } from '../design-system/Badge'
 import { Modal } from '../design-system/Modal'
 import type { Comparant, Dossier } from '../types/database'
@@ -51,6 +52,9 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<DossierRow | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [typeFilter, setTypeFilter] = useState<'all' | 'donation' | 'succession'>('all')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 25
 
   async function loadDossiers() {
     setLoading(true)
@@ -96,6 +100,10 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
 
+  useEffect(() => {
+    setPage(1)
+  }, [search, typeFilter])
+
   async function handleCreate(values: DossierFormValues) {
     setSaving(true)
     const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === values.type_acte)?.branche ?? 'famille'
@@ -131,7 +139,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   }
 
   const query = search.trim().toLowerCase()
-  const filtered = query
+  const searched = query
     ? dossiers.filter((d) => {
         const nom = (d.nom || suggestDossierNom(d.type_acte, d.comparants ?? []) || acteTypeLabel(d.type_acte)).toLowerCase()
         const noms = (d.comparants ?? []).filter((c) => c.personne).map((c) => personneDisplayName(c.personne!).toLowerCase())
@@ -143,13 +151,19 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       })
     : dossiers
 
+  const filtered = typeFilter === 'all' ? searched : searched.filter((d) => d.type_acte === typeFilter)
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
   const columns: TableColumn<DossierRow>[] = [
     { key: 'numero', label: 'Numéro', mono: true, sortable: true, width: '11%' },
     {
       key: 'nom', label: 'Nom', width: '22%',
       render: (v, row) => {
         const nom = (v as string | null) || suggestDossierNom(row.type_acte, row.comparants ?? []) || acteTypeLabel(row.type_acte)
-        return <span title={nom} style={truncateCell(220)}>{nom}</span>
+        return <span title={nom} style={truncateCell()}>{nom}</span>
       },
     },
     { key: 'type_acte', label: 'Type', sortable: true, width: '11%', render: (v) => acteTypeLabel(v as string) },
@@ -158,12 +172,12 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       render: (_v, row) => {
         const noms = (row.comparants ?? []).filter((c) => c.personne).map((c) => personneDisplayName(c.personne!))
         const label = noms.length ? noms.join(', ') : '—'
-        return <span title={label} style={truncateCellSmall(200)}>{label}</span>
+        return <span title={label} style={truncateCellSmall()}>{label}</span>
       },
     },
     {
       key: 'clerc_attitre_id', label: 'Géré par', width: '14%',
-      render: (v) => <span style={truncateCellSmall(140)}>{utilisateurLabel(utilisateursById[v as string])}</span>,
+      render: (v) => <span style={truncateCellSmall()}>{utilisateurLabel(utilisateursById[v as string])}</span>,
     },
     {
       key: 'statut', label: 'Statut', width: '10%',
@@ -200,6 +214,18 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
         <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Nouveau dossier</Button>
       </div>
 
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <FilterTabs
+          options={[
+            { value: 'all', label: 'Tous' },
+            { value: 'donation', label: 'Donations' },
+            { value: 'succession', label: 'Successions' },
+          ]}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
+      </div>
+
       <div style={{ marginBottom: 'var(--space-4)', maxWidth: '320px' }}>
         <Input placeholder="Rechercher par numéro, nom ou personne…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
@@ -214,11 +240,20 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
 
       <Table
         columns={columns}
-        rows={filtered}
+        rows={paged}
         loading={loading}
         onRowClick={onSelect}
         emptyLabel={query ? 'Aucun dossier ne correspond à cette recherche.' : 'Aucun dossier pour le moment.'}
         defaultSort={{ key: 'created_at', dir: 'desc' }}
+        cardBreakpoint={WIDE_TABLE_CARD_QUERY}
+      />
+
+      <Pagination
+        page={currentPage}
+        pageCount={pageCount}
+        totalItems={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
       />
 
       <DossierFormDrawer
@@ -253,19 +288,22 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   )
 }
 
-function truncateCell(widthPx: number): CSSProperties {
+// Fills whatever width the column/card gives it and only ellipsizes when that
+// space actually runs out, instead of truncating at a fixed pixel width
+// regardless of how much room is available (e.g. wide card view on mobile).
+function truncateCell(): CSSProperties {
   return {
     display: 'block',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    width: `${widthPx}px`,
+    maxWidth: '100%',
   }
 }
 
-function truncateCellSmall(widthPx: number): CSSProperties {
+function truncateCellSmall(): CSSProperties {
   return {
-    ...truncateCell(widthPx),
+    ...truncateCell(),
     fontSize: 'var(--text-xs)',
     color: 'var(--text-muted)',
   }

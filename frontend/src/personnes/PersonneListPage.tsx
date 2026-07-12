@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import { Button, HoverIconButton, Input, Table, Modal, Tooltip, folderPlusIcon, type TableColumn } from '../design-system'
+import { Button, HoverIconButton, Input, Table, Modal, Tooltip, FilterTabs, Pagination, folderPlusIcon, type TableColumn } from '../design-system'
+import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
 import type { Dossier, Personne, Utilisateur } from '../types/database'
 import { PERSONNE_TYPE_OPTIONS } from '../constants/personneTypes'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
@@ -48,6 +49,9 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
   const [notaires, setNotaires] = useState<Utilisateur[]>([])
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [typeFilter, setTypeFilter] = useState<'all' | 'physique' | 'morale' | 'tiers_partenaire'>('all')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 25
 
   async function loadPersonnes() {
     setLoading(true)
@@ -67,6 +71,10 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
     loadPersonnes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, typeFilter])
 
   async function loadDossierCreationData() {
     const [{ data: n }, { data: c }, { data: d }] = await Promise.all([
@@ -138,12 +146,18 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
   }
 
   const query = search.trim().toLowerCase()
-  const filtered = query
+  const searched = query
     ? personnes.filter((p) =>
         personneDisplayName(p).toLowerCase().includes(query) ||
         (p.email ?? '').toLowerCase().includes(query)
       )
     : personnes
+
+  const filtered = typeFilter === 'all' ? searched : searched.filter((p) => p.type === typeFilter)
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const columns: TableColumn<Personne>[] = [
     { key: 'nom', label: 'Nom', width: '35%', render: (_v, row) => personneDisplayName(row) },
@@ -182,6 +196,19 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
         <Button variant="primary" size="sm" onClick={() => setDrawerOpen(true)}>+ Nouvelle personne</Button>
       </div>
 
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <FilterTabs
+          options={[
+            { value: 'all', label: 'Tous' },
+            { value: 'physique', label: 'Personnes physiques' },
+            { value: 'morale', label: 'Personnes morales' },
+            { value: 'tiers_partenaire', label: 'Tiers / partenaires' },
+          ]}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
+      </div>
+
       <div style={{ marginBottom: 'var(--space-4)', maxWidth: '320px' }}>
         <Input placeholder="Rechercher par nom ou email…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
@@ -196,10 +223,19 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
 
       <Table
         columns={columns}
-        rows={filtered}
+        rows={paged}
         loading={loading}
         onRowClick={onSelect}
         emptyLabel={query ? 'Aucune personne ne correspond à cette recherche.' : 'Aucune personne pour le moment.'}
+        cardBreakpoint={WIDE_TABLE_CARD_QUERY}
+      />
+
+      <Pagination
+        page={currentPage}
+        pageCount={pageCount}
+        totalItems={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
       />
 
       <PersonneFormDrawer
