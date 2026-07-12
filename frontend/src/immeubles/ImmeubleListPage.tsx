@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, HoverIconButton, Input, Table, Modal, Tooltip, Pagination, FilterTabs, folderPlusIcon, type TableColumn } from '../design-system'
 import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
+import { TruncatedTooltip } from '../design-system/TruncatedTooltip'
 import type { Dossier, Immeuble, ImmeubleProprietaire, Utilisateur } from '../types/database'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel, typeBienGroup } from '../constants/typeBien'
@@ -177,14 +178,15 @@ export function ImmeubleListPage({ tenantId, onSelect, onSelectDossier }: Immeub
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const columns: TableColumn<Immeuble>[] = [
-    { key: 'designation', label: 'Désignation', width: '22%', render: (_v, row) => immeubleDisplayName(row) },
-    { key: 'type_bien', label: 'Type', width: '13%', render: (v) => typeBienLabel(v as string | null) },
+    { key: 'designation', label: 'Désignation', width: '22%', render: (_v, row) => <TruncatedTooltip text={immeubleDisplayName(row)} /> },
+    { key: 'type_bien', label: 'Type', width: '13%', render: (v) => <TruncatedTooltip text={typeBienLabel(v as string | null)} /> },
     { key: 'ville', label: 'Ville', width: '13%' },
     {
       key: 'proprietaires', label: 'Propriétaire(s)', width: '20%',
       render: (_v, row) => {
         const proprietaires = proprietairesByImmeuble[row.id] ?? []
-        return proprietaires.length > 0 ? proprietaires.map(proprietaireDisplayName).join(', ') : '—'
+        const label = proprietaires.length > 0 ? proprietaires.map(proprietaireDisplayName).join(', ') : '—'
+        return <TruncatedTooltip text={label} />
       },
     },
     {

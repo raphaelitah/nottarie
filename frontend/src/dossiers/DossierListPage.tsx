@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, Input, Table, Tooltip, FilterTabs, Pagination, type TableColumn } from '../design-system'
 import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
+import { TruncatedTooltip } from '../design-system/TruncatedTooltip'
 import { Badge } from '../design-system/Badge'
 import { Modal } from '../design-system/Modal'
 import type { Comparant, Dossier } from '../types/database'
@@ -172,7 +173,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       render: (_v, row) => {
         const noms = (row.comparants ?? []).filter((c) => c.personne).map((c) => personneDisplayName(c.personne!))
         const label = noms.length ? noms.join(', ') : '—'
-        return <span title={label} style={truncateCellSmall()}>{label}</span>
+        return <TruncatedTooltip text={label} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }} />
       },
     },
     {
@@ -184,11 +185,11 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       render: (v) => <Badge status={statutBadgeStatus(v as string)} label={dossierStatutLabel(v as string)} />,
     },
     {
-      key: 'created_at', label: 'Créé le', width: '10%', sortable: true,
+      key: 'created_at', label: 'Créé le', width: '8%', sortable: true,
       render: (v) => new Date(v as string).toLocaleDateString('fr-FR'),
     },
     ...(isAdmin ? [{
-      key: 'actions', label: '', width: '4%', align: 'right' as const,
+      key: 'actions', label: '', width: '6%', align: 'right' as const,
       render: (_: unknown, row: DossierRow) => (
         <Tooltip label="Supprimer le dossier" align="right">
           <button

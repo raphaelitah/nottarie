@@ -22,7 +22,7 @@ export function TruncatedTooltip({ text, style, align = 'left' }: TruncatedToolt
   }, [text])
 
   return (
-    <Tooltip label={text} disabled={!truncated} align={align}>
+    <Tooltip label={text} disabled={!truncated} align={align} fullWidth>
       <div ref={wrapRef} style={{ ...truncateStyle, ...style }}>{text}</div>
     </Tooltip>
   )
@@ -30,5 +30,5 @@ export function TruncatedTooltip({ text, style, align = 'left' }: TruncatedToolt
 
 const truncateStyle: CSSProperties = {
   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  flex: 1, minWidth: 0, width: '100%',
+  minWidth: 0, width: '100%',
 }

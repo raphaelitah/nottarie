@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, HoverIconButton, Input, Table, Modal, Tooltip, FilterTabs, Pagination, folderPlusIcon, type TableColumn } from '../design-system'
 import { WIDE_TABLE_CARD_QUERY } from '../design-system/useMediaQuery'
+import { TruncatedTooltip } from '../design-system/TruncatedTooltip'
 import type { Dossier, Personne, Utilisateur } from '../types/database'
 import { PERSONNE_TYPE_OPTIONS } from '../constants/personneTypes'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
@@ -160,8 +161,8 @@ export function PersonneListPage({ tenantId, onSelect, onSelectDossier }: Person
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const columns: TableColumn<Personne>[] = [
-    { key: 'nom', label: 'Nom', width: '35%', render: (_v, row) => personneDisplayName(row) },
-    { key: 'type', label: 'Type', width: '20%', render: (v) => personneTypeLabel(v as string) },
+    { key: 'nom', label: 'Nom', width: '30%', render: (_v, row) => <TruncatedTooltip text={personneDisplayName(row)} /> },
+    { key: 'type', label: 'Type', width: '15%', render: (v) => <TruncatedTooltip text={personneTypeLabel(v as string)} /> },
     { key: 'email', label: 'Email', width: '25%' },
     { key: 'telephone', label: 'Téléphone', width: '20%' },
     {

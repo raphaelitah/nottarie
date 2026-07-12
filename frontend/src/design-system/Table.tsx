@@ -21,6 +21,10 @@ interface TableProps<T extends { id: string | number }> {
   loading?: boolean
   emptyLabel?: string
   defaultSort?: { key: string; dir: 'asc' | 'desc' }
+  /** Media query at which to switch from the table layout to stacked cards.
+   *  Defaults to NAV_QUERY (768px); pass a wider query for tables with many
+   *  columns that would otherwise force horizontal scrolling earlier. */
+  cardBreakpoint?: string
 }
 
 export function Table<T extends { id: string | number }>({
@@ -33,8 +37,9 @@ export function Table<T extends { id: string | number }>({
   loading = false,
   emptyLabel = 'Aucun résultat',
   defaultSort,
+  cardBreakpoint = NAV_QUERY,
 }: TableProps<T>) {
-  const cardView = useMediaQuery(NAV_QUERY)
+  const cardView = useMediaQuery(cardBreakpoint)
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(defaultSort ?? null)
 
   const handleSort = (col: TableColumn<T>) => {
@@ -220,7 +225,7 @@ export function Table<T extends { id: string | number }>({
       boxShadow: '0 1px 3px rgba(30,45,69,.06)',
     }}>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <thead>
             <tr>
               {selectable && (
@@ -299,7 +304,7 @@ export function Table<T extends { id: string | number }>({
                     )}
                     {columns.map((col) => (
                       <td key={col.key} style={tdStyle(col)}>
-                        {cellValue(col, row)}
+                        {col.render ? cellValue(col, row) : <span style={defaultCellTruncateStyle}>{cellValue(col, row)}</span>}
                       </td>
                     ))}
                   </tr>
@@ -311,6 +316,18 @@ export function Table<T extends { id: string | number }>({
       </div>
     </div>
   )
+}
+
+// Columns without a custom `render` show a raw field value — clamp it to the
+// column's fixed width by default so long values can't bleed into the next
+// cell. Columns with a `render` are trusted to manage their own overflow
+// (e.g. action icons/tooltips that must not be clipped).
+const defaultCellTruncateStyle: CSSProperties = {
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  width: '100%',
 }
 
 function cardStyle(selected: boolean, clickable = false): CSSProperties {

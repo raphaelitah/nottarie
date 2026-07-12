@@ -11,6 +11,7 @@ import type { EventClickArg, EventInput, DateSelectArg, EventMountArg } from '@f
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/useAuth'
 import { Button } from '../design-system'
+import { NAV_QUERY, STACK_QUERY, useMediaQuery } from '../design-system/useMediaQuery'
 import type { Dossier, Evenement, EvenementCategorie, EvenementParticipantStatut, Utilisateur } from '../types/database'
 import { useAgendaEvents } from './useAgendaEvents'
 import { EventFormDrawer, type EventFormResult } from './EventFormDrawer'
@@ -123,6 +124,9 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
   const { memberships } = useAuth()
   const membership = memberships.find((m) => m.tenant_id === tenantId) ?? null
   const isAdminOrNotaire = !!membership && (membership.roles.includes('administrateur') || membership.roles.includes('notaire'))
+
+  const isMobile = useMediaQuery(NAV_QUERY)
+  const isTablet = useMediaQuery(STACK_QUERY)
 
   const { events, loading, error, reload } = useAgendaEvents(tenantId)
   const [categories, setCategories] = useState<EvenementCategorie[]>([])
@@ -468,15 +472,22 @@ export function AgendaPage({ tenantId, onSelectDossier }: AgendaPageProps) {
 
       {(error || formError) && <div style={errorBanner}>{error || formError}</div>}
 
-      <div style={{ background: 'var(--surface-base)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)' }}>
+      <div
+        className={isMobile ? 'agenda-calendar agenda-calendar--mobile' : isTablet ? 'agenda-calendar agenda-calendar--tablet' : 'agenda-calendar'}
+        style={{ background: 'var(--surface-base)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)', padding: isMobile ? 'var(--space-3)' : 'var(--space-4)' }}
+      >
         {loading ? (
           <div style={{ padding: 'var(--space-8)', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Chargement…</div>
         ) : (
           <FullCalendar
-            key={calendarKey}
+            key={`${calendarKey}-${isMobile ? 'mobile' : 'desktop'}`}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, rrulePlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth timeGridWeek timeGridDay listWeek' }}
+            initialView={isMobile ? 'listWeek' : 'dayGridMonth'}
+            headerToolbar={
+              isMobile
+                ? { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listWeek' }
+                : { left: 'prev,next today', center: 'title', right: 'dayGridMonth timeGridWeek timeGridDay listWeek' }
+            }
             locale={frLocale}
             firstDay={1}
             height="auto"

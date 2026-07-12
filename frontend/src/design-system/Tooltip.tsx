@@ -6,11 +6,15 @@ interface TooltipProps {
   disabled?: boolean
   align?: 'center' | 'left' | 'right'
   side?: 'top' | 'bottom'
+  /** Stretch the wrapper to the parent's width instead of shrinking to
+   *  content — needed when wrapping a truncated block (e.g. a table cell)
+   *  so its own width:100% resolves against something meaningful. */
+  fullWidth?: boolean
 }
 
 const VIEWPORT_MARGIN = 8
 
-export function Tooltip({ label, children, disabled, align = 'center', side = 'top' }: TooltipProps) {
+export function Tooltip({ label, children, disabled, align = 'center', side = 'top', fullWidth }: TooltipProps) {
   const [hover, setHover] = useState(false)
   const [shift, setShift] = useState(0)
   const bubbleRef = useRef<HTMLSpanElement>(null)
@@ -36,7 +40,12 @@ export function Tooltip({ label, children, disabled, align = 'center', side = 't
 
   return (
     <span
-      style={{ position: 'relative', display: 'inline-flex' }}
+      style={{
+        position: 'relative',
+        display: fullWidth ? 'block' : 'inline-flex',
+        width: fullWidth ? '100%' : undefined,
+        minWidth: fullWidth ? 0 : undefined,
+      }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
