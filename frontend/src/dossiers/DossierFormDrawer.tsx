@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Drawer, Button, Input, Select } from '../design-system'
 import { ACTE_TYPE_OPTIONS } from '../constants/acteTypes'
-import { QUALITE_SUGGESTIONS } from '../constants/personneTypes'
+import { QUALITE_SUGGESTIONS, QUALITES_SUJET } from '../constants/personneTypes'
 import type { Dossier, Immeuble, Personne, Utilisateur } from '../types/database'
 import { utilisateurLabel } from '../utilisateurs/utilisateurLabel'
 import { personneDisplayName } from '../personnes/personneForm'
@@ -44,9 +44,19 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
   const [parentSearch, setParentSearch] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  const isTiersPartenaire = prefillPersonne?.type === 'tiers_partenaire'
+  const qualiteOptions = isTiersPartenaire
+    ? QUALITE_SUGGESTIONS.filter((q) => !QUALITES_SUJET.includes(q.trim().toLowerCase()))
+    : QUALITE_SUGGESTIONS
+
   useEffect(() => {
     if (open) {
-      setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '', comparant_qualite: prefillPersonne ? QUALITE_SUGGESTIONS[0] : '' })
+      const defaultQualite = prefillPersonne
+        ? (prefillPersonne.type === 'tiers_partenaire'
+          ? QUALITE_SUGGESTIONS.filter((q) => !QUALITES_SUJET.includes(q.trim().toLowerCase()))[0]
+          : QUALITE_SUGGESTIONS[0])
+        : ''
+      setValues({ ...EMPTY, clerc_attitre_id: defaultClercId ?? '', comparant_qualite: defaultQualite })
       setLinking(false)
       setParentSearch('')
       setError(null)
@@ -65,6 +75,10 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
     if (!values.clerc_attitre_id) { setError("Le clerc attitré est obligatoire."); return }
     if (linking && !values.dossier_parent_id) { setError("Sélectionnez le dossier auquel lier ce nouveau dossier."); return }
     if (prefillPersonne && !values.comparant_qualite?.trim()) { setError("La qualité de la personne dans ce dossier est obligatoire."); return }
+    if (isTiersPartenaire && QUALITES_SUJET.includes((values.comparant_qualite ?? '').trim().toLowerCase())) {
+      setError('Un tiers/partenaire ne peut pas être défunt ni sujet du dossier : il ne fait que participer.')
+      return
+    }
     setError(null)
     onSave(linking ? values : { ...values, dossier_parent_id: null })
   }
@@ -104,7 +118,7 @@ export function DossierFormDrawer({ open, saving, notaires, clercs, dossiers, de
           <Select
             label="Qualité de cette personne dans le dossier"
             required
-            options={QUALITE_SUGGESTIONS.map((q) => ({ value: q, label: q }))}
+            options={qualiteOptions.map((q) => ({ value: q, label: q }))}
             value={values.comparant_qualite ?? ''}
             onChange={(e) => setValues((v) => ({ ...v, comparant_qualite: e.target.value }))}
           />

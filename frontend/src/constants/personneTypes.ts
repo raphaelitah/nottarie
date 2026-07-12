@@ -40,3 +40,7 @@ export const QUALITE_SUGGESTIONS = [
   'Notaire',
   'Tiers',
 ]
+
+// Qualités réservées aux sujets du dossier (parties prenantes de l'acte) : un tiers/partenaire
+// ne peut pas les porter, il ne fait que participer (ex. géomètre, expert, notaire adverse).
+export const QUALITES_SUJET = ['défunt', 'héritier', 'conjoint survivant', 'donateur', 'donataire']

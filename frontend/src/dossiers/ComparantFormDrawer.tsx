@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Drawer, Button, Input, Select } from '../design-system'
 import type { Personne } from '../types/database'
-import { QUALITE_SUGGESTIONS } from '../constants/personneTypes'
+import { QUALITE_SUGGESTIONS, QUALITES_SUJET } from '../constants/personneTypes'
 import { PersonneFields } from '../personnes/PersonneFields'
 import {
   EMPTY_PERSONNE_FORM,
@@ -63,6 +63,17 @@ export function ComparantFormDrawer({ open, tenantId, personnes, saving, onSave,
     ? personnes.filter((p) => personneDisplayName(p).toLowerCase().includes(query)).slice(0, 8)
     : []
   const selected = personnes.find((p) => p.id === selectedId) ?? null
+  const personneType = mode === 'existante' ? (selected?.type ?? null) : (newPersonne.type || null)
+  const isTiersPartenaire = personneType === 'tiers_partenaire'
+  const availableQualiteOptions = isTiersPartenaire
+    ? qualiteOptions.filter((q) => !QUALITES_SUJET.includes(q.trim().toLowerCase()))
+    : qualiteOptions
+
+  useEffect(() => {
+    if (isTiersPartenaire && QUALITES_SUJET.includes(qualite.trim().toLowerCase())) {
+      setQualite('')
+    }
+  }, [isTiersPartenaire, qualite])
 
   async function handleAddQualite() {
     const libelle = newQualiteLabel.trim()
@@ -82,6 +93,10 @@ export function ComparantFormDrawer({ open, tenantId, personnes, saving, onSave,
 
   function handleSubmit() {
     if (!qualite.trim()) { setError('La qualité est obligatoire.'); return }
+    if (isTiersPartenaire && QUALITES_SUJET.includes(qualite.trim().toLowerCase())) {
+      setError('Un tiers/partenaire ne peut pas être défunt ni sujet du dossier : il ne fait que participer.')
+      return
+    }
     if (mode === 'existante') {
       if (!selectedId) { setError('Sélectionnez une personne.'); return }
       setError(null)
@@ -175,7 +190,7 @@ export function ComparantFormDrawer({ open, tenantId, personnes, saving, onSave,
             label="Qualité"
             required
             options={[
-              ...qualiteOptions.map((q) => ({ value: q, label: q })),
+              ...availableQualiteOptions.map((q) => ({ value: q, label: q })),
               { value: ADD_QUALITE_VALUE, label: '+ Ajouter une qualité…' },
             ]}
             value={qualite}
