@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Badge, Button, EditPenButton, Input, MOBILE_QUERY, Select, STACK_QUERY, useMediaQuery } from '../design-system'
@@ -51,6 +51,7 @@ interface GeneralInfoDraft {
 
 interface DossierDetailPageProps {
   dossier: Dossier
+  focusComparants?: boolean
   onBack: () => void
   onUpdated: (dossier: Dossier) => void
   onOpenComposer: () => void
@@ -61,7 +62,7 @@ interface DossierDetailPageProps {
   onOpenAgenda?: () => void
 }
 
-export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, onEditActe, onOpenRelecture, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossierDetailPageProps) {
+export function DossierDetailPage({ dossier, focusComparants, onBack, onUpdated, onOpenComposer, onEditActe, onOpenRelecture, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossierDetailPageProps) {
   const stack = useMediaQuery(STACK_QUERY)
   const mobile = useMediaQuery(MOBILE_QUERY)
   const { memberships } = useAuth()
@@ -88,11 +89,17 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
   const [clercs, setClercs] = useState<Utilisateur[]>([])
   const [dossierParent, setDossierParent] = useState<Dossier | null>(null)
   const [comparants, setComparants] = useState<Comparant[]>([])
+  const comparantsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.from('comparants').select('*, personne:personnes(*)').eq('dossier_id', dossier.id)
       .then(({ data }) => setComparants(data ?? []))
   }, [dossier.id])
+
+  useEffect(() => {
+    if (focusComparants) comparantsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const suggestedNom = suggestDossierNom(dossier.type_acte, comparants)
 
@@ -313,8 +320,8 @@ export function DossierDetailPage({ dossier, onBack, onUpdated, onOpenComposer, 
           </div>
         </div>
 
-        <div style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
-          <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} onSelectPersonne={onSelectPersonne} />
+        <div ref={comparantsRef} style={{ ...grid2(stack), marginTop: 'var(--space-6)' }}>
+          <ComparantsSection tenantId={dossier.tenant_id} dossierId={dossier.id} onSelectPersonne={onSelectPersonne} autoOpenDrawer={focusComparants} onChange={setComparants} />
           <ImmeublesSection tenantId={dossier.tenant_id} dossierId={dossier.id} onSelectImmeuble={onSelectImmeuble} />
         </div>
 

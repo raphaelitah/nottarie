@@ -35,7 +35,7 @@ function statutBadgeStatus(statut: string): 'ongoing' | 'archived' {
 
 interface DossierListPageProps {
   tenantId: string
-  onSelect: (dossier: Dossier) => void
+  onSelect: (dossier: Dossier, opts?: { justCreated?: boolean }) => void
 }
 
 export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
@@ -108,7 +108,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
   async function handleCreate(values: DossierFormValues) {
     setSaving(true)
     const branche = ACTE_TYPE_OPTIONS.find((o) => o.value === values.type_acte)?.branche ?? 'famille'
-    const { error } = await supabase.from('dossiers').insert({
+    const { data, error } = await supabase.from('dossiers').insert({
       tenant_id: tenantId,
       branche,
       type_acte: values.type_acte,
@@ -116,7 +116,7 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
       notaire_id: values.notaire_id,
       clerc_attitre_id: values.clerc_attitre_id,
       dossier_parent_id: values.dossier_parent_id,
-    })
+    }).select().single()
     setSaving(false)
     if (error) {
       setError(error.code === '23505' ? 'Un dossier avec ce numéro existe déjà.' : 'Erreur lors de la création : ' + error.message)
@@ -124,6 +124,9 @@ export function DossierListPage({ tenantId, onSelect }: DossierListPageProps) {
     }
     setDrawerOpen(false)
     loadDossiers()
+    // Skip the name at creation and land straight on the dossier with the
+    // comparant form open — the name gets suggested once someone's added.
+    onSelect(data, { justCreated: true })
   }
 
   async function handleDelete() {

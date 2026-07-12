@@ -12,14 +12,16 @@ interface ComparantsSectionProps {
   tenantId: string
   dossierId: string
   onSelectPersonne?: (id: string) => void
+  autoOpenDrawer?: boolean
+  onChange?: (comparants: Comparant[]) => void
 }
 
-export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: ComparantsSectionProps) {
+export function ComparantsSection({ tenantId, dossierId, onSelectPersonne, autoOpenDrawer, onChange }: ComparantsSectionProps) {
   const [comparants, setComparants] = useState<Comparant[]>([])
   const [personnes, setPersonnes] = useState<Personne[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(!!autoOpenDrawer)
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -36,6 +38,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne }: Com
     if (error) setError('Impossible de charger les comparants : ' + error.message)
     else setError(null)
     setComparants(data ?? [])
+    onChange?.(data ?? [])
     setLoading(false)
   }
 

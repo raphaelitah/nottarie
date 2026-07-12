@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Acte, Dossier } from '../types/database'
 import { DossierListPage } from './DossierListPage'
@@ -18,6 +18,8 @@ interface DossiersPageProps {
 export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onOpenAgenda }: DossiersPageProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const focusComparants = !!(location.state as { focusComparants?: boolean } | null)?.focusComparants
   const [selected, setSelected] = useState<Dossier | null>(null)
   const [composerActe, setComposerActe] = useState<Acte | 'new' | null>(null)
   const [relectureActe, setRelectureActe] = useState<Acte | null>(null)
@@ -60,6 +62,7 @@ export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onO
     ? (
       <DossierDetailPage
         dossier={selected}
+        focusComparants={focusComparants}
         onBack={() => navigate('/dossiers')}
         onUpdated={setSelected}
         onOpenComposer={() => setComposerActe('new')}
@@ -70,5 +73,10 @@ export function DossiersPage({ tenantId, onSelectPersonne, onSelectImmeuble, onO
         onOpenAgenda={onOpenAgenda}
       />
     )
-    : <DossierListPage tenantId={tenantId} onSelect={(d) => navigate(`/dossiers/${d.id}`)} />
+    : (
+      <DossierListPage
+        tenantId={tenantId}
+        onSelect={(d, opts) => navigate(`/dossiers/${d.id}`, opts?.justCreated ? { state: { focusComparants: true } } : undefined)}
+      />
+    )
 }
