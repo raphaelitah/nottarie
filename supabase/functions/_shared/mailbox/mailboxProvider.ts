@@ -1,9 +1,11 @@
 import type {
   CreateCalendarEventInput,
   CreateCalendarEventResult,
+  DeleteCalendarEventInput,
   MailboxConnectionSummary,
   SendMailInput,
   SendMailResult,
+  UpdateCalendarEventInput,
 } from './types.ts'
 
 /**
@@ -35,6 +37,12 @@ export interface MailboxProvider {
 
   /** Create a calendar event with attendees; the provider sends the invite email itself. */
   createCalendarEvent(input: CreateCalendarEventInput): Promise<CreateCalendarEventResult>
+
+  /** Update an existing calendar event (used to keep a synced Outlook event in step with edits in Nottarie). */
+  updateCalendarEvent(input: UpdateCalendarEventInput): Promise<void>
+
+  /** Delete a calendar event previously created via createCalendarEvent. */
+  deleteCalendarEvent(input: DeleteCalendarEventInput): Promise<void>
 
   /** Delete the stored tokens (Vault secrets) and soft-revoke the connection row. */
   disconnect(params: { tenantId: string; utilisateurId: string }): Promise<void>

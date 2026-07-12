@@ -4,8 +4,18 @@ import type { MailboxProvider } from './mailboxProvider.ts'
 import type { MailboxProviderName } from './types.ts'
 
 export type { MailboxProvider } from './mailboxProvider.ts'
-export type { MailboxConnectionSummary, MailboxProviderName, SendMailInput, SendMailResult } from './types.ts'
-export { NoMailboxConnectedError } from './outlookMailboxProvider.ts'
+export type {
+  CreateCalendarEventInput,
+  CreateCalendarEventResult,
+  DeleteCalendarEventInput,
+  GraphRecurrence,
+  MailboxConnectionSummary,
+  MailboxProviderName,
+  SendMailInput,
+  SendMailResult,
+  UpdateCalendarEventInput,
+} from './types.ts'
+export { GraphNotFoundError, NoMailboxConnectedError } from './outlookMailboxProvider.ts'
 
 /**
  * Single swap point: Outlook (Microsoft Graph) is the only implementation

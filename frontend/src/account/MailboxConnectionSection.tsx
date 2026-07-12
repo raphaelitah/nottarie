@@ -90,7 +90,7 @@ export function MailboxConnectionSection({ tenantId, utilisateurId }: { tenantId
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: connection.status === 'active' ? 'var(--space-4)' : 0 }}>
             {connection.status === 'error' && (
               <Button variant="primary" size="sm" onClick={handleConnect} disabled={connecting}>
                 {connecting ? 'Connexion…' : 'Reconnecter'}
@@ -100,6 +100,13 @@ export function MailboxConnectionSection({ tenantId, utilisateurId }: { tenantId
               Déconnecter
             </Button>
           </div>
+          {connection.status === 'active' && (
+            <p style={{ ...mutedText, margin: 0 }}>
+              Vos événements d'agenda sont synchronisés vers votre calendrier Outlook. Les événements
+              d'étude y apparaissent avec la catégorie « Nottarie - Étude » — attribuez-lui une couleur
+              dans Outlook (Paramètres → Catégories) pour les distinguer facilement.
+            </p>
+          )}
         </>
       )}
 

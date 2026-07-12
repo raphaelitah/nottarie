@@ -3,9 +3,11 @@ import type { MailboxProvider } from './mailboxProvider.ts'
 import type {
   CreateCalendarEventInput,
   CreateCalendarEventResult,
+  DeleteCalendarEventInput,
   MailboxConnectionSummary,
   SendMailInput,
   SendMailResult,
+  UpdateCalendarEventInput,
 } from './types.ts'
 
 const AUTHORITY = Deno.env.get('MAILBOX_OUTLOOK_AUTHORITY') ?? 'https://login.microsoftonline.com/common'
@@ -154,9 +156,55 @@ export class OutlookMailboxProvider implements MailboxProvider {
           start: { dateTime: input.debut, timeZone: 'Europe/Paris' },
           end: { dateTime: input.fin, timeZone: 'Europe/Paris' },
           attendees: input.attendees.map((address) => ({ emailAddress: { address }, type: 'required' })),
+          categories: input.category ? [input.category] : undefined,
+          recurrence: input.recurrence,
         },
       })
       return { eventId: event.id as string }
+    } catch (err) {
+      if (err instanceof GraphAuthError) {
+        await this.admin
+          .from('mailbox_connections')
+          .update({ status: 'error', last_error: err.message })
+          .eq('id', connection.id)
+      }
+      throw err
+    }
+  }
+
+  async updateCalendarEvent(input: UpdateCalendarEventInput): Promise<void> {
+    const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
+    const accessToken = await this.ensureFreshAccessToken(connection)
+
+    try {
+      await this.graphFetch(accessToken, `/me/events/${input.eventId}`, {
+        method: 'PATCH',
+        body: {
+          subject: input.titre,
+          location: input.lieu ? { displayName: input.lieu } : undefined,
+          start: { dateTime: input.debut, timeZone: 'Europe/Paris' },
+          end: { dateTime: input.fin, timeZone: 'Europe/Paris' },
+          categories: input.category ? [input.category] : undefined,
+          recurrence: input.recurrence,
+        },
+      })
+    } catch (err) {
+      if (err instanceof GraphAuthError) {
+        await this.admin
+          .from('mailbox_connections')
+          .update({ status: 'error', last_error: err.message })
+          .eq('id', connection.id)
+      }
+      throw err
+    }
+  }
+
+  async deleteCalendarEvent(input: DeleteCalendarEventInput): Promise<void> {
+    const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
+    const accessToken = await this.ensureFreshAccessToken(connection)
+
+    try {
+      await this.graphFetch(accessToken, `/me/events/${input.eventId}`, { method: 'DELETE', allow404: true })
     } catch (err) {
       if (err instanceof GraphAuthError) {
         await this.admin
@@ -261,7 +309,11 @@ export class OutlookMailboxProvider implements MailboxProvider {
     return await res.json()
   }
 
-  private async graphFetch(accessToken: string, path: string, init?: { method?: string; body?: unknown }): Promise<any> {
+  private async graphFetch(
+    accessToken: string,
+    path: string,
+    init?: { method?: string; body?: unknown; allow404?: boolean },
+  ): Promise<any> {
     const res = await fetch(`${GRAPH_BASE}${path}`, {
       method: init?.method ?? 'GET',
       headers: {
@@ -272,6 +324,14 @@ export class OutlookMailboxProvider implements MailboxProvider {
     })
     if (res.status === 401 || res.status === 403) {
       throw new GraphAuthError(`Microsoft Graph a refusé la requête (${res.status}) : ${await res.text()}`)
+    }
+    // The event may already be gone on the Outlook side (user deleted it
+    // there, or a prior sync attempt succeeded but the local row didn't get
+    // updated). The delete flow treats that as success; update lets the
+    // caller catch GraphNotFoundError and recreate instead.
+    if (res.status === 404) {
+      if (init?.allow404) return {}
+      throw new GraphNotFoundError(`Événement introuvable sur Microsoft Graph (404) : ${await res.text()}`)
     }
     if (!res.ok) {
       throw new Error(`Erreur Microsoft Graph (${res.status}) : ${await res.text()}`)
@@ -307,5 +367,7 @@ export class NoMailboxConnectedError extends Error {
     super('no_mailbox_connected')
   }
 }
+
+export class GraphNotFoundError extends Error {}
 
 class GraphAuthError extends Error {}
