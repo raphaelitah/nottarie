@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { Formalite } from '../types/database'
 import { formaliteTypeLabel } from '../constants/formaliteTypes'
 import { formaliteStatutLabel } from '../constants/formaliteStatuts'
+import { TruncatedTooltip } from '../design-system/TruncatedTooltip'
 
 const PENDING_STATUTS = ['a_envoyer', 'envoyee', 'relancee']
 
@@ -65,8 +66,8 @@ export function FormalitesEnAttenteCard({ tenantId, onSelectDossier }: Formalite
               style={row}
             >
               <span style={rowMain}>
-                <span style={rowTitle}>{formaliteTypeLabel(f.type)}</span>
-                <span style={rowMeta}>{f.dossier?.nom || f.dossier?.numero || 'Dossier supprimé'}</span>
+                <TruncatedTooltip text={formaliteTypeLabel(f.type)} style={rowTitle} />
+                <TruncatedTooltip text={f.dossier?.nom || f.dossier?.numero || 'Dossier supprimé'} style={rowMeta} />
               </span>
               <span style={rowStatut}>{formaliteStatutLabel(f.statut)}</span>
             </button>

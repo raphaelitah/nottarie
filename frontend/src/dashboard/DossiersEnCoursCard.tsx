@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Dossier } from '../types/database'
+import type { Comparant, Dossier } from '../types/database'
 import { acteTypeLabel } from '../constants/acteTypes'
+import { TruncatedTooltip } from '../design-system/TruncatedTooltip'
+import { suggestDossierNom } from '../dossiers/dossierNom'
+
+type DossierWithComparants = Dossier & { comparants?: Comparant[] }
 
 interface DossiersEnCoursCardProps {
   tenantId: string
@@ -11,7 +15,7 @@ interface DossiersEnCoursCardProps {
 }
 
 export function DossiersEnCoursCard({ tenantId, onSelectDossier, onViewAll }: DossiersEnCoursCardProps) {
-  const [dossiers, setDossiers] = useState<Dossier[]>([])
+  const [dossiers, setDossiers] = useState<DossierWithComparants[]>([])
   const [count, setCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -21,7 +25,7 @@ export function DossiersEnCoursCard({ tenantId, onSelectDossier, onViewAll }: Do
     Promise.all([
       supabase
         .from('dossiers')
-        .select('*')
+        .select('*, comparants(qualite, personne:personnes(*))')
         .eq('tenant_id', tenantId)
         .eq('statut', 'ouvert')
         .is('archived_at', null)
@@ -56,7 +60,7 @@ export function DossiersEnCoursCard({ tenantId, onSelectDossier, onViewAll }: Do
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {dossiers.map((d) => (
             <button key={d.id} onClick={() => onSelectDossier(d.id)} style={row}>
-              <span style={rowTitle}>{d.nom || acteTypeLabel(d.type_acte)}</span>
+              <TruncatedTooltip text={d.nom || suggestDossierNom(d.type_acte, d.comparants ?? []) || acteTypeLabel(d.type_acte)} style={rowTitle} />
               <span style={rowMeta}>{d.numero ?? '—'}</span>
             </button>
           ))}
@@ -93,7 +97,7 @@ const emptyText: CSSProperties = {
 }
 
 const row: CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)',
+  display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', gap: 'var(--space-2)',
   width: '100%', textAlign: 'left',
   padding: 'var(--space-2)', borderRadius: 'var(--radius-md)',
   border: 'none', background: 'transparent', cursor: 'pointer',
@@ -101,7 +105,8 @@ const row: CSSProperties = {
 
 const rowTitle: CSSProperties = {
   fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: 'var(--n-900)',
-  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  flex: 1, minWidth: 0, width: '100%',
 }
 
 const rowMeta: CSSProperties = {

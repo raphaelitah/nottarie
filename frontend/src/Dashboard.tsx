@@ -327,7 +327,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                     />
                   </div>
                   <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => selectSection('agenda')} />
-                  <div style={{ display: 'flex', gap: 'var(--space-4)', marginTop: 'var(--space-6)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: isMobileNav ? 'column' : 'row', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
                     <DossiersEnCoursCard
                       tenantId={membership.tenant_id}
                       onSelectDossier={goToDossier}
