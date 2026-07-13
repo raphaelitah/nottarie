@@ -24,6 +24,13 @@ const TIMEZONE_OPTIONS = [
   'America/Sao_Paulo', 'Africa/Abidjan', 'Asia/Dubai', 'Asia/Tokyo', 'Australia/Sydney', 'UTC',
 ]
 
+/** Local wall-clock "yyyy-MM-ddTHH:mm" for a datetime-local input — NOT
+ * toISOString(), which is UTC and would shift the displayed time. */
+function toDatetimeLocalString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 function detectBrowserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'
 }
@@ -234,15 +241,23 @@ export function EventFormDrawer({
                 type={allDay ? 'date' : 'datetime-local'}
                 value={allDay ? debut.slice(0, 10) : debut}
                 onChange={(e) => {
-                  const nextDebut = allDay ? `${e.target.value}T00:00` : e.target.value
+                  if (allDay) { setDebut(`${e.target.value}T00:00`); return }
+
+                  const nextDebut = e.target.value
                   setDebut(nextDebut)
+                  // Native datetime-local inputs fire onChange with an empty
+                  // value for every intermediate keystroke while the user is
+                  // still picking (date filled in but not the time yet, etc.)
+                  // — skip those rather than let `new Date('')` (Invalid
+                  // Date) blow up in the arithmetic below.
+                  const start = new Date(nextDebut)
+                  if (Number.isNaN(start.getTime())) return
                   // Default a 30-min duration whenever there's no end yet, or
                   // the existing end no longer makes sense after this change
                   // (before/equal to the new start) — never overwrites an end
                   // the user deliberately set further out.
-                  if (!allDay && (!fin || new Date(fin) <= new Date(nextDebut))) {
-                    const defaultFin = new Date(new Date(nextDebut).getTime() + 30 * 60 * 1000)
-                    setFin(defaultFin.toISOString().slice(0, 16))
+                  if (!fin || new Date(fin) <= start) {
+                    setFin(toDatetimeLocalString(new Date(start.getTime() + 30 * 60 * 1000)))
                   }
                 }}
               />
