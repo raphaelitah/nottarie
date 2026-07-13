@@ -100,9 +100,15 @@ export class OutlookMailboxProvider implements MailboxProvider {
 
   async sendMail(input: SendMailInput): Promise<SendMailResult> {
     const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
-    const accessToken = await this.ensureFreshAccessToken(connection)
 
     try {
+      // ensureFreshAccessToken must be inside this try: a dead refresh
+      // token throws GraphAuthError from here too, and that's exactly the
+      // failure this catch block exists to flag — outside it, the
+      // connection silently stays "active" in the DB forever even once
+      // Microsoft has revoked it (found via a real expired-token case).
+      const accessToken = await this.ensureFreshAccessToken(connection)
+
       // /me/sendMail only needs Mail.Send. The two-step create-then-send
       // alternative (POST /me/messages, then /send) looks appealing because
       // it returns a real message id, but POST /me/messages is a mailbox
@@ -143,9 +149,10 @@ export class OutlookMailboxProvider implements MailboxProvider {
 
   async createCalendarEvent(input: CreateCalendarEventInput): Promise<CreateCalendarEventResult> {
     const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
-    const accessToken = await this.ensureFreshAccessToken(connection)
 
     try {
+      const accessToken = await this.ensureFreshAccessToken(connection)
+
       // Creating an event with attendees makes Graph send the invite email
       // itself (no separate sendMail call needed for the invite).
       const event = await this.graphFetch(accessToken, '/me/events', {
@@ -174,9 +181,9 @@ export class OutlookMailboxProvider implements MailboxProvider {
 
   async updateCalendarEvent(input: UpdateCalendarEventInput): Promise<void> {
     const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
-    const accessToken = await this.ensureFreshAccessToken(connection)
 
     try {
+      const accessToken = await this.ensureFreshAccessToken(connection)
       await this.graphFetch(accessToken, `/me/events/${input.eventId}`, {
         method: 'PATCH',
         body: {
@@ -201,9 +208,9 @@ export class OutlookMailboxProvider implements MailboxProvider {
 
   async deleteCalendarEvent(input: DeleteCalendarEventInput): Promise<void> {
     const connection = await this.loadConnection(input.tenantId, input.utilisateurId)
-    const accessToken = await this.ensureFreshAccessToken(connection)
 
     try {
+      const accessToken = await this.ensureFreshAccessToken(connection)
       await this.graphFetch(accessToken, `/me/events/${input.eventId}`, { method: 'DELETE', allow404: true })
     } catch (err) {
       if (err instanceof GraphAuthError) {
