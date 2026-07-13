@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { DateTime } from 'luxon'
 import { Drawer, Button, Input, Select, Textarea } from '../design-system'
@@ -101,6 +101,11 @@ export function EventFormDrawer({
   const [recurrence, setRecurrence] = useState<RecurrenceOptions>(DEFAULT_RECURRENCE)
   const [dossierIds, setDossierIds] = useState<string[]>([])
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  // Tracks whether "Fin" currently holds a value this component computed
+  // (start+30min) rather than one the user typed themselves — so editing
+  // "Début" keeps following it, but the moment the user touches "Fin"
+  // directly, their choice is never silently overwritten again.
+  const finIsAutoFilled = useRef(true)
   const [error, setError] = useState<string | null>(null)
   const [scopeModalOpen, setScopeModalOpen] = useState(false)
   const [pendingResult, setPendingResult] = useState<EventFormResult | null>(null)
@@ -110,6 +115,10 @@ export function EventFormDrawer({
     setError(null)
     setScopeModalOpen(false)
     setPendingResult(null)
+    // Loading an existing event's own end time is never "auto-fill it for
+    // me"; a brand-new event with no end prefilled starts back in
+    // auto-fill mode (see the Début handler below).
+    finIsAutoFilled.current = !initialEvent && !initialRange?.end
 
     if (initialEvent) {
       // When editing one occurrence of a recurring master, the clicked instance's
@@ -252,11 +261,11 @@ export function EventFormDrawer({
                   // Date) blow up in the arithmetic below.
                   const start = new Date(nextDebut)
                   if (Number.isNaN(start.getTime())) return
-                  // Default a 30-min duration whenever there's no end yet, or
-                  // the existing end no longer makes sense after this change
-                  // (before/equal to the new start) — never overwrites an end
-                  // the user deliberately set further out.
-                  if (!fin || new Date(fin) <= start) {
+                  // Only follow along automatically while "Fin" still holds
+                  // a value this component computed — the moment the user
+                  // edits "Fin" themselves (see its own handler below),
+                  // Début changes stop touching it.
+                  if (finIsAutoFilled.current) {
                     setFin(toDatetimeLocalString(new Date(start.getTime() + 30 * 60 * 1000)))
                   }
                 }}
@@ -267,7 +276,10 @@ export function EventFormDrawer({
                 label="Fin"
                 type={allDay ? 'date' : 'datetime-local'}
                 value={allDay ? fin.slice(0, 10) : fin}
-                onChange={(e) => setFin(allDay ? `${e.target.value}T00:00` : e.target.value)}
+                onChange={(e) => {
+                  if (!allDay) finIsAutoFilled.current = false
+                  setFin(allDay ? `${e.target.value}T00:00` : e.target.value)
+                }}
               />
             </div>
           </div>
