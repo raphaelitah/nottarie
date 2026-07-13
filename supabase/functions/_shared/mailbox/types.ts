@@ -32,6 +32,8 @@ export interface CreateCalendarEventInput {
   lieu: string | null
   debut: string
   fin: string
+  /** Nottarie's `evenements.all_day` flag — maps to Graph's isAllDay, which needs date-only start/end rather than a timed dateTime. */
+  allDay?: boolean
   attendees: string[]
   /** Graph category to tag the event with, e.g. "Nottarie - Étude" for étude-wide events. */
   category?: string
@@ -51,6 +53,7 @@ export interface UpdateCalendarEventInput {
   lieu: string | null
   debut: string
   fin: string
+  allDay?: boolean
   category?: string
   recurrence?: GraphRecurrence
 }

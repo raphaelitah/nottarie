@@ -14,6 +14,7 @@ interface EvenementRow {
   lieu: string | null
   debut: string
   fin: string
+  all_day: boolean
   organisateur_id: string | null
   est_prive: boolean
   rrule: string | null
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
 
     const { data: evenement } = await admin
       .from('evenements')
-      .select('id, tenant_id, titre, lieu, debut, fin, organisateur_id, est_prive, rrule')
+      .select('id, tenant_id, titre, lieu, debut, fin, all_day, organisateur_id, est_prive, rrule')
       .eq('id', evenementId)
       .maybeSingle()
     if (!evenement) return new Response(JSON.stringify({ ok: true, skipped: 'evenement_gone' }))
@@ -132,6 +133,7 @@ async function reconcileEvenement(admin: SupabaseClient, evenement: EvenementRow
             lieu: evenement.lieu,
             debut: evenement.debut,
             fin: evenement.fin,
+            allDay: evenement.all_day,
             category,
             recurrence,
           })
@@ -140,7 +142,7 @@ async function reconcileEvenement(admin: SupabaseClient, evenement: EvenementRow
           if (!(err instanceof GraphNotFoundError)) throw err
           const created = await provider.createCalendarEvent({
             tenantId: evenement.tenant_id, utilisateurId, titre: evenement.titre, lieu: evenement.lieu,
-            debut: evenement.debut, fin: evenement.fin, attendees: [], category, recurrence,
+            debut: evenement.debut, fin: evenement.fin, allDay: evenement.all_day, attendees: [], category, recurrence,
           })
           await admin.from('evenement_outlook_syncs').update({
             outlook_event_id: created.eventId, last_synced_at: new Date().toISOString(), last_error: null,
@@ -149,7 +151,7 @@ async function reconcileEvenement(admin: SupabaseClient, evenement: EvenementRow
       } else {
         const created = await provider.createCalendarEvent({
           tenantId: evenement.tenant_id, utilisateurId, titre: evenement.titre, lieu: evenement.lieu,
-          debut: evenement.debut, fin: evenement.fin, attendees: [], category, recurrence,
+          debut: evenement.debut, fin: evenement.fin, allDay: evenement.all_day, attendees: [], category, recurrence,
         })
         await admin.from('evenement_outlook_syncs').upsert({
           tenant_id: evenement.tenant_id, evenement_id: evenement.id, utilisateur_id: utilisateurId,

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
+import { DateTime } from 'luxon'
 import { Drawer, Button, Input, Select, Textarea } from '../design-system'
 import type { Dossier, Evenement, EvenementCategorie, EvenementDisponibilite, Utilisateur } from '../types/database'
 import { CATEGORY_COLOR_PRESETS } from './agendaColors'
@@ -15,11 +16,34 @@ const DISPONIBILITE_OPTIONS: { value: EvenementDisponibilite; label: string }[] 
   { value: 'indisponible', label: 'Indisponible' },
 ]
 
+// A curated list is far more usable than IANA's full ~400-zone catalogue in
+// a plain <select>; the browser's own detected zone is always added if it
+// isn't already one of these, so no one is stuck picking an approximation.
+const TIMEZONE_OPTIONS = [
+  'Europe/Paris', 'Europe/London', 'America/New_York', 'America/Chicago', 'America/Los_Angeles',
+  'America/Sao_Paulo', 'Africa/Abidjan', 'Asia/Dubai', 'Asia/Tokyo', 'Australia/Sydney', 'UTC',
+]
+
+function detectBrowserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'
+}
+
+/** Absolute UTC instant (ISO) -> the wall-clock datetime-local string as seen in `zone`. */
+function toZonedDatetimeLocal(iso: string, zone: string): string {
+  return DateTime.fromISO(iso, { zone: 'utc' }).setZone(zone).toFormat("yyyy-MM-dd'T'HH:mm")
+}
+
+/** A datetime-local string, interpreted as wall-clock time in `zone` -> absolute UTC instant (ISO). */
+function fromZonedDatetimeLocal(local: string, zone: string): string {
+  return DateTime.fromISO(local, { zone }).toUTC().toISO()!
+}
+
 export interface EventFormResult {
   titre: string
   description: string
   lieu: string
   allDay: boolean
+  timezone: string
   debut: string // ISO
   fin: string | null // ISO
   categorieId: string | null
@@ -44,12 +68,6 @@ interface EventFormDrawerProps {
   onClose: () => void
 }
 
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso)
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 16)
-}
-
 export function EventFormDrawer({
   open,
   saving,
@@ -66,6 +84,7 @@ export function EventFormDrawer({
   const [description, setDescription] = useState('')
   const [lieu, setLieu] = useState('')
   const [allDay, setAllDay] = useState(false)
+  const [timezone, setTimezone] = useState(detectBrowserTimezone())
   const [debut, setDebut] = useState('')
   const [fin, setFin] = useState('')
   const [categorieId, setCategorieId] = useState('')
@@ -95,12 +114,14 @@ export function EventFormDrawer({
         ? new Date(new Date(occurrenceStart!).getTime() + (new Date(initialEvent.fin).getTime() - new Date(initialEvent.debut).getTime())).toISOString()
         : initialEvent.fin
 
+      const zone = initialEvent.timezone || detectBrowserTimezone()
       setTitre(initialEvent.titre)
       setDescription(initialEvent.description ?? '')
       setLieu(initialEvent.lieu ?? '')
       setAllDay(initialEvent.all_day)
-      setDebut(toDatetimeLocal(effectiveDebut))
-      setFin(effectiveFin ? toDatetimeLocal(effectiveFin) : '')
+      setTimezone(zone)
+      setDebut(toZonedDatetimeLocal(effectiveDebut, zone))
+      setFin(effectiveFin ? toZonedDatetimeLocal(effectiveFin, zone) : '')
       setCategorieId(initialEvent.categorie_id ?? '')
       setCouleur(initialEvent.couleur ?? '')
       setDisponibilite(initialEvent.disponibilite)
@@ -109,12 +130,14 @@ export function EventFormDrawer({
       setDossierIds((initialEvent.dossiers ?? []).map((d) => d.dossier_id))
       setParticipantIds((initialEvent.participants ?? []).filter((p) => !p.is_organisateur).map((p) => p.utilisateur_id))
     } else {
+      const zone = detectBrowserTimezone()
       setTitre('')
       setDescription('')
       setLieu('')
       setAllDay(initialRange?.allDay ?? false)
-      setDebut(initialRange ? toDatetimeLocal(initialRange.start) : '')
-      setFin(initialRange?.end ? toDatetimeLocal(initialRange.end) : '')
+      setTimezone(zone)
+      setDebut(initialRange ? toZonedDatetimeLocal(initialRange.start, zone) : '')
+      setFin(initialRange?.end ? toZonedDatetimeLocal(initialRange.end, zone) : '')
       setCategorieId('')
       setCouleur('')
       setDisponibilite('occupe')
@@ -129,13 +152,16 @@ export function EventFormDrawer({
     if (!titre.trim()) { setError('Le titre est obligatoire.'); return null }
     if (!debut) { setError('La date de début est obligatoire.'); return null }
     setError(null)
+    // All-day events are date-only concepts (a calendar day, not a moment in
+    // time) — the chosen fuseau horaire only matters for timed events.
     return {
       titre: titre.trim(),
       description: description.trim(),
       lieu: lieu.trim(),
       allDay,
-      debut: new Date(debut).toISOString(),
-      fin: fin ? new Date(fin).toISOString() : null,
+      timezone,
+      debut: allDay ? new Date(debut).toISOString() : fromZonedDatetimeLocal(debut, timezone),
+      fin: fin ? (allDay ? new Date(fin).toISOString() : fromZonedDatetimeLocal(fin, timezone)) : null,
       categorieId: categorieId || null,
       couleur: couleur || null,
       disponibilite,
@@ -207,7 +233,18 @@ export function EventFormDrawer({
                 required
                 type={allDay ? 'date' : 'datetime-local'}
                 value={allDay ? debut.slice(0, 10) : debut}
-                onChange={(e) => setDebut(allDay ? `${e.target.value}T00:00` : e.target.value)}
+                onChange={(e) => {
+                  const nextDebut = allDay ? `${e.target.value}T00:00` : e.target.value
+                  setDebut(nextDebut)
+                  // Default a 30-min duration whenever there's no end yet, or
+                  // the existing end no longer makes sense after this change
+                  // (before/equal to the new start) — never overwrites an end
+                  // the user deliberately set further out.
+                  if (!allDay && (!fin || new Date(fin) <= new Date(nextDebut))) {
+                    const defaultFin = new Date(new Date(nextDebut).getTime() + 30 * 60 * 1000)
+                    setFin(defaultFin.toISOString().slice(0, 16))
+                  }
+                }}
               />
             </div>
             <div style={{ flex: 1 }}>
@@ -219,6 +256,15 @@ export function EventFormDrawer({
               />
             </div>
           </div>
+
+          {!allDay && (
+            <Select
+              label="Fuseau horaire"
+              options={(TIMEZONE_OPTIONS.includes(timezone) ? TIMEZONE_OPTIONS : [timezone, ...TIMEZONE_OPTIONS]).map((tz) => ({ value: tz, label: tz.replace('_', ' ') }))}
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            />
+          )}
 
           <Select
             label="Catégorie"

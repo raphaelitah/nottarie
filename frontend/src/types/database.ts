@@ -398,6 +398,7 @@ export interface Evenement {
   debut: string
   fin: string | null
   all_day: boolean
+  timezone: string
   categorie_id: string | null
   couleur: string | null
   disponibilite: EvenementDisponibilite

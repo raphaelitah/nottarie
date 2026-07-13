@@ -121,8 +121,23 @@ create trigger evenements_outlook_sync
 after insert or update on evenements
 for each row execute function notify_outlook_calendar_sync();
 
-create trigger evenement_participants_outlook_sync
-after insert or delete on evenement_participants
+-- INSERT only fires for a genuinely added participant, not the organisateur
+-- row that seed_evenement_organisateur_participant() auto-inserts on every
+-- evenements insert — that seed row fires concurrently with the
+-- evenements_outlook_sync trigger above for the same brand-new evenement,
+-- and since neither has committed/seen the other's write yet, both
+-- webhook calls see "no existing sync row" and each independently create a
+-- Graph event, with the second's upsert silently overwriting the tracked
+-- outlook_event_id and orphaning the first (a real duplicate-event bug,
+-- found 2026-07-13). DELETE still fires unconditionally since removing a
+-- participant is never something the evenements-level trigger covers.
+create trigger evenement_participants_outlook_sync_insert
+after insert on evenement_participants
+for each row when (new.is_organisateur is false)
+execute function notify_outlook_calendar_sync();
+
+create trigger evenement_participants_outlook_sync_delete
+after delete on evenement_participants
 for each row execute function notify_outlook_calendar_sync();
 
 -- evenement_outlook_syncs has "on delete cascade" from evenements, so by the

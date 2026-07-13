@@ -42,6 +42,52 @@ function clientSecret(): string {
   return Deno.env.get('MAILBOX_OUTLOOK_CLIENT_SECRET')!
 }
 
+/**
+ * Graph's `dateTime` field is a *local wall-clock* string interpreted using
+ * the paired `timeZone` label — it does NOT parse a "Z"/offset suffix and
+ * convert from UTC. Passing Nottarie's UTC ISO timestamps straight through
+ * with timeZone: 'Europe/Paris' silently double-applies the offset (this
+ * shipped bug caused a 17/07 all-day event to show as a timed event at
+ * 22:00 on 16/07 in Outlook). Fixed by always pairing literal UTC digits
+ * with timeZone: 'UTC' for timed events, and by computing actual Paris
+ * calendar dates (via Intl, not string slicing) for all-day events, which
+ * Graph requires as isAllDay + midnight-to-midnight dates rather than a
+ * timed range.
+ */
+function graphDateFields(debutIso: string, finIso: string, allDay?: boolean): Record<string, unknown> {
+  if (allDay) {
+    const startDate = parisDateOnly(debutIso)
+    let endDate = parisDateOnly(finIso)
+    // A single-day all-day event stores debut === fin (see "Vacances",
+    // "Test Disney" etc.) — but Graph's all-day `end` is exclusive and
+    // rejects a zero-length range ("must be at least 24 hours"), so a
+    // same-day end needs bumping to the next calendar day.
+    if (endDate === startDate) {
+      const d = new Date(`${startDate}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() + 1)
+      endDate = d.toISOString().slice(0, 10)
+    }
+    return {
+      isAllDay: true,
+      start: { dateTime: `${startDate}T00:00:00`, timeZone: 'Europe/Paris' },
+      end: { dateTime: `${endDate}T00:00:00`, timeZone: 'Europe/Paris' },
+    }
+  }
+  return {
+    start: { dateTime: utcWallClock(debutIso), timeZone: 'UTC' },
+    end: { dateTime: utcWallClock(finIso), timeZone: 'UTC' },
+  }
+}
+
+/** en-CA locale formats as YYYY-MM-DD, which is exactly the date Graph expects for all-day events. */
+function parisDateOnly(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
+}
+
+function utcWallClock(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 19)
+}
+
 export class OutlookMailboxProvider implements MailboxProvider {
   constructor(private readonly admin: SupabaseClient) {}
 
@@ -160,8 +206,7 @@ export class OutlookMailboxProvider implements MailboxProvider {
         body: {
           subject: input.titre,
           location: input.lieu ? { displayName: input.lieu } : undefined,
-          start: { dateTime: input.debut, timeZone: 'Europe/Paris' },
-          end: { dateTime: input.fin, timeZone: 'Europe/Paris' },
+          ...graphDateFields(input.debut, input.fin, input.allDay),
           attendees: input.attendees.map((address) => ({ emailAddress: { address }, type: 'required' })),
           categories: input.category ? [input.category] : undefined,
           recurrence: input.recurrence,
@@ -189,8 +234,7 @@ export class OutlookMailboxProvider implements MailboxProvider {
         body: {
           subject: input.titre,
           location: input.lieu ? { displayName: input.lieu } : undefined,
-          start: { dateTime: input.debut, timeZone: 'Europe/Paris' },
-          end: { dateTime: input.fin, timeZone: 'Europe/Paris' },
+          ...graphDateFields(input.debut, input.fin, input.allDay),
           categories: input.category ? [input.category] : undefined,
           recurrence: input.recurrence,
         },
