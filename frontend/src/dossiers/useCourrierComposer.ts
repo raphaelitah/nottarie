@@ -17,6 +17,11 @@ export function useCourrierComposer(tenantId: string, dossierId: string, onSaved
   const [noMailboxConnected, setNoMailboxConnected] = useState(false)
 
   useEffect(() => {
+    setNoMailboxConnected(false)
+    setError(null)
+  }, [dossierId])
+
+  useEffect(() => {
     if (!membership) { setFromEmail(null); return }
     supabase
       .from('mailbox_connections')

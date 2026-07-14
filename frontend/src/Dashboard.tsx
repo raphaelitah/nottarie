@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth/useAuth'
 import { Button } from './design-system/Button'
@@ -21,6 +21,7 @@ import { MonComptePage } from './account/MonComptePage'
 import { NouveauDossierButton } from './dashboard/NouveauDossierButton'
 import { DossiersEnCoursCard } from './dashboard/DossiersEnCoursCard'
 import { FormalitesEnAttenteCard } from './dashboard/FormalitesEnAttenteCard'
+import { DashboardKpisCard } from './dashboard/DashboardKpisCard'
 
 const AgendaPage = lazy(() => import('./agenda/AgendaPage').then((m) => ({ default: m.AgendaPage })))
 
@@ -53,6 +54,17 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
   const location = useLocation()
   const navigate = useNavigate()
   const section = sectionFromPath(location.pathname)
+  const mainRef = useRef<HTMLElement>(null)
+
+  // The <main> panel scrolls independently and is never remounted across
+  // routes, so it kept whatever scroll position the previous page left it
+  // at. Navigating from a scrolled-down list to a shorter page (e.g.
+  // Accueil) could leave primary buttons like "+ Nouveau dossier" rendered
+  // below the fold — the first click landed on nothing, which read as the
+  // click "not registering".
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+  }, [location.pathname])
 
   // Returning from the Outlook OAuth redirect lands here with ?mailbox_oauth=1
   // in the URL — jump straight to Mon compte so MailboxConnectionSection
@@ -260,7 +272,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
             </div>
           </Drawer>
 
-          <main style={{ flex: 1, padding: isMobileNav ? 'var(--space-4)' : 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
+          <main ref={mainRef} style={{ flex: 1, padding: isMobileNav ? 'var(--space-4)' : 'var(--space-8)', minWidth: 0, overflowY: 'auto' }}>
             <Routes>
               <Route path="dossiers" element={
                 <DossiersPage
@@ -327,6 +339,7 @@ export function Dashboard({ onSwitchToAdmin }: { onSwitchToAdmin?: () => void })
                     />
                   </div>
                   <WeekStrip tenantId={membership.tenant_id} onOpenAgenda={() => selectSection('agenda')} />
+                  <DashboardKpisCard tenantId={membership.tenant_id} />
                   <div style={{ display: 'flex', flexDirection: isMobileNav ? 'column' : 'row', gap: 'var(--space-4)', marginTop: 'var(--space-6)' }}>
                     <DossiersEnCoursCard
                       tenantId={membership.tenant_id}

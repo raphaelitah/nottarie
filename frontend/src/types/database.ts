@@ -68,6 +68,7 @@ export interface Dossier {
   archived_at: string | null
   autres_actifs: number | null
   passif: number | null
+  clos_at: string | null
 }
 
 export interface Historique {
@@ -274,6 +275,7 @@ export interface Formalite {
   dossier_id: string
   type: string
   statut: string
+  echeance: string | null
   created_at: string
   updated_at: string
 }

@@ -41,7 +41,7 @@ export function GlobalSearch({ tenantId, onSelectDossier, onSelectPersonne, onSe
   }
 
   const showPanel = open && query.trim().length >= 2
-  const totalCount = results ? results.dossiers.length + results.personnes.length + results.immeubles.length : null
+  const totalCount = results ? results.dossiers.length + results.personnes.length + results.immeubles.length + results.documents.length : null
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
@@ -96,6 +96,18 @@ export function GlobalSearch({ tenantId, onSelectDossier, onSelectPersonne, onSe
                       title={immeubleDisplayName(i)}
                       subtitle={i.references_cadastrales ?? undefined}
                       onClick={() => handleSelect(() => onSelectImmeuble(i.id))}
+                    />
+                  ))}
+                </ResultGroup>
+              )}
+              {results.documents.length > 0 && (
+                <ResultGroup title="Documents">
+                  {results.documents.map((doc) => (
+                    <ResultRow
+                      key={doc.id}
+                      title={doc.nom}
+                      subtitle={doc.dossier ? (doc.dossier.nom || doc.dossier.numero || undefined) : undefined}
+                      onClick={() => doc.dossier && handleSelect(() => onSelectDossier(doc.dossier!.id))}
                     />
                   ))}
                 </ResultGroup>

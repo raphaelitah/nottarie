@@ -67,17 +67,27 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Non authentifié' }), { status: 401, headers: corsHeaders })
     }
 
-    const supabaseAdmin = createClient(
+    const authClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(
+    const { data: { user: caller }, error: authError } = await authClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     )
     if (authError || !caller) {
       return new Response(JSON.stringify({ error: 'Session invalide' }), { status: 401, headers: corsHeaders })
     }
+
+    // Service-role writes bypass RLS, so auth.uid() is null inside the
+    // log_historique trigger and audit entries lose attribution. This
+    // header lets the trigger resolve the acting user the same way it
+    // would for a direct client-side write.
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { 'x-acting-user-id': caller.id } } },
+    )
 
     const { dossier_id, content, acte_id, nom } = await req.json()
     if (!dossier_id || !content || typeof content !== 'object') {

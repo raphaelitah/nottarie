@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Modal, Button, Textarea } from '../../design-system'
 import type { Comparant } from '../../types/database'
-import { comparantDisplayName, formatComparantIdentification, formatComparantsList } from './comparantFormat'
+import { comparantDisplayName, formatComparantIdentification, formatComparantName, formatComparantsList } from './comparantFormat'
 
 interface FieldFillModalProps {
   open: boolean
@@ -13,8 +13,17 @@ interface FieldFillModalProps {
   onClose: () => void
 }
 
+// Fields whose label literally asks for a name (e.g. "Nom du conjoint
+// survivant, le cas échéant") sit right next to "Identification complète des
+// comparants" — inserting the full identification sentence there is just
+// redundant with that adjacent block, so those fields get only the name.
+function wantsNameOnly(label: string): boolean {
+  return /^nom du /i.test(label.trim())
+}
+
 export function FieldFillModal({ open, label, value, comparants, onSave, onClose }: FieldFillModalProps) {
   const [draft, setDraft] = useState(value)
+  const nameOnly = wantsNameOnly(label)
 
   useEffect(() => {
     if (open) setDraft(value)
@@ -39,13 +48,18 @@ export function FieldFillModal({ open, label, value, comparants, onSave, onClose
     >
       {comparants.length > 0 && (
         <div style={chipsWrap}>
-          {comparants.length > 1 && (
+          {!nameOnly && comparants.length > 1 && (
             <button type="button" style={chipStyle} onClick={() => insert(formatComparantsList(comparants))}>
               + Tous les comparants
             </button>
           )}
           {comparants.map((c) => (
-            <button key={c.id} type="button" style={chipStyle} onClick={() => insert(formatComparantIdentification(c))}>
+            <button
+              key={c.id}
+              type="button"
+              style={chipStyle}
+              onClick={() => insert(nameOnly ? formatComparantName(c) : formatComparantIdentification(c))}
+            >
               + {comparantDisplayName(c)}
             </button>
           ))}

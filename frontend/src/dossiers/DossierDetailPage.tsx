@@ -19,6 +19,7 @@ import { CoutEstimationSection } from './CoutEstimationSection'
 import { AccesSection } from './AccesSection'
 import { HistoriqueSection } from './HistoriqueSection'
 import { EvenementsSection } from './EvenementsSection'
+import { DossierTimeline } from './DossierTimeline'
 
 const TABS = [
   { key: 'general', label: 'Général' },
@@ -209,6 +210,8 @@ export function DossierDetailPage({ dossier, focusComparants, onBack, onUpdated,
           fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', color: '#DC2626',
         }}>{error}</div>
       )}
+
+      <DossierTimeline dossierId={dossier.id} statut={dossier.statut} comparantsCount={comparants.length} />
 
       <div style={tabBar}>
         {TABS.map((t) => (

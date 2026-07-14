@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Comparant, Dossier, Immeuble, Personne } from '../types/database'
+import type { Comparant, Dossier, DocumentRow, Immeuble, Personne } from '../types/database'
 
 export type DossierSearchResult = Dossier & { comparants?: Comparant[] }
+export type DocumentSearchResult = DocumentRow & { dossier: { id: string; nom: string | null; numero: string | null } | null }
 
 export interface CrossEntitySearchResults {
   dossiers: DossierSearchResult[]
   personnes: Personne[]
   immeubles: Immeuble[]
+  documents: DocumentSearchResult[]
 }
 
 // PostgREST's .or() filter uses "," to separate conditions and "()" for grouping —
@@ -34,15 +36,18 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
       setError(null)
       const pattern = toSearchPattern(q)
 
-      const [personnesRes, immeublesRes, dossiersByNumeroRes] = await Promise.all([
+      const [personnesRes, immeublesRes, dossiersByFieldsRes, documentsRes] = await Promise.all([
         supabase.from('personnes').select('*').eq('tenant_id', tenantId).is('archived_at', null)
           .or(`nom.ilike.${pattern},prenom.ilike.${pattern},raison_sociale.ilike.${pattern},email.ilike.${pattern}`),
         supabase.from('immeubles').select('*').eq('tenant_id', tenantId).is('archived_at', null)
           .or(`designation.ilike.${pattern},references_cadastrales.ilike.${pattern}`),
-        supabase.from('dossiers').select('*, comparants(qualite, personne:personnes(*))').eq('tenant_id', tenantId).is('archived_at', null).ilike('numero', pattern),
+        supabase.from('dossiers').select('*, comparants(qualite, personne:personnes(*))').eq('tenant_id', tenantId).is('archived_at', null)
+          .or(`numero.ilike.${pattern},nom.ilike.${pattern}`),
+        supabase.from('documents').select('*, dossier:dossiers(id, nom, numero)').eq('tenant_id', tenantId).not('dossier_id', 'is', null)
+          .ilike('nom', pattern),
       ])
 
-      const firstError = personnesRes.error ?? immeublesRes.error ?? dossiersByNumeroRes.error
+      const firstError = personnesRes.error ?? immeublesRes.error ?? dossiersByFieldsRes.error ?? documentsRes.error
       if (firstError) {
         if (!cancelled) { setError('Erreur lors de la recherche : ' + firstError.message); setLoading(false) }
         return
@@ -50,7 +55,7 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
 
       const personnes = personnesRes.data ?? []
       const dossierMap = new Map<string, DossierSearchResult>()
-      for (const d of dossiersByNumeroRes.data ?? []) dossierMap.set(d.id, d)
+      for (const d of dossiersByFieldsRes.data ?? []) dossierMap.set(d.id, d)
 
       if (personnes.length > 0) {
         const { data: comparants, error: comparantsError } = await supabase
@@ -75,7 +80,12 @@ export function useCrossEntitySearch(tenantId: string, query: string) {
       }
 
       if (!cancelled) {
-        setResults({ dossiers: [...dossierMap.values()], personnes, immeubles: immeublesRes.data ?? [] })
+        setResults({
+          dossiers: [...dossierMap.values()],
+          personnes,
+          immeubles: immeublesRes.data ?? [],
+          documents: (documentsRes.data ?? []) as DocumentSearchResult[],
+        })
         setLoading(false)
       }
     }, 300)

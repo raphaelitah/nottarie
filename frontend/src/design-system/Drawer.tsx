@@ -33,6 +33,17 @@ export function Drawer({
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
+  // Without this, the dimmed background page still scrolls under the drawer:
+  // a mouse-wheel gesture over the overlay can move window.scrollY instead of
+  // the drawer's own content, which reads as the app being frozen (a form's
+  // lower fields/Save button can appear unreachable).
+  useEffect(() => {
+    if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [open])
+
   const fullScreen = useMediaQuery(MOBILE_QUERY)
   const widths = { sm: '360px', md: '480px', lg: '640px' }
   const width = fullScreen ? '100%' : widths[size] ?? widths.md

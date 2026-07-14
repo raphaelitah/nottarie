@@ -35,3 +35,14 @@ export function comparantDisplayName(comparant: Comparant): string {
   const name = p.type === 'morale' ? p.raison_sociale : [p.prenom, p.nom].filter(Boolean).join(' ')
   return `${name || 'Sans nom'} (${comparant.qualite})`
 }
+
+// Just the civil name, no birth/address/qualité — for fields that literally
+// ask for a name (e.g. "Nom du conjoint survivant") and already sit next to
+// a separate "Identification complète des comparants" block, where inserting
+// the full sentence would just duplicate it.
+export function formatComparantName(comparant: Comparant): string {
+  const p = comparant.personne
+  if (!p) return ''
+  if (p.type === 'morale') return p.raison_sociale ?? ''
+  return [p.civilite, [p.prenom, p.nom].filter(Boolean).join(' ')].filter(Boolean).join(' ')
+}
