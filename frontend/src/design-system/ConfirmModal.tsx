@@ -5,7 +5,7 @@ interface ConfirmModalProps {
   open: boolean
   title: string
   subtitle?: string
-  message: React.ReactNode
+  children: React.ReactNode
   confirmLabel?: string
   confirmingLabel?: string
   confirming?: boolean
@@ -20,7 +20,7 @@ export function ConfirmModal({
   open,
   title,
   subtitle,
-  message,
+  children,
   confirmLabel = 'Supprimer',
   confirmingLabel = 'Suppression…',
   confirming = false,
@@ -43,7 +43,7 @@ export function ConfirmModal({
         </>
       )}
     >
-      {message}
+      {children}
     </Modal>
   )
 }

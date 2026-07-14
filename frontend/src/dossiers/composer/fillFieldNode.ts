@@ -14,6 +14,12 @@ export interface FillChampAttrs {
   value: string
 }
 
+declare module '@tiptap/core' {
+  interface Storage {
+    champ: { comparants: Comparant[] }
+  }
+}
+
 export const FillFieldNode = Node.create({
   name: 'champ',
   group: 'inline',
