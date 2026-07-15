@@ -35,6 +35,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
   const [togglingUserId, setTogglingUserId] = useState<string | null>(null)
   const [confirmDisableId, setConfirmDisableId] = useState<string | null>(null)
   const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null)
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null)
 
   async function loadUsers() {
     setLoading(true)
@@ -116,6 +117,16 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
     loadUsers()
   }
 
+  async function handleResendInvite(u: Utilisateur) {
+    if (!u.email) return
+    setResendingInviteId(u.id)
+    setError(null)
+    const json = await invokeUserAction({ action: 'resend_invite', email: u.email })
+    setResendingInviteId(null)
+    if (json.error) { setError('Erreur : ' + json.error); return }
+    setSuccess(`Invitation renvoyée à ${u.email}.`)
+  }
+
   async function handleResetPassword(u: Utilisateur) {
     if (!u.email) return
     setResettingPasswordId(u.id)
@@ -185,6 +196,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
             const isConfirmDisable = confirmDisableId === u.id
             const displayName = [u.prenom, u.nom].filter(Boolean).join(' ') || '—'
             const inactive = !u.actif
+            const invited = !!u.invited && !inactive
             return (
               <div key={u.id} style={{ ...card, padding: 'var(--space-4) var(--space-5)', opacity: inactive ? 0.7 : 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-4)' }}>
@@ -192,6 +204,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-sm)', fontWeight: 600, color: inactive ? 'var(--n-400)' : 'var(--n-900)' }}>
                       {displayName}
                       {inactive && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, color: 'var(--n-400)', marginLeft: '8px' }}>Désactivé</span>}
+                      {invited && <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, color: 'var(--color-accent)', marginLeft: '8px' }}>Invité</span>}
                     </div>
                     {u.email && (
                       <a href={`mailto:${u.email}`} style={{ fontFamily: 'var(--font-sans)', fontSize: 'var(--text-xs)', color: inactive ? 'var(--n-400)' : 'var(--color-accent)', marginTop: '2px', display: 'block', textDecoration: 'none', pointerEvents: inactive ? 'none' : 'auto' }}>
@@ -213,8 +226,13 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
                         <IconButton icon="refresh" label="Réactiver" onClick={() => handleToggleActif(u)} disabled={togglingUserId === u.id} />
                       ) : (
                         <>
+                          {invited && (
+                            <IconButton icon="refresh" label="Renvoyer l'invitation" onClick={() => handleResendInvite(u)} disabled={resendingInviteId === u.id} />
+                          )}
                           <IconButton icon="pencil" label="Modifier le rôle" onClick={() => { setEditingUserId(u.id); setEditingRoles([...u.roles]); setConfirmDisableId(null); setError(null) }} />
-                          <IconButton icon="key" label="Réinitialiser le mot de passe" onClick={() => handleResetPassword(u)} disabled={resettingPasswordId === u.id} />
+                          {!invited && (
+                            <IconButton icon="key" label="Réinitialiser le mot de passe" onClick={() => handleResetPassword(u)} disabled={resettingPasswordId === u.id} />
+                          )}
                           <IconButton icon="ban" label="Désactiver" onClick={() => { setConfirmDisableId(u.id); setEditingUserId(null); setError(null) }} />
                         </>
                       )}

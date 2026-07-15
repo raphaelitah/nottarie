@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     let authUserId: string
     const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { prenom, nom },
+      redirectTo: 'https://nottarie.pages.dev/',
     })
 
     if (inviteError) {

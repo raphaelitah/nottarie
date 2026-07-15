@@ -62,6 +62,40 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    if (action === 'resend_invite') {
+      if (!email) {
+        return new Response(JSON.stringify({ error: 'email requis' }), { status: 400, headers: corsHeaders })
+      }
+
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers()
+      const target = listData?.users?.find(u => u.email === email)
+      if (!target) {
+        return new Response(JSON.stringify({ error: 'Utilisateur introuvable' }), { status: 404, headers: corsHeaders })
+      }
+      if (target.last_sign_in_at) {
+        return new Response(JSON.stringify({ error: 'Cet utilisateur a déjà défini son mot de passe.' }), { status: 409, headers: corsHeaders })
+      }
+
+      const { data: memberships } = await supabaseAdmin
+        .from('utilisateurs')
+        .select('tenant_id')
+        .eq('auth_user_id', target.id)
+
+      const callerIsPlatformAdmin = await isPlatformAdmin(supabaseAdmin, caller.id)
+      const callerManagesAMembership = (
+        await Promise.all((memberships ?? []).map(m => canManageEtude(supabaseAdmin, caller.id, m.tenant_id)))
+      ).some(Boolean)
+      if (!callerIsPlatformAdmin && !callerManagesAMembership) {
+        return new Response(JSON.stringify({ error: 'Accès refusé à cet utilisateur.' }), { status: 403, headers: corsHeaders })
+      }
+
+      const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: 'https://nottarie.pages.dev/',
+      })
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+      return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     if (action === 'reset_password') {
       if (!email) {
         return new Response(JSON.stringify({ error: 'email requis' }), { status: 400, headers: corsHeaders })

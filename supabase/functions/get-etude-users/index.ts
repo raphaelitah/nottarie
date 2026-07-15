@@ -52,16 +52,21 @@ Deno.serve(async (req) => {
     // Enrich with email from auth.users
     const authUserIds = (data ?? []).map((u: { auth_user_id: string }) => u.auth_user_id)
     const emailMap: Record<string, string> = {}
+    const invitedMap: Record<string, boolean> = {}
     if (authUserIds.length > 0) {
       const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
       for (const au of authUsers ?? []) {
-        if (authUserIds.includes(au.id)) emailMap[au.id] = au.email ?? ''
+        if (authUserIds.includes(au.id)) {
+          emailMap[au.id] = au.email ?? ''
+          invitedMap[au.id] = !au.last_sign_in_at
+        }
       }
     }
 
     const enriched = (data ?? []).map((u: { auth_user_id: string }) => ({
       ...u,
       email: emailMap[u.auth_user_id] ?? null,
+      invited: invitedMap[u.auth_user_id] ?? false,
     }))
 
     return new Response(JSON.stringify({ users: enriched }), {

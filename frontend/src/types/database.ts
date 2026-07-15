@@ -363,6 +363,7 @@ export interface Utilisateur {
   roles: RoleNotarial[]
   actif: boolean
   email?: string | null
+  invited?: boolean
   created_at: string
   etude?: { raison_sociale: string } | null
 }
