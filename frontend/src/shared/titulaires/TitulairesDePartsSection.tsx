@@ -101,7 +101,7 @@ export function TitulairesDePartsSection({
       .order('created_at')
     if (error) setError('Impossible de charger la liste : ' + error.message)
     else setError(null)
-    setTitulaires(((data ?? []) as Record<string, unknown>[]).map((r) => toTitulaire(r)))
+    setTitulaires(((data ?? []) as unknown as Record<string, unknown>[]).map((r) => toTitulaire(r)))
     setLoading(false)
   }
 
