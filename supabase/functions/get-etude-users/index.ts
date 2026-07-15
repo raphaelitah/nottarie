@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       for (const au of authUsers ?? []) {
         if (authUserIds.includes(au.id)) {
           emailMap[au.id] = au.email ?? ''
-          invitedMap[au.id] = !au.last_sign_in_at
+          invitedMap[au.id] = au.user_metadata?.password_set !== true
         }
       }
     }

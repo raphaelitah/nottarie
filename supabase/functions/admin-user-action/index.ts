@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       if (!target) {
         return new Response(JSON.stringify({ error: 'Utilisateur introuvable' }), { status: 404, headers: corsHeaders })
       }
-      if (target.last_sign_in_at) {
+      if (target.user_metadata?.password_set === true) {
         return new Response(JSON.stringify({ error: 'Cet utilisateur a déjà défini son mot de passe.' }), { status: 409, headers: corsHeaders })
       }
 

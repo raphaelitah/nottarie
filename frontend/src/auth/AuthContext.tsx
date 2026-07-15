@@ -44,6 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if ((event === 'SIGNED_IN' && isInvite) || event === 'PASSWORD_RECOVERY') {
         setNeedsPasswordChange(true)
       }
+      if (event === 'SIGNED_IN' && !isInvite && newSession?.user && newSession.user.user_metadata?.password_set !== true) {
+        // Self-heal: a normal password sign-in proves the account has a working
+        // password, even if it predates the password_set tracking flag.
+        supabase.auth.updateUser({ data: { password_set: true } })
+      }
       if (event === 'USER_UPDATED') {
         setNeedsPasswordChange(false)
       }
@@ -90,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const setNewPassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.updateUser({ password, data: { password_set: true } })
     if (!error) setNeedsPasswordChange(false)
     return { error: error?.message ?? null }
   }
