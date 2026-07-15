@@ -1,30 +1,43 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { Drawer, Button, Input, NumberInput } from '../design-system'
-import type { Personne } from '../types/database'
-import { personneDisplayName } from '../personnes/personneForm'
+import { Drawer, Button, Input, NumberInput, Select } from '../../design-system'
+import type { NaturePropriete, Personne } from '../../types/database'
+import { personneDisplayName } from '../../personnes/personneForm'
 
-export interface ImmeubleProprietaireFormResult {
+export const NATURE_PROPRIETE_OPTIONS: { value: NaturePropriete; label: string }[] = [
+  { value: 'pleine_propriete', label: 'Pleine propriété' },
+  { value: 'usufruit', label: 'Usufruit' },
+  { value: 'nue_propriete', label: 'Nue-propriété' },
+]
+
+export function naturePorprieteLabel(value: NaturePropriete): string {
+  return NATURE_PROPRIETE_OPTIONS.find((o) => o.value === value)?.label ?? value
+}
+
+export interface TitulaireDePartsFormResult {
   personneId: string | null
   nomLibre: string | null
+  naturePropriete: NaturePropriete
   quotePart: string
   nombreParts: string
 }
 
-interface ImmeubleProprietaireFormDrawerProps {
+interface TitulaireDePartsFormDrawerProps {
   open: boolean
+  title: string
   personnes: Personne[]
   saving: boolean
   nombrePartsTotal: number | null
-  onSave: (result: ImmeubleProprietaireFormResult) => void
+  onSave: (result: TitulaireDePartsFormResult) => void
   onClose: () => void
 }
 
-export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombrePartsTotal, onSave, onClose }: ImmeubleProprietaireFormDrawerProps) {
+export function TitulaireDePartsFormDrawer({ open, title, personnes, saving, nombrePartsTotal, onSave, onClose }: TitulaireDePartsFormDrawerProps) {
   const [mode, setMode] = useState<'existante' | 'libre'>('existante')
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nomLibre, setNomLibre] = useState('')
+  const [naturePropriete, setNaturePropriete] = useState<NaturePropriete>('pleine_propriete')
   const [quotePart, setQuotePart] = useState('')
   const [nombreParts, setNombreParts] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -35,6 +48,7 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombre
     setSearch('')
     setSelectedId(null)
     setNomLibre('')
+    setNaturePropriete('pleine_propriete')
     setQuotePart('')
     setNombreParts('')
     setError(null)
@@ -68,11 +82,11 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombre
     if (mode === 'existante') {
       if (!selectedId) { setError('Sélectionnez une personne.'); return }
       setError(null)
-      onSave({ personneId: selectedId, nomLibre: null, quotePart, nombreParts })
+      onSave({ personneId: selectedId, nomLibre: null, naturePropriete, quotePart, nombreParts })
     } else {
-      if (!nomLibre.trim()) { setError('Le nom du propriétaire est obligatoire.'); return }
+      if (!nomLibre.trim()) { setError('Le nom est obligatoire.'); return }
       setError(null)
-      onSave({ personneId: null, nomLibre: nomLibre.trim(), quotePart, nombreParts })
+      onSave({ personneId: null, nomLibre: nomLibre.trim(), naturePropriete, quotePart, nombreParts })
     }
   }
 
@@ -80,7 +94,7 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombre
     <Drawer
       open={open}
       onClose={onClose}
-      title="Ajouter un propriétaire"
+      title={title}
       size="md"
       footer={
         <>
@@ -135,12 +149,19 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombre
           )
         ) : (
           <Input
-            label="Nom du propriétaire"
+            label="Nom"
             placeholder="ex. Jean Dupont"
             value={nomLibre}
             onChange={(e) => setNomLibre(e.target.value)}
           />
         )}
+
+        <Select
+          label="Nature de propriété"
+          value={naturePropriete}
+          options={NATURE_PROPRIETE_OPTIONS}
+          onChange={(e) => setNaturePropriete(e.target.value as NaturePropriete)}
+        />
 
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ flex: 1 }}>
@@ -156,7 +177,7 @@ export function ImmeubleProprietaireFormDrawer({ open, personnes, saving, nombre
               label="Nombre de parts"
               placeholder={nombrePartsTotal ? `sur ${nombrePartsTotal}` : 'ex. 50'}
               disabled={!nombrePartsTotal}
-              helper={!nombrePartsTotal ? "Renseignez d'abord le nombre de parts total de l'immeuble." : undefined}
+              helper={!nombrePartsTotal ? "Renseignez d'abord le nombre de parts total." : undefined}
               value={nombreParts}
               onChange={(e) => handleNombrePartsChange(e.target.value)}
             />

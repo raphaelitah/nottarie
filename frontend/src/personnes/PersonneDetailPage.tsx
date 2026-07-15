@@ -10,6 +10,7 @@ import { PersonneDocumentsSection } from './PersonneDocumentsSection'
 import { PersonneDossiersSection } from './PersonneDossiersSection'
 import { PersonneImmeublesSection } from './PersonneImmeublesSection'
 import { PersonneMoraleContactsSection } from './PersonneMoraleContactsSection'
+import { PersonneMoraleAssociesSection } from './PersonneMoraleAssociesSection'
 import {
   personneToForm,
   personneFormError,
@@ -22,6 +23,7 @@ const TABS = [
   { key: 'informations', label: 'Informations' },
   { key: 'dossiers', label: 'Dossiers' },
   { key: 'immeubles', label: 'Immeubles' },
+  { key: 'associes', label: 'Associés' },
   { key: 'contacts', label: 'Contacts' },
   { key: 'documents', label: 'Documents' },
 ] as const
@@ -113,7 +115,7 @@ export function PersonneDetailPage({ personne, onBack, onUpdated, onSelectDossie
       )}
 
       <div style={tabBar}>
-        {TABS.filter((t) => t.key !== 'contacts' || personne.type === 'morale').map((t) => (
+        {TABS.filter((t) => (t.key !== 'contacts' && t.key !== 'associes') || personne.type === 'morale').map((t) => (
           <button key={t.key} type="button" onClick={() => setTab(t.key)} style={tabBtn(tab === t.key)}>
             {t.label}
           </button>
@@ -152,6 +154,16 @@ export function PersonneDetailPage({ personne, onBack, onUpdated, onSelectDossie
       {tab === 'immeubles' && (
         <div style={{ marginTop: 'var(--space-6)' }}>
           <PersonneImmeublesSection tenantId={personne.tenant_id} personneId={personne.id} onSelectImmeuble={onSelectImmeuble} />
+        </div>
+      )}
+
+      {tab === 'associes' && personne.type === 'morale' && (
+        <div style={{ marginTop: 'var(--space-6)' }}>
+          <PersonneMoraleAssociesSection
+            tenantId={personne.tenant_id}
+            personneMorale={personne}
+            onNombrePartsTotalChange={(nombre_parts_total) => onUpdated({ ...personne, nombre_parts_total })}
+          />
         </div>
       )}
 
@@ -194,7 +206,17 @@ function ReadonlyInformations({ personne }: { personne: Personne }) {
           <Field label="Nom" value={personne.nom} />
         </>
       ) : (
-        <Field label="Raison sociale" value={personne.raison_sociale} />
+        <>
+          <Field label="Raison sociale" value={personne.raison_sociale} />
+          {personne.type === 'morale' && (
+            <>
+              <Field label="Forme juridique" value={personne.forme_juridique} />
+              <Field label="SIREN" value={personne.siren} />
+              <Field label="SIRET" value={personne.siret} />
+              <Field label="Capital social" value={personne.capital_social != null ? `${personne.capital_social.toLocaleString('fr-FR')} €` : null} />
+            </>
+          )}
+        </>
       )}
       <Field label="Email" value={personne.email} />
       <Field label="Téléphone" value={personne.telephone} />

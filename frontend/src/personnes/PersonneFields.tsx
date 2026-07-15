@@ -5,6 +5,7 @@ import {
   CIVILITE_OPTIONS,
   SITUATION_MATRIMONIALE_OPTIONS,
   REGIME_MATRIMONIAL_OPTIONS,
+  FORME_JURIDIQUE_OPTIONS,
 } from '../constants/personneTypes'
 import { PAYS_OPTIONS, DEPARTEMENTS_OPTIONS, ETRANGER } from '../constants/geo'
 import type { PersonneFormValues } from './personneForm'
@@ -55,6 +56,29 @@ export function PersonneFields({ values, onChange }: PersonneFieldsProps) {
           value={values.raison_sociale}
           onChange={(e) => set({ raison_sociale: e.target.value })}
         />
+      )}
+
+      {values.type === 'morale' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Select
+              label="Forme juridique"
+              options={FORME_JURIDIQUE_OPTIONS}
+              value={values.forme_juridique}
+              onChange={(e) => set({ forme_juridique: e.target.value })}
+            />
+            <Input
+              label="Capital social"
+              type="number"
+              value={values.capital_social}
+              onChange={(e) => set({ capital_social: e.target.value })}
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <Input label="SIREN" value={values.siren} onChange={(e) => set({ siren: e.target.value })} />
+            <Input label="SIRET" value={values.siret} onChange={(e) => set({ siret: e.target.value })} />
+          </div>
+        </>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

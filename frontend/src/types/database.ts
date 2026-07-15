@@ -93,6 +93,8 @@ export interface DossierAcces {
 
 export type PersonneType = 'physique' | 'morale' | 'tiers_partenaire'
 
+export type NaturePropriete = 'pleine_propriete' | 'usufruit' | 'nue_propriete'
+
 export interface Personne {
   id: string
   tenant_id: string
@@ -116,6 +118,11 @@ export interface Personne {
   regime_matrimonial: string | null
   date_deces: string | null
   lieu_deces: string | null
+  forme_juridique: string | null
+  siren: string | null
+  siret: string | null
+  capital_social: number | null
+  nombre_parts_total: number | null
   created_at: string
   archived_at: string | null
 }
@@ -159,9 +166,23 @@ export interface ImmeubleProprietaire {
   nom_libre: string | null
   quote_part: number | null
   nombre_parts: number | null
+  nature_propriete: NaturePropriete
   created_at: string
   personne?: Personne | null
   immeuble?: Immeuble
+}
+
+export interface PersonneMoraleAssocie {
+  id: string
+  tenant_id: string
+  personne_morale_id: string
+  titulaire_personne_id: string | null
+  nom_libre: string | null
+  nature_propriete: NaturePropriete
+  quote_part: number | null
+  nombre_parts: number | null
+  created_at: string
+  titulaire_personne?: Personne | null
 }
 
 export type RegimeBien = 'propre' | 'communaute'

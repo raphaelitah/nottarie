@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, unlinkIcon } from '../design-system'
-import type { DossierImmeuble, Immeuble } from '../types/database'
+import type { DossierImmeuble, Immeuble, ImmeubleProprietaire } from '../types/database'
 import { immeubleDisplayName, immeubleFormToInsertPayload } from '../immeubles/immeubleForm'
 import { regimeBienLabel } from '../constants/regimeBien'
 import { typeBienLabel } from '../constants/typeBien'
+import { personneDisplayName } from '../personnes/personneForm'
+import { naturePorprieteLabel } from '../shared/titulaires/TitulaireDePartsFormDrawer'
 import { ImmeubleAttachDrawer, type ImmeubleAttachResult } from './ImmeubleAttachDrawer'
+
+function proprietaireDisplayName(p: ImmeubleProprietaire): string {
+  return p.personne ? personneDisplayName(p.personne) : (p.nom_libre ?? 'Sans nom')
+}
 
 interface ImmeublesSectionProps {
   tenantId: string
@@ -23,6 +29,7 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
   const [saving, setSaving] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [detachTarget, setDetachTarget] = useState<DossierImmeuble | null>(null)
+  const [proprietairesByImmeubleId, setProprietairesByImmeubleId] = useState<Record<string, ImmeubleProprietaire[]>>({})
 
   async function loadLinks() {
     setLoading(true)
@@ -34,6 +41,18 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
     else setError(null)
     setLinks(data ?? [])
     setLoading(false)
+
+    const immeubleIds = (data ?? []).map((l) => l.immeuble_id)
+    if (immeubleIds.length === 0) { setProprietairesByImmeubleId({}); return }
+    const { data: proprietaires } = await supabase
+      .from('immeuble_proprietaires')
+      .select('*, personne:personnes(*)')
+      .in('immeuble_id', immeubleIds)
+    const grouped: Record<string, ImmeubleProprietaire[]> = {}
+    for (const p of (proprietaires ?? []) as ImmeubleProprietaire[]) {
+      (grouped[p.immeuble_id] ??= []).push(p)
+    }
+    setProprietairesByImmeubleId(grouped)
   }
 
   async function loadImmeubles() {
@@ -103,22 +122,37 @@ export function ImmeublesSection({ tenantId, dossierId, onSelectImmeuble }: Imme
         <EmptyState>Aucun immeuble rattaché à ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {links.map((l) => (
-            <div
-              key={l.id}
-              style={{ ...row, cursor: l.immeuble && onSelectImmeuble ? 'pointer' : 'default' }}
-              onClick={() => { if (l.immeuble && onSelectImmeuble) onSelectImmeuble(l.immeuble.id) }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <span style={name}>{l.immeuble ? immeubleDisplayName(l.immeuble) : 'Immeuble inconnu'}</span>
-                {l.immeuble?.type_bien && <span style={meta}>{typeBienLabel(l.immeuble.type_bien)}</span>}
-                {l.immeuble?.regime && <span style={meta}>{regimeBienLabel(l.immeuble.regime)}</span>}
+          {links.map((l) => {
+            const proprietaires = proprietairesByImmeubleId[l.immeuble_id] ?? []
+            return (
+              <div key={l.id}>
+                <div
+                  style={{ ...row, cursor: l.immeuble && onSelectImmeuble ? 'pointer' : 'default' }}
+                  onClick={() => { if (l.immeuble && onSelectImmeuble) onSelectImmeuble(l.immeuble.id) }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <span style={name}>{l.immeuble ? immeubleDisplayName(l.immeuble) : 'Immeuble inconnu'}</span>
+                    {l.immeuble?.type_bien && <span style={meta}>{typeBienLabel(l.immeuble.type_bien)}</span>}
+                    {l.immeuble?.regime && <span style={meta}>{regimeBienLabel(l.immeuble.regime)}</span>}
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <HoverIconButton icon={unlinkIcon} label="Détacher" disabled={removingId === l.id} onClick={() => setDetachTarget(l)} />
+                  </div>
+                </div>
+                {proprietaires.length > 0 && (
+                  <div style={subCardList}>
+                    {proprietaires.map((p) => (
+                      <div key={p.id} style={subRow}>
+                        <span style={subName}>{proprietaireDisplayName(p)}</span>
+                        <span style={subMeta}>{naturePorprieteLabel(p.nature_propriete)}</span>
+                        {p.quote_part != null && <span style={subMeta}>{p.quote_part}%</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div onClick={(e) => e.stopPropagation()}>
-                <HoverIconButton icon={unlinkIcon} label="Détacher" disabled={removingId === l.id} onClick={() => setDetachTarget(l)} />
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -175,6 +209,36 @@ const name: CSSProperties = {
 }
 
 const meta: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  color: 'var(--text-muted)',
+  marginLeft: 'var(--space-3)',
+}
+
+const subCardList: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  margin: '4px 0 var(--space-2) 24px',
+}
+
+const subRow: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  padding: '6px var(--space-3)',
+  background: 'var(--surface-muted)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-sm, 4px)',
+}
+
+const subName: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 500,
+  color: 'var(--n-700)',
+}
+
+const subMeta: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-xs)',
   color: 'var(--text-muted)',

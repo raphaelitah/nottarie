@@ -21,6 +21,10 @@ export interface PersonneFormValues {
   regime_matrimonial: string
   date_deces: string
   lieu_deces: string
+  forme_juridique: string
+  siren: string
+  siret: string
+  capital_social: string
 }
 
 export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
@@ -44,6 +48,10 @@ export const EMPTY_PERSONNE_FORM: PersonneFormValues = {
   regime_matrimonial: '',
   date_deces: '',
   lieu_deces: '',
+  forme_juridique: '',
+  siren: '',
+  siret: '',
+  capital_social: '',
 }
 
 export function personneToForm(p: Personne): PersonneFormValues {
@@ -68,6 +76,10 @@ export function personneToForm(p: Personne): PersonneFormValues {
     regime_matrimonial: p.regime_matrimonial ?? '',
     date_deces: p.date_deces ?? '',
     lieu_deces: p.lieu_deces ?? '',
+    forme_juridique: p.forme_juridique ?? '',
+    siren: p.siren ?? '',
+    siret: p.siret ?? '',
+    capital_social: p.capital_social != null ? String(p.capital_social) : '',
   }
 }
 
@@ -111,5 +123,9 @@ export function personneFormToInsertPayload(values: PersonneFormValues, tenantId
     regime_matrimonial: isPhysique ? (values.regime_matrimonial || null) : null,
     date_deces: isPhysique ? (values.date_deces || null) : null,
     lieu_deces: isPhysique ? (values.lieu_deces.trim() || null) : null,
+    forme_juridique: values.type === 'morale' ? (values.forme_juridique || null) : null,
+    siren: values.type === 'morale' ? (values.siren.trim() || null) : null,
+    siret: values.type === 'morale' ? (values.siret.trim() || null) : null,
+    capital_social: values.type === 'morale' && values.capital_social.trim() ? Number(values.capital_social) : null,
   }
 }

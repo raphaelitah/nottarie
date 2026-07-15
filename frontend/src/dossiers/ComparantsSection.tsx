@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button, ConfirmModal, EmptyState, HoverIconButton, SectionAddButton, sendIcon, trashIcon } from '../design-system'
-import type { Comparant, Personne } from '../types/database'
+import type { Comparant, Personne, PersonneMoraleAssocie } from '../types/database'
 import { personneDisplayName, personneFormToInsertPayload } from '../personnes/personneForm'
+import { naturePorprieteLabel } from '../shared/titulaires/TitulaireDePartsFormDrawer'
 import { ComparantFormDrawer, type ComparantFormResult } from './ComparantFormDrawer'
 import { CourrierFormDrawer } from './CourrierFormDrawer'
 import { useCourrierComposer } from './useCourrierComposer'
+
+function associeDisplayName(a: PersonneMoraleAssocie): string {
+  return a.titulaire_personne ? personneDisplayName(a.titulaire_personne) : (a.nom_libre ?? 'Sans nom')
+}
 
 interface ComparantsSectionProps {
   tenantId: string
@@ -26,6 +31,7 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne, autoO
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [removeTarget, setRemoveTarget] = useState<Comparant | null>(null)
+  const [associesByMoraleId, setAssociesByMoraleId] = useState<Record<string, PersonneMoraleAssocie[]>>({})
   const composer = useCourrierComposer(tenantId, dossierId, () => setSelectedIds([]))
 
   async function loadComparants() {
@@ -40,6 +46,18 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne, autoO
     setComparants(data ?? [])
     onChange?.(data ?? [])
     setLoading(false)
+
+    const moraleIds = (data ?? []).filter((c) => c.personne?.type === 'morale').map((c) => c.personne!.id)
+    if (moraleIds.length === 0) { setAssociesByMoraleId({}); return }
+    const { data: associes } = await supabase
+      .from('personne_morale_associes')
+      .select('*, titulaire_personne:personnes!personne_morale_associes_titulaire_personne_id_fkey(*)')
+      .in('personne_morale_id', moraleIds)
+    const grouped: Record<string, PersonneMoraleAssocie[]> = {}
+    for (const a of (associes ?? []) as PersonneMoraleAssocie[]) {
+      (grouped[a.personne_morale_id] ??= []).push(a)
+    }
+    setAssociesByMoraleId(grouped)
   }
 
   async function loadPersonnes() {
@@ -135,34 +153,49 @@ export function ComparantsSection({ tenantId, dossierId, onSelectPersonne, autoO
         <EmptyState>Aucun comparant rattaché à ce dossier.</EmptyState>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {comparants.map((c) => (
-            <div
-              key={c.id}
-              style={{ ...row, cursor: c.personne && onSelectPersonne ? 'pointer' : 'default' }}
-              onClick={() => { if (c.personne && onSelectPersonne) onSelectPersonne(c.personne.id) }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
-                {isEmailable(c) && (
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(c.id)}
-                    onChange={(e) => { e.stopPropagation(); toggleSelected(c.id) }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <span style={name}>{c.personne ? personneDisplayName(c.personne) : 'Personne inconnue'}</span>
-                  <span style={qualite}>{c.qualite}</span>
+          {comparants.map((c) => {
+            const associes = c.personne?.type === 'morale' ? associesByMoraleId[c.personne.id] ?? [] : []
+            return (
+              <div key={c.id}>
+                <div
+                  style={{ ...row, cursor: c.personne && onSelectPersonne ? 'pointer' : 'default' }}
+                  onClick={() => { if (c.personne && onSelectPersonne) onSelectPersonne(c.personne.id) }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: 0 }}>
+                    {isEmailable(c) && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(c.id)}
+                        onChange={(e) => { e.stopPropagation(); toggleSelected(c.id) }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <span style={name}>{c.personne ? personneDisplayName(c.personne) : 'Personne inconnue'}</span>
+                      <span style={qualite}>{c.qualite}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    {isEmailable(c) && (
+                      <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => composer.openComposer([toDestinataireId(c)])} />
+                    )}
+                    <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => setRemoveTarget(c)} />
+                  </div>
                 </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                {isEmailable(c) && (
-                  <HoverIconButton icon={sendIcon} label="Envoyer un email" onClick={() => composer.openComposer([toDestinataireId(c)])} />
+                {associes.length > 0 && (
+                  <div style={subCardList}>
+                    {associes.map((a) => (
+                      <div key={a.id} style={subRow}>
+                        <span style={subName}>{associeDisplayName(a)}</span>
+                        <span style={subMeta}>{naturePorprieteLabel(a.nature_propriete)}</span>
+                        {a.quote_part != null && <span style={subMeta}>{a.quote_part}%</span>}
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <HoverIconButton icon={trashIcon} label="Retirer" disabled={removingId === c.id} onClick={() => setRemoveTarget(c)} />
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -240,6 +273,36 @@ const name: CSSProperties = {
 }
 
 const qualite: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  color: 'var(--text-muted)',
+  marginLeft: 'var(--space-3)',
+}
+
+const subCardList: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '4px',
+  margin: '4px 0 var(--space-2) 24px',
+}
+
+const subRow: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  padding: '6px var(--space-3)',
+  background: 'var(--surface-muted)',
+  border: '1px solid var(--border-default)',
+  borderRadius: 'var(--radius-sm, 4px)',
+}
+
+const subName: CSSProperties = {
+  fontFamily: 'var(--font-sans)',
+  fontSize: 'var(--text-xs)',
+  fontWeight: 500,
+  color: 'var(--n-700)',
+}
+
+const subMeta: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 'var(--text-xs)',
   color: 'var(--text-muted)',

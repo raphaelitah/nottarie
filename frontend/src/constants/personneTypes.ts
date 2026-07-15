@@ -6,6 +6,8 @@ export const PERSONNE_TYPE_OPTIONS: { value: string; label: string }[] = [
 
 export const CIVILITE_OPTIONS = ['M.', 'Mme']
 
+export const FORME_JURIDIQUE_OPTIONS = ['SCI', 'SARL', 'SAS', 'SA', 'Association', 'Autre']
+
 export const SITUATION_MATRIMONIALE_OPTIONS = [
   'Célibataire',
   'Marié(e)',
