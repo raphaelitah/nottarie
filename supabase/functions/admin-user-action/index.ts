@@ -76,6 +76,19 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Cet utilisateur a déjà défini son mot de passe.' }), { status: 409, headers: corsHeaders })
       }
 
+      const RESEND_COOLDOWN_MS = 2 * 60 * 1000
+      const lastSentAt = target.user_metadata?.invite_last_sent_at
+      if (lastSentAt) {
+        const elapsed = Date.now() - new Date(lastSentAt).getTime()
+        if (elapsed < RESEND_COOLDOWN_MS) {
+          const waitSeconds = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000)
+          return new Response(
+            JSON.stringify({ error: `Merci de patienter ${waitSeconds}s avant de renvoyer une invitation.` }),
+            { status: 429, headers: corsHeaders },
+          )
+        }
+      }
+
       const { data: memberships } = await supabaseAdmin
         .from('utilisateurs')
         .select('tenant_id')
@@ -89,10 +102,22 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: 'Accès refusé à cet utilisateur.' }), { status: 403, headers: corsHeaders })
       }
 
-      const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      // The auth user already exists (found via listUsers above), so inviteUserByEmail
+      // would fail with "already registered" — resetPasswordForEmail resends a link that
+      // lets them set their initial password instead, using the same account.
+      const supabaseAnon = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+      )
+      const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, {
         redirectTo: 'https://nottarie.pages.dev/',
       })
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders })
+
+      await supabaseAdmin.auth.admin.updateUserById(target.id, {
+        user_metadata: { ...target.user_metadata, invite_last_sent_at: new Date().toISOString() },
+      })
+
       return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
