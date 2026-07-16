@@ -85,7 +85,16 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
     })
     setInviting(false)
     if (res.error || res.data?.error) {
-      setError('Invitation impossible : ' + (res.data?.error ?? res.error?.message))
+      let message = res.data?.error ?? res.error?.message
+      if (!res.data?.error && res.error?.context instanceof Response) {
+        try {
+          const body = await res.error.context.clone().json()
+          if (body?.error) message = body.error
+        } catch {
+          // response body wasn't JSON — fall back to the generic message
+        }
+      }
+      setError('Invitation impossible : ' + message)
       return
     }
     setSuccess(`Invitation envoyée à ${inviteForm.email}. L'utilisateur recevra un email pour définir son mot de passe.`)
