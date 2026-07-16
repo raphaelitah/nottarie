@@ -56,6 +56,8 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ error: 'Utilisateur déjà inscrit mais introuvable.' }), { status: 400, headers: corsHeaders })
         }
         authUserId = existing.id
+      } else if (inviteError.status === 429) {
+        return new Response(JSON.stringify({ error: 'Trop d\'invitations envoyées, réessayez dans quelques minutes.' }), { status: 429, headers: corsHeaders })
       } else {
         return new Response(JSON.stringify({ error: inviteError.message }), { status: 400, headers: corsHeaders })
       }
