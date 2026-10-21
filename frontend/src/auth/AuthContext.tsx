@@ -29,10 +29,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-    })
+    // The Neon SDK's window-focus session refetch can abort this initial
+    // call (observed: an in-flight getSession() rejected with AbortError
+    // when the tab's visibility changed while it was still pending) — a
+    // .catch is required here, not just style, or a rejected promise leaves
+    // `loading` stuck true forever with no error surfaced.
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        setSession(data.session)
+      })
+      .catch(() => {
+        setSession(null)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
