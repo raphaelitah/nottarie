@@ -9,7 +9,13 @@ if (!neonUrl) {
 const { auth, dataApi } = defaultDeriveNeonUrls(neonUrl)
 
 export const supabase = createClient({
-  auth: { url: auth, adapter: SupabaseAuthAdapter() },
+  // Frontend and Managed Better Auth live on different origins (Pages vs.
+  // *.neonauth.*.aws.neon.tech) — without credentials: 'include', the
+  // browser drops the session cookie on both the Set-Cookie response and
+  // subsequent requests, and the user appears signed in (200 OK) but the
+  // session never actually persists. See Neon's JWT plugin docs, "cross-
+  // origin requests".
+  auth: { url: auth, adapter: SupabaseAuthAdapter({ fetchOptions: { credentials: 'include' } }) },
   dataApi: { url: dataApi },
 })
 
