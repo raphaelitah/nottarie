@@ -1,13 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, defaultDeriveNeonUrls, SupabaseAuthAdapter } from '@neondatabase/neon-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+const neonUrl = import.meta.env.VITE_NEON_URL
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY env vars')
+if (!neonUrl) {
+  throw new Error('Missing VITE_NEON_URL env var')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+const { auth, dataApi } = defaultDeriveNeonUrls(neonUrl)
+
+export const supabase = createClient({
+  auth: { url: auth, adapter: SupabaseAuthAdapter() },
+  dataApi: { url: dataApi },
+})
 
 if (import.meta.env.DEV) {
   // Lets preview tooling sign in via window.supabase.auth.signInWithPassword(...) instead of driving the login form.

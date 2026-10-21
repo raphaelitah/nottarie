@@ -1,0 +1,22 @@
+{
+  "name": "nottarie-workers",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "docx": "^9.13.0",
+    "hono": "^4.13.13",
+    "jose": "^6.2.13"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261021.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.151.3"
+  },
+  "private": true
+}

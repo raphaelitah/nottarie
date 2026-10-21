@@ -1,0 +1,10 @@
+export interface Env {
+  DOCUMENTS: R2Bucket
+  NEON_AUTH_JWKS_URL: string
+  FRONTEND_URL: string
+  DATABASE_URL: string
+  DOCUMENTS_ENCRYPTION_KEY: string
+  OUTLOOK_CLIENT_ID: string
+  OUTLOOK_CLIENT_SECRET: string
+  OUTLOOK_SYNC_WEBHOOK_SECRET: string
+}

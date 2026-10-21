@@ -1,0 +1,18 @@
+name = "nottarie-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-21"
+
+[[r2_buckets]]
+binding = "DOCUMENTS"
+bucket_name = "nottarie-documents"
+jurisdiction = "eu"
+
+[vars]
+NEON_AUTH_JWKS_URL = "https://ep-red-cherry-b91sqqjj.neonauth.c-7.eu-central-1.aws.neon.tech/neondb/auth/.well-known/jwks.json"
+FRONTEND_URL = "http://localhost:5173"
+
+# Secrets (set via `wrangler secret put <NAME>`), not committed:
+# DATABASE_URL                - workers_service Postgres connection string (direct, pooled)
+# DOCUMENTS_ENCRYPTION_KEY    - symmetric key for pgcrypto-encrypted OAuth tokens
+# OUTLOOK_CLIENT_ID / OUTLOOK_CLIENT_SECRET
+# OUTLOOK_SYNC_WEBHOOK_SECRET

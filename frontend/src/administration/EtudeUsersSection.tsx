@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { invokeWorkerFunction, WORKER_URL } from '../lib/workerFunctions'
 import { Button, Input, MOBILE_QUERY, Select, useMediaQuery, HoverIconButton } from '../design-system'
 import type { RoleNotarial, Utilisateur } from '../types/database'
 import { ROLE_OPTIONS } from '../constants/roles'
@@ -41,7 +42,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
     setLoading(true)
     const { data: { session } } = await supabase.auth.getSession()
     const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-etude-users?tenant_id=${etudeId}`,
+      `${WORKER_URL}/get-etude-users?tenant_id=${etudeId}`,
       { headers: { Authorization: `Bearer ${session?.access_token}` } }
     )
     const json = await response.json()
@@ -57,7 +58,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
   async function invokeUserAction(body: object) {
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-user-action`,
+      `${WORKER_URL}/admin-user-action`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
@@ -73,7 +74,7 @@ export function EtudeUsersSection({ etudeId }: { etudeId: string }) {
     if (!inviteForm.email.trim()) { setError('L\'email est obligatoire.'); return }
     setInviting(true)
     const { data: { session } } = await supabase.auth.getSession()
-    const res = await supabase.functions.invoke('invite-user', {
+    const res = await invokeWorkerFunction<{ error?: string }>('invite-user', {
       body: {
         email: inviteForm.email.trim(),
         prenom: inviteForm.prenom.trim() || null,

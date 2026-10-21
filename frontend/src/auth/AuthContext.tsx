@@ -1,8 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { RoleNotarial, Utilisateur } from '../types/database'
-import { AuthContext } from './authContextObject'
+import { AuthContext, type NeonAuthSession } from './authContextObject'
 
 const ACTIVE_ROLE_STORAGE_KEY = 'nottarie:active-roles'
 
@@ -15,11 +14,10 @@ function loadStoredActiveRoles(): Record<string, RoleNotarial> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null)
+  const [session, setSession] = useState<NeonAuthSession | null>(null)
   const [memberships, setMemberships] = useState<Utilisateur[]>([])
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [needsPasswordChange, setNeedsPasswordChange] = useState(false)
   const [activeRoles, setActiveRoles] = useState<Record<string, RoleNotarial>>(loadStoredActiveRoles)
 
   const setActiveRole = (tenantId: string, role: RoleNotarial) => {
@@ -31,27 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Capture invite type from URL hash before Supabase clears it
-    const isInvite = window.location.hash.includes('type=invite')
-
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
     })
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession)
-      if ((event === 'SIGNED_IN' && isInvite) || event === 'PASSWORD_RECOVERY') {
-        setNeedsPasswordChange(true)
-      }
-      if (event === 'SIGNED_IN' && !isInvite && newSession?.user && newSession.user.user_metadata?.password_set !== true) {
-        // Self-heal: a normal password sign-in proves the account has a working
-        // password, even if it predates the password_set tracking flag.
-        supabase.auth.updateUser({ data: { password_set: true } })
-      }
-      if (event === 'USER_UPDATED') {
-        setNeedsPasswordChange(false)
-      }
     })
 
     return () => subscription.subscription.unsubscribe()
@@ -94,12 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
-  const setNewPassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password, data: { password_set: true } })
-    if (!error) setNeedsPasswordChange(false)
-    return { error: error?.message ?? null }
-  }
-
   const signOut = async () => {
     await supabase.auth.signOut()
   }
@@ -112,10 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memberships,
         isPlatformAdmin,
         loading,
-        needsPasswordChange,
         signInWithPassword,
         signUp,
-        setNewPassword,
         signOut,
         activeRoles,
         setActiveRole,

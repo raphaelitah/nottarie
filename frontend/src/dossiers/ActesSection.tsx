@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
+import { invokeWorkerFunction } from '../lib/workerFunctions'
+import { documentsStorage } from '../lib/documentsClient'
 import { Badge, Button, downloadIcon, EmptyState, eyeIcon, HoverIconButton, pencilIcon, PdfViewerModal, SectionAddButton } from '../design-system'
 import type { Acte, DocumentRow, Dossier, SignatureRequestRow } from '../types/database'
 import { acteStatutBadgeStatus, acteStatutLabel } from '../constants/acteStatuts'
@@ -56,14 +58,14 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe, onOpenRelect
 
   async function handleDownload(document: DocumentRow) {
     setDownloadingId(document.id)
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 60)
+    const { data, error } = await documentsStorage.createSignedUrl(document.storage_path, 60)
     setDownloadingId(null)
     if (error || !data) { setError('Impossible de générer le lien de téléchargement : ' + error?.message); return }
     window.open(data.signedUrl, '_blank')
   }
 
   async function handleDownloadPath(storagePath: string) {
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(storagePath, 60)
+    const { data, error } = await documentsStorage.createSignedUrl(storagePath, 60)
     if (error || !data) { setError('Impossible de générer le lien de téléchargement : ' + error?.message); return }
     window.open(data.signedUrl, '_blank')
   }
@@ -71,7 +73,7 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe, onOpenRelect
   async function handleView(document: DocumentRow) {
     if (!isPdf(document.nom)) { handleDownload(document); return }
     setViewingDocument(document)
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 300)
+    const { data, error } = await documentsStorage.createSignedUrl(document.storage_path, 300)
     if (error || !data) { setError('Impossible de générer le lien de visualisation : ' + error?.message); setViewingDocument(null); return }
     setViewingUrl(data.signedUrl)
   }
@@ -79,9 +81,9 @@ export function ActesSection({ dossier, onOpenComposer, onEditActe, onOpenRelect
   async function handleRequestSignature(acte: Acte) {
     setSignatureActionId(acte.id)
     setError(null)
-    const designate = await supabase.functions.invoke('acte-signature', { body: { action: 'designate', acte_id: acte.id } })
-    if (designate.error) { setSignatureActionId(null); setError("Erreur lors de la désignation des signataires : " + designate.error.message); return }
-    const requestResult = await supabase.functions.invoke('acte-signature', {
+    const designate = await invokeWorkerFunction<{ signatureRequest: { id: string } }>('acte-signature', { body: { action: 'designate', acte_id: acte.id } })
+    if (designate.error || !designate.data) { setSignatureActionId(null); setError("Erreur lors de la désignation des signataires : " + designate.error?.message); return }
+    const requestResult = await invokeWorkerFunction('acte-signature', {
       body: { action: 'request', signature_request_id: designate.data.signatureRequest.id },
     })
     setSignatureActionId(null)

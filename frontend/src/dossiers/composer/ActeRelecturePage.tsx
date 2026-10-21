@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../../lib/supabase'
+import { invokeWorkerFunction } from '../../lib/workerFunctions'
 import { Button } from '../../design-system'
 import type { Acte, Comparant, Dossier, SignatureRequestRow, SignatureSignataireRow } from '../../types/database'
 import { ActeComposerPage } from './ActeComposerPage'
@@ -67,7 +68,7 @@ export function ActeRelecturePage({ dossier, acte, onBack }: ActeRelecturePagePr
   async function callAction(body: Record<string, unknown>) {
     setBusy(true)
     setError(null)
-    const { error: invokeError } = await supabase.functions.invoke('acte-signature', { body })
+    const { error: invokeError } = await invokeWorkerFunction('acte-signature', { body })
     setBusy(false)
     if (invokeError) { setError(invokeError.message); return false }
     await load()

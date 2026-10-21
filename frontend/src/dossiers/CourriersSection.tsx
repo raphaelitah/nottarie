@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { invokeWorkerFunction } from '../lib/workerFunctions'
 import { Badge, Button, ConfirmModal, EmptyState, eyeIcon, HoverIconButton, retryIcon, SectionAddButton, trashIcon } from '../design-system'
 import { Modal } from '../design-system/Modal'
 import type { Courrier, CourrierDocument, Email } from '../types/database'
@@ -83,7 +83,7 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
     setRetryError(null)
     setRetryNoMailbox(false)
     const { data: attachments } = await supabase.from('courrier_documents').select('document_id').eq('courrier_id', courrier.id)
-    const { error: sendError } = await supabase.functions.invoke('send-email', {
+    const { error: sendError } = await invokeWorkerFunction('send-email', {
       body: {
         dossier_id: dossierId,
         courrier_id: courrier.id,
@@ -94,7 +94,7 @@ export function CourriersSection({ tenantId, dossierId }: CourriersSectionProps)
       },
     })
     if (sendError) {
-      if (sendError instanceof FunctionsHttpError && (await sendError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
+      if (sendError?.context instanceof Response && (await sendError.context.clone().json().catch(() => null))?.error === 'no_mailbox_connected') {
         setRetryNoMailbox(true)
       } else {
         setRetryError("Le renvoi du courrier a échoué : " + sendError.message)

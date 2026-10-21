@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { documentsStorage } from '../lib/documentsClient'
 import { Drawer, Button, Input, MultiSelect, Textarea, HoverIconButton, trashIcon } from '../design-system'
 import type { Comparant, Utilisateur } from '../types/database'
 import { personneDisplayName } from '../personnes/personneForm'
@@ -151,7 +152,7 @@ export function CourrierFormDrawer({ open, saving, tenantId, dossierId, fromEmai
       try {
         uploadedIds = await Promise.all(newFiles.map(async (file) => {
           const storagePath = `${tenantId}/dossiers/${dossierId}/documents/${crypto.randomUUID()}-${file.name}`
-          const { error: uploadError } = await supabase.storage.from('documents').upload(storagePath, file)
+          const { error: uploadError } = await documentsStorage.upload(storagePath, file)
           if (uploadError) throw new Error(uploadError.message)
           const { data: doc, error: insertError } = await supabase.from('documents').insert({
             tenant_id: tenantId,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '../lib/supabase'
+import { documentsStorage } from '../lib/documentsClient'
 import { ConfirmModal, downloadIcon, eyeIcon, EmptyState, HoverIconButton, PdfViewerModal, SectionAddButton, trashIcon } from '../design-system'
 import type { DocumentRow } from '../types/database'
 
@@ -63,7 +64,7 @@ export function EntityDocumentsSection({ tenantId, entityColumn, entityId, stora
     setUploading(true)
     setError(null)
     const storagePath = `${tenantId}/${storageSegment}/${entityId}/documents/${crypto.randomUUID()}-${file.name}`
-    const { error: uploadError } = await supabase.storage.from('documents').upload(storagePath, file)
+    const { error: uploadError } = await documentsStorage.upload(storagePath, file)
     if (uploadError) { setUploading(false); setError("Erreur lors de l'envoi du fichier : " + uploadError.message); return }
 
     const { error: insertError } = await supabase.from('documents').insert({
@@ -79,7 +80,7 @@ export function EntityDocumentsSection({ tenantId, entityColumn, entityId, stora
 
   async function handleDownload(document: DocumentRow) {
     setDownloadingId(document.id)
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 60)
+    const { data, error } = await documentsStorage.createSignedUrl(document.storage_path, 60)
     setDownloadingId(null)
     if (error || !data) { setError('Impossible de générer le lien de téléchargement : ' + error?.message); return }
     window.open(data.signedUrl, '_blank')
@@ -88,14 +89,14 @@ export function EntityDocumentsSection({ tenantId, entityColumn, entityId, stora
   async function handleView(document: DocumentRow) {
     if (!isPdf(document.nom)) { handleDownload(document); return }
     setViewingDocument(document)
-    const { data, error } = await supabase.storage.from('documents').createSignedUrl(document.storage_path, 300)
+    const { data, error } = await documentsStorage.createSignedUrl(document.storage_path, 300)
     if (error || !data) { setError('Impossible de générer le lien de visualisation : ' + error?.message); setViewingDocument(null); return }
     setViewingUrl(data.signedUrl)
   }
 
   async function handleRemove(document: DocumentRow) {
     setRemovingId(document.id)
-    const { error: storageError } = await supabase.storage.from('documents').remove([document.storage_path])
+    const { error: storageError } = await documentsStorage.remove([document.storage_path])
     if (storageError) { setRemovingId(null); setError('Erreur lors de la suppression du fichier : ' + storageError.message); return }
     const { error } = await supabase.from('documents').delete().eq('id', document.id)
     setRemovingId(null)

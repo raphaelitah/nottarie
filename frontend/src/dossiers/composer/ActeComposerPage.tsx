@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { supabase } from '../../lib/supabase'
+import { WORKER_URL } from '../../lib/workerFunctions'
 import { useAuth } from '../../auth/useAuth'
 import { Button } from '../../design-system'
 import type { Acte, Comparant, DocumentRow, Dossier, Etude, TrameSection } from '../../types/database'
@@ -53,7 +54,7 @@ interface ActeComposerPageProps {
 }
 
 export function ActeComposerPage({ dossier, acte, onBack, onGenerated, editable = true, sectionsLayout = 'sidebar', onScrolledToBottomChange }: ActeComposerPageProps) {
-  const { session, memberships } = useAuth()
+  const { memberships } = useAuth()
   const [standard, setStandard] = useState<TrameSection | null>(null)
   const [optionalSections, setOptionalSections] = useState<TrameSection[]>([])
   const [sectionsDrawerOpen, setSectionsDrawerOpen] = useState(false)
@@ -238,11 +239,12 @@ export function ActeComposerPage({ dossier, acte, onBack, onGenerated, editable 
 
     setSaving(true)
     setError(null)
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-acte`, {
+    const { data: { session: freshSession } } = await supabase.auth.getSession()
+    const response = await fetch(`${WORKER_URL}/generate-acte`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token}`,
+        Authorization: `Bearer ${freshSession?.access_token}`,
       },
       body: JSON.stringify({ dossier_id: dossier.id, content: json, acte_id: acte?.id, nom: nom.trim() }),
     })

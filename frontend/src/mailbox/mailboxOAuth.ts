@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { invokeWorkerFunction } from '../lib/workerFunctions'
 
 const CODE_VERIFIER_STORAGE_KEY = 'nottarie:mailbox_oauth_code_verifier'
 
@@ -22,7 +22,7 @@ export async function startOutlookConnect(tenantId: string): Promise<{ error: st
   const codeVerifier = generateCodeVerifier()
   const codeChallenge = await codeChallengeFromVerifier(codeVerifier)
 
-  const { data, error } = await supabase.functions.invoke('mailbox-oauth-start', {
+  const { data, error } = await invokeWorkerFunction<{ authorizeUrl: string }>('mailbox-oauth-start', {
     body: { tenant_id: tenantId, code_challenge: codeChallenge },
   })
   if (error || !data?.authorizeUrl) {
@@ -67,7 +67,7 @@ export async function handleMailboxOAuthCallbackIfPresent(): Promise<MailboxOAut
     return { handled: true, error: "La connexion à Outlook a échoué : requête incomplète." }
   }
 
-  const { data, error } = await supabase.functions.invoke('mailbox-oauth-exchange', {
+  const { data, error } = await invokeWorkerFunction<{ connection: { emailAddress: string } }>('mailbox-oauth-exchange', {
     body: { code, state, code_verifier: codeVerifier },
   })
   if (error || !data?.connection) {
@@ -78,6 +78,6 @@ export async function handleMailboxOAuthCallbackIfPresent(): Promise<MailboxOAut
 }
 
 export async function disconnectOutlook(tenantId: string): Promise<{ error: string | null }> {
-  const { error } = await supabase.functions.invoke('mailbox-disconnect', { body: { tenant_id: tenantId } })
+  const { error } = await invokeWorkerFunction('mailbox-disconnect', { body: { tenant_id: tenantId } })
   return { error: error?.message ?? null }
 }

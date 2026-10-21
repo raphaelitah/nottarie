@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { invokeWorkerFunction } from '../lib/workerFunctions'
 import type { CourrierFormResult } from './CourrierFormDrawer'
 import { useAuth } from '../auth/useAuth'
 
@@ -65,7 +65,7 @@ export function useCourrierComposer(tenantId: string, dossierId: string, onSaved
     }
 
     if (result.invitationCalendaire && result.destinataires.length > 0) {
-      const { error: inviteError } = await supabase.functions.invoke('create-calendar-event', {
+      const { error: inviteError } = await invokeWorkerFunction('create-calendar-event', {
         body: {
           dossier_id: dossierId,
           titre: result.invitationCalendaire.titre,
@@ -76,7 +76,7 @@ export function useCourrierComposer(tenantId: string, dossierId: string, onSaved
         },
       })
       if (inviteError) {
-        if (inviteError instanceof FunctionsHttpError && (await inviteError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
+        if (inviteError?.context instanceof Response && (await inviteError.context.clone().json().catch(() => null))?.error === 'no_mailbox_connected') {
           setNoMailboxConnected(true)
         } else {
           setError("Le courrier a été enregistré, mais l'envoi de l'invitation calendaire a échoué : " + inviteError.message)
@@ -85,7 +85,7 @@ export function useCourrierComposer(tenantId: string, dossierId: string, onSaved
     }
 
     if (result.send) {
-      const { error: sendError } = await supabase.functions.invoke('send-email', {
+      const { error: sendError } = await invokeWorkerFunction('send-email', {
         body: {
           dossier_id: dossierId,
           courrier_id: courrier.id,
@@ -97,7 +97,7 @@ export function useCourrierComposer(tenantId: string, dossierId: string, onSaved
       })
       if (sendError) {
         setSaving(false)
-        if (sendError instanceof FunctionsHttpError && (await sendError.context.json().catch(() => null))?.error === 'no_mailbox_connected') {
+        if (sendError?.context instanceof Response && (await sendError.context.clone().json().catch(() => null))?.error === 'no_mailbox_connected') {
           setNoMailboxConnected(true)
         } else {
           setError("Le courrier a été enregistré, mais l'envoi par email a échoué : " + sendError.message)
