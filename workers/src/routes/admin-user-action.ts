@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import type { Env } from '../shared/env'
 import { dbPool } from '../shared/db'
-import { AuthError, verifyAuthHeader, canManageEtude } from '../shared/auth'
+import { AuthError, verifyAuthHeader, canManageEtude, isPlatformAdmin } from '../shared/auth'
+import { sendPasswordResetLink, BetterAuthAdminError } from '../shared/betterAuthAdmin'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -50,39 +51,40 @@ app.post('/', async (c) => {
       return c.json({ success: true })
     }
 
-    if (action === 'resend_invite') {
+    if (action === 'resend_invite' || action === 'reset_password') {
       if (!email) {
         return c.json({ error: 'email requis' }, 400)
       }
 
-      // TODO(Phase 4 follow-up): the original implementation used Supabase
-      // Auth's Admin API (auth.admin.listUsers to find the target user, then
-      // supabaseAnon.auth.resetPasswordForEmail to resend the invite link,
-      // then auth.admin.updateUserById to stamp invite_last_sent_at for the
-      // 2-minute resend cooldown). Neon's Managed Better Auth doesn't expose
-      // an equivalent admin API reachable from a Worker the same way — this
-      // needs its own design (likely a direct call into Better Auth's own
-      // server-side invite/reset-link API, or a dedicated users table we can
-      // query/update directly) before this action can work again.
-      return c.json(
-        { error: "Not yet implemented against Neon's Managed Better Auth — see Phase 4 follow-up" },
-        501,
+      // No admin "list users by email" API reachable from a Worker, but
+      // Managed Better Auth's own tables live in this same Postgres database
+      // — look the target up there directly instead.
+      const { rows: targetRows } = await pool.query<{ id: string }>(
+        'select id from neon_auth."user" where email = $1',
+        [email],
       )
-    }
+      const target = targetRows[0]
+      if (!target) return c.json({ error: 'Utilisateur introuvable' }, 404)
 
-    if (action === 'reset_password') {
-      if (!email) {
-        return c.json({ error: 'email requis' }, 400)
+      const { rows: memberships } = await pool.query<{ tenant_id: string }>(
+        'select tenant_id from utilisateurs where auth_user_id = $1',
+        [target.id],
+      )
+      const callerIsPlatformAdmin = await isPlatformAdmin(pool, callerId)
+      const callerManagesAMembership = (
+        await Promise.all(memberships.map((m) => canManageEtude(pool, callerId, m.tenant_id)))
+      ).some(Boolean)
+      if (!callerIsPlatformAdmin && !callerManagesAMembership) {
+        return c.json({ error: 'Accès refusé à cet utilisateur.' }, 403)
       }
 
-      // TODO(Phase 4 follow-up): same gap as resend_invite above — this relied
-      // on auth.admin.listUsers to find the target and
-      // supabaseAnon.auth.resetPasswordForEmail to trigger the reset email.
-      // Needs a Better-Auth-native equivalent.
-      return c.json(
-        { error: "Not yet implemented against Neon's Managed Better Auth — see Phase 4 follow-up" },
-        501,
-      )
+      try {
+        await sendPasswordResetLink(c.env.NEON_AUTH_JWKS_URL, { email, redirectTo: `${c.env.FRONTEND_URL}/` })
+      } catch (err) {
+        if (err instanceof BetterAuthAdminError) return c.json({ error: err.message }, err.status)
+        throw err
+      }
+      return c.json({ success: true })
     }
 
     return c.json({ error: 'Action inconnue' }, 400)

@@ -31,21 +31,17 @@ app.get('/', async (c) => {
     }
 
     const { rows: data } = await pool.query(
-      'select * from utilisateurs where tenant_id = $1 order by created_at asc',
+      'select u.*, n.email as email from utilisateurs u left join neon_auth."user" n on n.id = u.auth_user_id where u.tenant_id = $1 order by u.created_at asc',
       [tenant_id],
     )
 
-    // TODO(Phase 4 follow-up): the original enriched each row with `email`
-    // and `invited` (password not yet set) read from Supabase Auth's
-    // auth.admin.listUsers(). Neon's Managed Better Auth doesn't expose that
-    // same admin listing from a Worker — once we know where/how Better Auth
-    // exposes its user table (or a server-side admin API) to query from here,
-    // wire these two fields back up. Until then they're left as null/false
-    // rather than 501-ing the whole endpoint, since the étude's user list
-    // itself (the roles/actif data) is still fully functional from Postgres.
+    // `invited` (password not yet set) can't be reconstructed: Supabase
+    // tracked it via a custom user_metadata flag we no longer set (Managed
+    // Better Auth has no equivalent "has this user ever signed in" field
+    // reachable here). Left false always — resend_invite/reset_password
+    // still work regardless, this only drops the UI's "invited" badge.
     const enriched = data.map((u: Record<string, unknown>) => ({
       ...u,
-      email: null,
       invited: false,
     }))
 
