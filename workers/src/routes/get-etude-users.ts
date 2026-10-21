@@ -30,22 +30,22 @@ app.get('/', async (c) => {
       return c.json({ error: 'Accès refusé à cette étude.' }, 403)
     }
 
+    // `invited` means "has never signed in" — Supabase tracked this via a
+    // custom user_metadata flag set on first real sign-in; Managed Better
+    // Auth has no equivalent field, but it does create a neon_auth.session
+    // row the moment someone actually logs in, which serves the same
+    // purpose: no session row ever created yet = still pending.
     const { rows: data } = await pool.query(
-      'select u.*, n.email as email from utilisateurs u left join neon_auth."user" n on n.id = u.auth_user_id where u.tenant_id = $1 order by u.created_at asc',
+      `select u.*, n.email as email,
+              not exists (select 1 from neon_auth.session s where s."userId" = u.auth_user_id) as invited
+       from utilisateurs u
+       left join neon_auth."user" n on n.id = u.auth_user_id
+       where u.tenant_id = $1
+       order by u.created_at asc`,
       [tenant_id],
     )
 
-    // `invited` (password not yet set) can't be reconstructed: Supabase
-    // tracked it via a custom user_metadata flag we no longer set (Managed
-    // Better Auth has no equivalent "has this user ever signed in" field
-    // reachable here). Left false always — resend_invite/reset_password
-    // still work regardless, this only drops the UI's "invited" badge.
-    const enriched = data.map((u: Record<string, unknown>) => ({
-      ...u,
-      invited: false,
-    }))
-
-    return c.json({ users: enriched })
+    return c.json({ users: data })
   } catch (err) {
     return c.json({ error: String(err) }, 500)
   }
