@@ -14,6 +14,8 @@ import mailboxOauthCallback from './routes/mailbox-oauth-callback'
 import mailboxOauthExchange from './routes/mailbox-oauth-exchange'
 import mailboxOauthStart from './routes/mailbox-oauth-start'
 import sendEmail from './routes/send-email'
+import { dbPool } from './shared/db'
+import { processOutlookSyncOutbox } from './shared/outlookSync'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -42,4 +44,31 @@ app.route('/mailbox-oauth-exchange', mailboxOauthExchange)
 app.route('/mailbox-oauth-start', mailboxOauthStart)
 app.route('/send-email', sendEmail)
 
-export default app
+// Manual trigger for testing the outbox processor without waiting for the
+// cron schedule. Guarded by a shared secret (not caller identity, since it
+// does no tenant-scoped work of its own, only drains a backend-internal
+// queue) to keep it off the open internet.
+app.post('/internal/process-outlook-sync', async (c) => {
+  if (c.req.header('x-webhook-secret') !== c.env.OUTLOOK_SYNC_WEBHOOK_SECRET) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  const pool = dbPool(c.env.DATABASE_URL)
+  const result = await processOutlookSyncOutbox(pool, {
+    encryptionKey: c.env.DOCUMENTS_ENCRYPTION_KEY,
+    outlookClientId: c.env.OUTLOOK_CLIENT_ID,
+    outlookClientSecret: c.env.OUTLOOK_CLIENT_SECRET,
+  })
+  return c.json(result)
+})
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env) {
+    const pool = dbPool(env.DATABASE_URL)
+    await processOutlookSyncOutbox(pool, {
+      encryptionKey: env.DOCUMENTS_ENCRYPTION_KEY,
+      outlookClientId: env.OUTLOOK_CLIENT_ID,
+      outlookClientSecret: env.OUTLOOK_CLIENT_SECRET,
+    })
+  },
+}
