@@ -7,8 +7,11 @@ binding = "DOCUMENTS"
 bucket_name = "nottarie-documents"
 jurisdiction = "eu"
 
+# Outlook sync cron disabled while Nottarie is dormant (kept the Neon compute
+# awake 24/7, burning the monthly CU-hour budget). Re-enable by restoring
+# `crons = ["*/15 * * * *"]` and redeploying once Outlook sync is needed again.
 [triggers]
-crons = ["*/15 * * * *"]
+crons = []
 
 [vars]
 NEON_AUTH_JWKS_URL = "https://ep-red-cherry-b91sqqjj.neonauth.c-7.eu-central-1.aws.neon.tech/neondb/auth/.well-known/jwks.json"
